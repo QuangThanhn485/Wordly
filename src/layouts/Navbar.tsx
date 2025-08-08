@@ -15,6 +15,7 @@ import {
     Toolbar,
     Typography,
     useMediaQuery,
+    Avatar,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
@@ -34,13 +35,29 @@ import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { useThemeMode } from 'contexts/ThemeContext';
 
 const drawerWidth = 240;
-const collapsedWidth = 72;
+const collapsedWidth = 80;
 
 const iconStyle = (open: boolean) => ({
     minWidth: 0,
     mr: open ? 2 : 'auto',
     justifyContent: 'center',
     display: 'flex',
+    color: 'inherit',
+});
+
+const listItemStyle = (open: boolean, active: boolean, theme: any) => ({
+    pl: open ? 2 : 1.5,
+    borderRadius: 2,
+    mx: 1,
+    mb: 0.5,
+    backgroundColor: active ? theme.palette.mode === 'dark' 
+        ? 'rgba(255, 255, 255, 0.1)' 
+        : 'rgba(0, 0, 0, 0.05)' : 'transparent',
+    '&:hover': {
+        backgroundColor: theme.palette.mode === 'dark' 
+            ? 'rgba(255, 255, 255, 0.08)' 
+            : 'rgba(0, 0, 0, 0.04)',
+    },
 });
 
 const ListItemLink = React.forwardRef<HTMLAnchorElement,
@@ -77,25 +94,38 @@ const Navbar = () => {
         <>
             {isMobile && (
                 <>
-                    <AppBar position="fixed">
+                    <AppBar position="fixed" elevation={0}>
                         <Toolbar>
                             <IconButton
                                 edge="start"
                                 color="inherit"
                                 aria-label="menu"
                                 onClick={handleToggleDrawer}
+                                sx={{ mr: 2 }}
                             >
                                 <MenuIcon />
                             </IconButton>
-                            <Typography variant="h6" noWrap component="div">
-                                My App
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <Avatar 
+                                    src="/logo.png" 
+                                    alt="Wordly Logo"
+                                    sx={{ 
+                                        width: 32, 
+                                        height: 32,
+                                        bgcolor: theme.palette.primary.main,
+                                    }}
+                                >
+                                    <AutoStoriesIcon fontSize="small" />
+                                </Avatar>
+                                <Typography variant="h6" noWrap component="div" fontWeight={600}>
+                                    Wordly
+                                </Typography>
+                            </Box>
                         </Toolbar>
                     </AppBar>
                     <Toolbar />
                 </>
             )}
-
 
             <Drawer
                 variant={isMobile ? 'temporary' : 'permanent'}
@@ -107,7 +137,10 @@ const Navbar = () => {
                     '& .MuiDrawer-paper': {
                         width: open ? drawerWidth : collapsedWidth,
                         overflowX: 'hidden',
-                        transition: 'width 0.3s',
+                        transition: theme.transitions.create('width', {
+                            easing: theme.transitions.easing.sharp,
+                            duration: theme.transitions.duration.enteringScreen,
+                        }),
                         boxSizing: 'border-box',
                         bgcolor: theme.palette.background.paper,
                         borderRight: `1px solid ${theme.palette.divider}`,
@@ -115,8 +148,53 @@ const Navbar = () => {
                 }}
             >
                 {!isMobile && (
-                    <Box sx={{ display: 'flex', justifyContent: open ? 'flex-end' : 'center', p: 1 }}>
-                        <IconButton onClick={handleToggleDrawer}>
+                    <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: open ? 'space-between' : 'center', 
+                        alignItems: 'center',
+                        p: 2,
+                        pb: 1.5,
+                    }}>
+                        {open ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <Avatar 
+                                    src="/logo.png" 
+                                    alt="Wordly Logo"
+                                    sx={{ 
+                                        width: 32, 
+                                        height: 32,
+                                        bgcolor: theme.palette.primary.main,
+                                    }}
+                                >
+                                    <AutoStoriesIcon fontSize="small" />
+                                </Avatar>
+                                <Typography variant="h6" fontWeight={600}>
+                                    Wordly
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <Avatar 
+                                src="/logo.png" 
+                                alt="Wordly Logo"
+                                sx={{ 
+                                    width: 32, 
+                                    height: 32,
+                                    bgcolor: theme.palette.primary.main,
+                                }}
+                            >
+                                <AutoStoriesIcon fontSize="small" />
+                            </Avatar>
+                        )}
+                        <IconButton 
+                            onClick={handleToggleDrawer}
+                            size="small"
+                            sx={{
+                                color: theme.palette.text.secondary,
+                                '&:hover': {
+                                    backgroundColor: theme.palette.action.hover,
+                                },
+                            }}
+                        >
                             {open ? <ChevronLeftIcon /> : <ChevronRightIcon />}
                         </IconButton>
                     </Box>
@@ -124,25 +202,44 @@ const Navbar = () => {
 
                 <Divider />
 
-                <List>
-                    <ListItemLink to='/' selected={isActive('/')} sx={{ pl: open ? 2 : 1 }}>
+                <List sx={{ p: 1 }}>
+                    <ListItemLink 
+                        to='/' 
+                        selected={isActive('/')} 
+                        sx={listItemStyle(open, isActive('/'), theme)}
+                    >
                         <Tooltip title='Home' placement='right' disableHoverListener={open}>
-                            <ListItemIcon sx={iconStyle(open)}><HomeIcon /></ListItemIcon>
+                            <ListItemIcon sx={iconStyle(open)}>
+                                <HomeIcon />
+                            </ListItemIcon>
                         </Tooltip>
-                        {open && <ListItemText primary='Home' />}
+                        {open && <ListItemText primary='Home' primaryTypographyProps={{ fontWeight: 500 }} />}
                     </ListItemLink>
-                    <ListItemLink to='/source-data' selected={isActive('/source-data')} sx={{ pl: open ? 2 : 1 }}>
+                    
+                    <ListItemLink 
+                        to='/source-data' 
+                        selected={isActive('/source-data')} 
+                        sx={listItemStyle(open, isActive('/source-data'), theme)}
+                    >
                         <Tooltip title='Source Data' placement='right' disableHoverListener={open}>
-                            <ListItemIcon sx={iconStyle(open)}><BarChartIcon /></ListItemIcon>
+                            <ListItemIcon sx={iconStyle(open)}>
+                                <BarChartIcon />
+                            </ListItemIcon>
                         </Tooltip>
-                        {open && <ListItemText primary='Source Data' />}
+                        {open && <ListItemText primary='Source Data' primaryTypographyProps={{ fontWeight: 500 }} />}
                     </ListItemLink>
 
-                    <ListItemButton onClick={handleTrainClick} selected={isActive('/train')} sx={{ alignItems: 'center' }}>
+                    <ListItemButton 
+                        onClick={handleTrainClick} 
+                        selected={isActive('/train')} 
+                        sx={listItemStyle(open, isActive('/train'), theme)}
+                    >
                         <Tooltip title='Train' placement='right' disableHoverListener={open}>
-                            <ListItemIcon sx={iconStyle(open)}><AutoStoriesIcon /></ListItemIcon>
+                            <ListItemIcon sx={iconStyle(open)}>
+                                <AutoStoriesIcon />
+                            </ListItemIcon>
                         </Tooltip>
-                        {open && <ListItemText primary='Train' />}
+                        {open && <ListItemText primary='Train' primaryTypographyProps={{ fontWeight: 500 }} />}
                         {open && (trainOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />)}
                     </ListItemButton>
 
@@ -151,55 +248,94 @@ const Navbar = () => {
                             <ListItemLink
                                 to='/train-start'
                                 selected={isActive('/train-start')}
-                                sx={{ pl: open ? 4 : 2 }}
+                                sx={{ 
+                                    ...listItemStyle(open, isActive('/train-start'), theme),
+                                    pl: open ? 4 : 2.5,
+                                }}
                             >
-                                <ListItemIcon sx={iconStyle(open)}><RocketLaunchIcon fontSize='small' /></ListItemIcon>
+                                <ListItemIcon sx={iconStyle(open)}>
+                                    <RocketLaunchIcon fontSize='small' />
+                                </ListItemIcon>
                                 {open && <ListItemText primary='Start' />}
                             </ListItemLink>
 
                             <ListItemLink
                                 to='/train/result'
                                 selected={isActive('/train/result')}
-                                sx={{ pl: open ? 4 : 2 }}
+                                sx={{ 
+                                    ...listItemStyle(open, isActive('/train/result'), theme),
+                                    pl: open ? 4 : 2.5,
+                                }}
                             >
-                                <ListItemIcon sx={iconStyle(open)}><BarChartIcon fontSize='small' /></ListItemIcon>
+                                <ListItemIcon sx={iconStyle(open)}>
+                                    <BarChartIcon fontSize='small' />
+                                </ListItemIcon>
                                 {open && <ListItemText primary='Result' />}
                             </ListItemLink>
 
                             <ListItemLink
                                 to='/train/lib'
                                 selected={isActive('/train/lib')}
-                                sx={{ pl: open ? 4 : 2 }}
+                                sx={{ 
+                                    ...listItemStyle(open, isActive('/train/lib'), theme),
+                                    pl: open ? 4 : 2.5,
+                                }}
                             >
-                                <ListItemIcon sx={iconStyle(open)}><LibraryBooksIcon fontSize='small' /></ListItemIcon>
+                                <ListItemIcon sx={iconStyle(open)}>
+                                    <LibraryBooksIcon fontSize='small' />
+                                </ListItemIcon>
                                 {open && <ListItemText primary='Lib' />}
                             </ListItemLink>
                         </List>
                     </Collapse>
-
-                    <ListItemLink to='/login' selected={isActive('/login')} sx={{ pl: open ? 2 : 1 }}>
-                        <Tooltip title='Login' placement='right' disableHoverListener={open}>
-                            <ListItemIcon sx={iconStyle(open)}><LoginIcon /></ListItemIcon>
-                        </Tooltip>
-                        {open && <ListItemText primary='Login' />}
-                    </ListItemLink>
-
-                    <ListItemLink to='/register' selected={isActive('/register')} sx={{ pl: open ? 2 : 1 }}>
-                        <Tooltip title='Register' placement='right' disableHoverListener={open}>
-                            <ListItemIcon sx={iconStyle(open)}><AppRegistrationIcon /></ListItemIcon>
-                        </Tooltip>
-                        {open && <ListItemText primary='Register' />}
-                    </ListItemLink>
                 </List>
 
-                <Divider />
+                <Box sx={{ mt: 'auto' }}>
+                    <Divider />
+                    <List sx={{ p: 1 }}>
+                        <ListItemLink 
+                            to='/login' 
+                            selected={isActive('/login')} 
+                            sx={listItemStyle(open, isActive('/login'), theme)}
+                        >
+                            <Tooltip title='Login' placement='right' disableHoverListener={open}>
+                                <ListItemIcon sx={iconStyle(open)}>
+                                    <LoginIcon />
+                                </ListItemIcon>
+                            </Tooltip>
+                            {open && <ListItemText primary='Login' primaryTypographyProps={{ fontWeight: 500 }} />}
+                        </ListItemLink>
 
-                <Box sx={{ mt: 'auto', p: 1, display: 'flex', justifyContent: 'center' }}>
-                    <Tooltip title='Toggle theme'>
-                        <IconButton onClick={toggleTheme}>
-                            {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-                        </IconButton>
-                    </Tooltip>
+                        <ListItemLink 
+                            to='/register' 
+                            selected={isActive('/register')} 
+                            sx={listItemStyle(open, isActive('/register'), theme)}
+                        >
+                            <Tooltip title='Register' placement='right' disableHoverListener={open}>
+                                <ListItemIcon sx={iconStyle(open)}>
+                                    <AppRegistrationIcon />
+                                </ListItemIcon>
+                            </Tooltip>
+                            {open && <ListItemText primary='Register' primaryTypographyProps={{ fontWeight: 500 }} />}
+                        </ListItemLink>
+                    </List>
+                    <Divider />
+                    
+                    <Box sx={{ p: 1.5, display: 'flex', justifyContent: 'center' }}>
+                        <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
+                            <IconButton 
+                                onClick={toggleTheme}
+                                sx={{
+                                    color: theme.palette.text.secondary,
+                                    '&:hover': {
+                                        backgroundColor: theme.palette.action.hover,
+                                    },
+                                }}
+                            >
+                                {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
                 </Box>
             </Drawer>
         </>
