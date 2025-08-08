@@ -131,6 +131,12 @@ const Navbar = () => {
                         </Tooltip>
                         {open && <ListItemText primary='Home' />}
                     </ListItemLink>
+                    <ListItemLink to='/source-data' selected={isActive('/source-data')} sx={{ pl: open ? 2 : 1 }}>
+                        <Tooltip title='Source Data' placement='right' disableHoverListener={open}>
+                            <ListItemIcon sx={iconStyle(open)}><BarChartIcon /></ListItemIcon>
+                        </Tooltip>
+                        {open && <ListItemText primary='Source Data' />}
+                    </ListItemLink>
 
                     <ListItemButton onClick={handleTrainClick} selected={isActive('/train')} sx={{ alignItems: 'center' }}>
                         <Tooltip title='Train' placement='right' disableHoverListener={open}>
