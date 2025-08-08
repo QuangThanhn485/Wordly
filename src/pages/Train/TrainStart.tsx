@@ -5,7 +5,9 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from '@mui/material';
-import ShuffleIcon from '@mui/icons-material/Shuffle';
+import TranslateIcon from '@mui/icons-material/Translate';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { useState } from 'react';
 import { useTrainWords } from 'features/train/train-start';
 import { WordCard } from 'features/train/train-start';
@@ -13,10 +15,10 @@ import { WordCard } from 'features/train/train-start';
 const TrainStart = () => {
   const { words, isLoading } = useTrainWords();
 
-  // Fake random word
   const [language, setLanguage] = useState<'vi' | 'en'>('vi');
-  const [randomWord, setRandomWord] = useState('quả táo');
+  const [randomWord, setRandomWord] = useState('quả táo'); // TODO: Replace with real logic
   const [current, setCurrent] = useState(1);
+  const [mistakes, setMistakes] = useState(1); // Future usage
 
   const handleLanguageToggle = (
     _: React.MouseEvent<HTMLElement>,
@@ -25,91 +27,102 @@ const TrainStart = () => {
     if (newLang) setLanguage(newLang);
   };
 
-  return (
-    <Container maxWidth={false} sx={{ px: 4, py: 2 }}>
-      {/* Sticky Top Panel */}
+  const renderTopPanel = () => (
+    <Box
+      sx={{
+        position: 'sticky',
+        top: { xs: '64px', sm: '72px' },
+        zIndex: 10,
+        backgroundColor: 'background.paper',
+        borderRadius: 1,
+        boxShadow: 1,
+        px: 2,
+        py: 1.5,
+        mb: 2,
+      }}
+    >
       <Box
         sx={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
-          backgroundColor: 'background.paper',
-          borderRadius: 1,
-          boxShadow: 1,
-          px: 2,
-          py: 1.5,
-          mb: 2,
           display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'flex-start', sm: 'center' },
           justifyContent: 'space-between',
-          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 2,
         }}
       >
-        {/* Left: Random Vietnamese word */}
+        {/* Từ vựng hiện tại */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <ShuffleIcon fontSize="small" color="primary" />
-            <Typography
-                variant="h6"
-                fontWeight="bold"
-                color="primary"
-                sx={{ textTransform: 'capitalize', letterSpacing: 0.5 }}
-            >
-                {randomWord}
-            </Typography>
+          <TranslateIcon fontSize="small" color="primary" />
+          <Typography
+            variant="h6"
+            fontWeight="bold"
+            color="primary"
+            sx={{ textTransform: 'capitalize', letterSpacing: 0.5 }}
+          >
+            {randomWord}
+          </Typography>
         </Box>
 
-        {/* Center: Progress */}
+        {/* Vị trí câu hỏi */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-            📍
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
+          <LocationOnIcon fontSize="small" color="action" />
+          <Typography variant="body1" fontWeight="medium">
             {current} / {words.length}
-            </Typography>
+          </Typography>
         </Box>
 
-        {/* Mistake count */}
+        {/* Số lỗi */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" color="error">
-            ❌
-            </Typography>
-            <Typography variant="body1" fontWeight="medium" color="error">
-            Mistakes: 1
-            </Typography>
+          <ErrorOutlineIcon fontSize="small" color="error" />
+          <Typography variant="body1" fontWeight="medium" color="error">
+            Mistakes: {mistakes}
+          </Typography>
         </Box>
 
-        {/* Right: Language toggle */}
+        {/* Chọn ngôn ngữ */}
         <ToggleButtonGroup
           value={language}
           exclusive
           size="small"
           onChange={handleLanguageToggle}
           color="primary"
+          sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}
         >
           <ToggleButton value="vi">VI ➜ EN</ToggleButton>
           <ToggleButton value="en">EN ➜ VI</ToggleButton>
         </ToggleButtonGroup>
       </Box>
+    </Box>
+  );
 
+  const renderWordCards = () => (
+    <Box
+      sx={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 2,
+        justifyContent: 'flex-start',
+        alignItems: 'stretch',
+      }}
+    >
+      {words.map((word, idx) => (
+        <WordCard
+          key={idx}
+          word={word}
+          meaning="A sweet fruit that grows on trees." // TODO: Make dynamic if possible
+        />
+      ))}
+    </Box>
+  );
+
+  return (
+    <Container maxWidth={false} sx={{ px: 4, py: 2 }}>
+      {renderTopPanel()}
       {isLoading ? (
         <Typography>Loading...</Typography>
       ) : (
-        <Box
-          sx={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 2,
-            justifyContent: 'flex-start',
-            alignItems: 'stretch',
-          }}
-        >
-          {words.map((word, idx) => (
-            <WordCard
-              key={idx}
-              word={word}
-              meaning="A sweet fruit that grows on trees."
-            />
-          ))}
-        </Box>
+        renderWordCards()
       )}
     </Container>
   );

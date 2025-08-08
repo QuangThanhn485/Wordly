@@ -1,7 +1,11 @@
-// src/features/train/train-start/components/WordCard.tsx
 import React, { useState } from 'react';
 import { Box, Card, CardContent, Typography } from '@mui/material';
-import {cardBackRotate, cardBack, boxRotate} from './styles'
+import {
+  cardFront,
+  cardBackRotate,
+  boxRotate,
+  cardContainer,
+} from './styles';
 
 interface WordCardProps {
   word: string;
@@ -15,50 +19,56 @@ export const WordCard: React.FC<WordCardProps> = ({
   const [flipped, setFlipped] = useState(false);
 
   return (
-    <Box
-      onClick={() => setFlipped((prev) => !prev)}
-      sx={{
-        width: 300,
-        height: 180,
-        perspective: 1000,
-        mx: 'auto',
-        my: 2,
-        cursor: 'pointer',
-      }}
-    >
-      <Box
-        sx={boxRotate(flipped)}
-      >
+    <Box onClick={() => setFlipped((prev) => !prev)} sx={cardContainer}>
+      <Box sx={boxRotate(flipped)}>
         {/* Front */}
-        <Card
-          sx={cardBack}
-        >
+        <Card sx={cardFront}>
           <CardContent>
-            <Typography variant="h4" align="center" fontWeight="bold">
+            <Typography
+              variant="h5"
+              align="center"
+              fontWeight="bold"
+              sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }}
+            >
               {word}
             </Typography>
-            <Typography variant="body2" color="text.secondary" align="center" mt={2}>
-              Click to flip
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              align="center"
+              mt={2}
+            >
+              Tap to flip
             </Typography>
           </CardContent>
         </Card>
 
         {/* Back */}
-        <Card
-          sx={cardBackRotate}
-        >
-          <CardContent>
-            <Typography variant="subtitle1" align="center" fontWeight={600}>
+        <Card sx={cardBackRotate}>
+          <Box>
+            <Typography
+              variant="subtitle1"
+              fontWeight={600}
+              sx={{ fontSize: { xs: '0.95rem', sm: '1.1rem' }, mb: 1 }}
+            >
               Meaning
             </Typography>
-            <Typography variant="body1" align="center" mt={1}>
+            <Typography
+              variant="body1"
+              sx={{ fontSize: { xs: '0.85rem', sm: '1rem' } }}
+            >
               {meaning}
             </Typography>
-            <Typography variant="body2" color="text.secondary" align="center" mt={2}>
-              Click to flip back
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 2 }}
+            >
+              Tap to flip back
             </Typography>
-          </CardContent>
+          </Box>
         </Card>
+
       </Box>
     </Box>
   );
