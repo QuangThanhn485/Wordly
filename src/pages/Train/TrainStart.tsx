@@ -14,7 +14,7 @@ import {
 import TranslateIcon from '@mui/icons-material/Translate';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTrainWords } from 'features/train/train-start';
 import { WordCard } from 'features/train/train-start';
 
@@ -75,6 +75,56 @@ const TrainStart = () => {
     setTargetIdx(pickRandomIndex(items.length, new Set()));
   }, [items.length]);
 
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const getAudioCtx = () => {
+    if (typeof window === 'undefined') return null;
+    if (!audioCtxRef.current) {
+      try {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      } catch {
+        audioCtxRef.current = null;
+      }
+    }
+    return audioCtxRef.current;
+  };
+
+  const playErrorTone = () => {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(440, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.22);
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.24);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.26);
+  };
+
+  const speakEN = (text: string) => {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US';
+    const voices = synth.getVoices();
+    const v =
+      voices.find((x) => x.lang?.toLowerCase().startsWith('en-us')) ||
+      voices.find((x) => x.lang?.toLowerCase().startsWith('en-gb')) ||
+      voices.find((x) => x.lang?.toLowerCase().startsWith('en'));
+    if (v) u.voice = v;
+    u.rate = 1;
+    u.pitch = 1;
+    try {
+      synth.cancel();
+    } catch {}
+    synth.speak(u);
+  };
+
   const handleLanguageToggle = (_: React.MouseEvent<HTMLElement>, newLang: 'vi' | 'en' | null) => {
     if (newLang) setLanguage(newLang);
   };
@@ -87,6 +137,7 @@ const TrainStart = () => {
       if (isCorrect) {
         setFlipped((f) => ({ ...f, [idx]: true }));
         setScore((v) => v + 1);
+        speakEN(items[idx].en);
         const exclude = new Set<number>();
         Object.keys(flipped).forEach((k) => {
           if (flipped[+k]) exclude.add(+k);
@@ -97,6 +148,7 @@ const TrainStart = () => {
         setWrongIdx(idx);
         setWrongTick((t) => t + 1);
         setMistakes((m) => m + 1);
+        playErrorTone();
         if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
           try {
             (navigator as any).vibrate?.(60);
@@ -130,20 +182,20 @@ const TrainStart = () => {
     >
       <Box
         sx={{
-        position: 'sticky',
-        top: { xs: 56, sm: 56, md: 0, lg: 0, xl: 0 },
-        zIndex: (t) => t.zIndex.appBar + 1,
-        bgcolor: 'background.paper',
-        borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-        px: { xs: 1.5, sm: 3 },
-        py: { xs: 1, sm: 1.5 },
-        mb: 2,
-        display: 'flex',
-        flexDirection: { xs: 'column', sm: 'row' },
-        alignItems: { xs: 'flex-start', sm: 'center' },
-        justifyContent: 'space-between',
-        gap: 2,
-      }}
+          position: 'sticky',
+          top: { xs: 56, sm: 56, md: 0, lg: 0, xl: 0 },
+          zIndex: (t) => t.zIndex.appBar + 1,
+          bgcolor: 'background.paper',
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          px: { xs: 1.5, sm: 3 },
+          py: { xs: 1, sm: 1.5 },
+          mb: 2,
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          justifyContent: 'space-between',
+          gap: 2,
+        }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <TranslateIcon fontSize="small" color="primary" />
@@ -152,9 +204,9 @@ const TrainStart = () => {
             fontWeight="bold"
             color="primary"
             sx={{
-              fontSize: { xs: '0.95rem', sm: '1.2rem' }, // mobile nhỏ hơn
+              fontSize: { xs: '0.95rem', sm: '1.05rem', md: '1.2rem' },
               lineHeight: 1.3,
-              wordBreak: 'break-word', // xuống dòng nếu dài
+              wordBreak: 'break-word',
               whiteSpace: 'normal',
             }}
           >
@@ -199,7 +251,12 @@ const TrainStart = () => {
             label={`Mistakes: ${mistakes}`}
             variant="outlined"
             size={isMobile ? 'small' : 'medium'}
-            sx={{ borderRadius: 1, borderColor: theme.palette.error.light, color: 'error.main', bgcolor: 'error.light' + '20' }}
+            sx={{
+              borderRadius: 1,
+              borderColor: theme.palette.error.light,
+              color: 'error.main',
+              bgcolor: theme.palette.error.light + '20',
+            }}
           />
           <Button
             variant="outlined"
