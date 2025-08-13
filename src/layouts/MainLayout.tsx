@@ -17,7 +17,7 @@ const MainLayout = () => {
           pl: { xs: 0, md: 'var(--nav-w, 240px)' },
           pr: 0,
           pt: 0,
-          overflow: 'hidden',
+          overflow: 'revert',
           transition: theme.transitions.create('padding-left', {
             duration: theme.transitions.duration.standard,
             easing: theme.transitions.easing.easeInOut,
