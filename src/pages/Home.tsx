@@ -348,7 +348,7 @@ const Home: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             <MenuBookIcon color="primary" sx={{ mr: 1 }} />
             <Typography variant={isSmDown ? 'subtitle1' : 'h6'} sx={{ fontWeight: 600 }}>
-              Thư mục
+              Thư mục từ vựng
             </Typography>
           </Box>
           <Divider sx={{ mb: 0 }} />
