@@ -1,0 +1,33 @@
+name: Deploy React to EC2 (Nginx)
+
+on:
+  push:
+    branches: [ "main" ]   # chạy khi push/merge vào main
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted    # chạy trên runner EC2
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build React app
+        run: npm run build
+
+      - name: Deploy to Nginx web root
+        run: |
+          sudo rsync -a --delete ./build/ /var/www/reactapp/
+          sudo chown -R nginx:nginx /var/www/reactapp
+          sudo chmod -R 755 /var/www/reactapp
+          sudo nginx -t
+          sudo systemctl reload nginx
