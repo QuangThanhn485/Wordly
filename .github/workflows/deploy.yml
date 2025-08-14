@@ -2,11 +2,11 @@ name: Deploy React to EC2 (Nginx)
 
 on:
   push:
-    branches: [ "main" ]   # chạy khi push/merge vào main
+    branches: [ "main" ]   # chạy khi push hoặc merge vào nhánh main
 
 jobs:
   build-and-deploy:
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: self-hosted    # dùng runner EC2 của bạn
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
