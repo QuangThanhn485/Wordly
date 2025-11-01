@@ -1,11 +1,9 @@
-import React, { memo, useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Box,
   Typography,
   List,
-  ListItemButton,
   ListItemText,
-  Collapse,
   IconButton,
   Table,
   TableBody,
@@ -23,27 +21,14 @@ import {
   useMediaQuery,
   useTheme,
   TableContainer,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   Button,
   Snackbar,
   Alert,
   Checkbox,
   Stack,
-  Select,
-  FormControl,
-  InputLabel,
-  FormHelperText,
 } from '@mui/material';
 import {
-  Folder as FolderIcon,
-  FolderOpen as FolderOpenIcon,
   InsertDriveFile as FileIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
   VolumeUp as VolumeUpIcon,
   MenuBook as MenuBookIcon,
   Category as CategoryIcon,
@@ -55,169 +40,49 @@ import {
   FileDownload as ExportIcon,
   CreateNewFolder as NewFolderIcon,
   DeleteOutline as DeleteIcon,
-  MoreVert as MoreIcon,
   Add as AddIcon,
   Edit as EditIcon,
-  CheckBox as CheckBoxIcon,
-  CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
   UnfoldLess as UnfoldLessIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
 } from '@mui/icons-material';
 
-// ===== Types =====
-export type VocabItem = {
-  word: string;
-  type: string;
-  vnMeaning: string;
-  pronunciation: string;
-};
-export type FileLeaf = { kind: 'file'; name: string; id: string };
-export type FolderNode = { kind: 'folder'; label: string; id: string; children: Array<FolderNode | FileLeaf> };
+// Import types
+import type { VocabItem, FolderNode, FileLeaf, SnackState } from '../types';
 
-// ===== Word Types (Parts of Speech) =====
-const WORD_TYPES = [
-  { value: 'noun', label: 'Noun (Danh từ)' },
-  { value: 'verb', label: 'Verb (Động từ)' },
-  { value: 'adjective', label: 'Adjective (Tính từ)' },
-  { value: 'adverb', label: 'Adverb (Trạng từ)' },
-  { value: 'pronoun', label: 'Pronoun (Đại từ)' },
-  { value: 'preposition', label: 'Preposition (Giới từ)' },
-  { value: 'conjunction', label: 'Conjunction (Liên từ)' },
-  { value: 'interjection', label: 'Interjection (Thán từ)' },
-  { value: 'article', label: 'Article (Mạo từ)' },
-  { value: 'determiner', label: 'Determiner (Từ hạn định)' },
-  { value: 'auxiliary', label: 'Auxiliary (Trợ động từ)' },
-] as const;
+// Import constants
+import { TOTAL_LEFT_BAND } from '../constants/wordTypes';
+import { seedVocab, getDefaultTree } from '../constants/seedData';
 
-// ===== Demo seed data =====
-const seedVocab: Record<string, VocabItem[]> = {
-  'vocab1.txt': [
-    { word: 'apple', type: 'noun', vnMeaning: 'quả táo', pronunciation: 'ˈæp.əl' },
-    { word: 'eat', type: 'verb', vnMeaning: 'ăn', pronunciation: 'iːt' },
-    { word: 'delicious', type: 'adjective', vnMeaning: 'ngon', pronunciation: 'dɪˈlɪʃ.əs' },
-  ],
-  'vocab2.txt': [
-    { word: 'run', type: 'verb', vnMeaning: 'chạy', pronunciation: 'rʌn' },
-    { word: 'quickly', type: 'adverb', vnMeaning: 'một cách nhanh chóng', pronunciation: 'ˈkwɪk.li' },
-    { word: 'tired', type: 'adjective', vnMeaning: 'mệt', pronunciation: 'taɪəd' },
-  ],
-  'vocab3.txt': [
-    { word: 'drink', type: 'verb', vnMeaning: 'uống', pronunciation: 'drɪŋk' },
-    { word: 'water', type: 'noun', vnMeaning: 'nước', pronunciation: 'ˈwɔː.tər' },
-  ],
-  'vocab4.txt': [
-    { word: 'study', type: 'verb', vnMeaning: 'học', pronunciation: 'ˈstʌd.i' },
-    { word: 'book', type: 'noun', vnMeaning: 'sách', pronunciation: 'bʊk' },
-  ],
-};
+// Import utilities
+import {
+  genId,
+  cloneNode,
+  findNodeByPath,
+  isDescendant,
+  ensureUniqueName,
+  getAllFileNames,
+  removeAtPath,
+} from '../utils/treeUtils';
+import {
+  saveVocabToStorage,
+  loadVocabFromStorage,
+  saveTreeToStorage,
+  loadTreeFromStorage,
+} from '../utils/storageUtils';
+import { speak } from '../utils/speechUtils';
 
-// ===== Utilities =====
-const genId = (() => {
-  let i = 0;
-  return () => `n_${++i}`;
-})();
+// Import components
+import { FolderItem } from '../components/FolderTree';
+import {
+  RenameDialog,
+  NewFolderDialog,
+  NewFileDialog,
+  ConfirmDeleteDialog,
+  VocabFormDialog,
+} from '../components/dialogs';
 
-const cloneNode = (node: FolderNode | FileLeaf): FolderNode | FileLeaf => {
-  if (node.kind === 'file') return { ...node, id: genId() };
-  return { ...node, id: genId(), children: node.children.map(cloneNode) as any };
-};
-
-// path is array of node ids from root -> target
-const findNodeByPath = (
-  root: FolderNode,
-  path: string[],
-): { node: FolderNode | FileLeaf; parent: FolderNode | null; index: number } | null => {
-  let current: FolderNode | FileLeaf = root;
-  let parent: FolderNode | null = null;
-  let idx = -1;
-  for (let i = 1; i < path.length; i++) {
-    if (current.kind !== 'folder') return null;
-    const nextIndex = current.children.findIndex((c) => c.id === path[i]);
-    if (nextIndex === -1) return null;
-    parent = current;
-    idx = nextIndex;
-    current = current.children[nextIndex];
-  }
-  return { node: current, parent, index: idx };
-};
-
-const isDescendant = (ancPath: string[], candPath: string[]): boolean => {
-  if (candPath.length <= ancPath.length) return false;
-  for (let i = 0; i < ancPath.length; i++) if (ancPath[i] !== candPath[i]) return false;
-  return true;
-};
-
-// Remove node at path, returning tuple [newRoot, removedNode]
-const removeAtPath = (
-  root: FolderNode,
-  path: string[],
-): { newRoot: FolderNode; removed?: FolderNode | FileLeaf } => {
-  const copy = structuredClone(root);
-  const located = findNodeByPath(copy, path);
-  if (!located || !located.parent) return { newRoot: root };
-  const removed = located.parent.children.splice(located.index, 1)[0];
-  return { newRoot: copy, removed };
-};
-
-const ensureUniqueName = (siblings: Array<FolderNode | FileLeaf>, base: string, isFolder: boolean) => {
-  const exists = new Set(
-    siblings.map((c) => (c.kind === 'folder' ? c.label : c.name).toLowerCase()),
-  );
-  if (!exists.has(base.toLowerCase())) return base;
-  let k = 1;
-  while (exists.has(`${base} (${k})`.toLowerCase())) k++;
-  return `${base} (${k})`;
-};
-
-const gatherFileNames = (node: FolderNode | FileLeaf): string[] => {
-  if (node.kind === 'file') return [node.name];
-  let out: string[] = [];
-  for (const c of node.children) out = out.concat(gatherFileNames(c));
-  return out;
-};
-
-// ===== LocalStorage Utilities =====
-const STORAGE_KEY_VOCAB = 'wordly_vocab_map';
-const STORAGE_KEY_TREE = 'wordly_folder_tree';
-
-const saveVocabToStorage = (vocabMap: Record<string, VocabItem[]>) => {
-  try {
-    localStorage.setItem(STORAGE_KEY_VOCAB, JSON.stringify(vocabMap));
-  } catch (err) {
-    console.error('Failed to save vocab to localStorage:', err);
-  }
-};
-
-const loadVocabFromStorage = (): Record<string, VocabItem[]> | null => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_VOCAB);
-    return stored ? JSON.parse(stored) : null;
-  } catch (err) {
-    console.error('Failed to load vocab from localStorage:', err);
-    return null;
-  }
-};
-
-const saveTreeToStorage = (tree: FolderNode) => {
-  try {
-    localStorage.setItem(STORAGE_KEY_TREE, JSON.stringify(tree));
-  } catch (err) {
-    console.error('Failed to save tree to localStorage:', err);
-  }
-};
-
-const loadTreeFromStorage = (): FolderNode | null => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_TREE);
-    return stored ? JSON.parse(stored) : null;
-  } catch (err) {
-    console.error('Failed to load tree from localStorage:', err);
-    return null;
-  }
-};
-
-// ===== Styles =====
+// ===== Styled Components =====
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
     backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[100],
@@ -238,212 +103,8 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   '&:last-child td, &:last-child th': { border: 0 },
 }));
 
-// ===== Speak =====
-const speak = (text: string) => {
-  if (typeof window === 'undefined') return;
-  const synth = window.speechSynthesis;
-  if (!synth) return;
-  synth.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = 'en-US';
-  synth.speak(utter);
-};
-
-const TOTAL_LEFT_BAND = 520;
-
-// ===== Folder item (recursive) =====
-const FolderItem = memo(function FolderItem({
-  node,
-  level = 0,
-  onFileClick,
-  onContext,
-  path,
-  forceShowMenu = false,
-  isFolderOpen,
-  onToggle,
-}: {
-  node: FolderNode;
-  level?: number;
-  onFileClick: (filePath: string[], fileName: string) => void;
-  onContext: (type: 'folder' | 'file', path: string[], event: React.MouseEvent) => void;
-  path: string[]; // ids from root to this node
-  forceShowMenu?: boolean;
-  isFolderOpen?: (id: string) => boolean;
-  onToggle?: (folderId: string, open: boolean) => void;
-}) {
-  const open = isFolderOpen ? isFolderOpen(node.id) : false;
-  const handleToggle = useCallback(() => {
-    if (onToggle) {
-      onToggle(node.id, !open);
-    }
-  }, [onToggle, node.id, open]);
-
-  return (
-    <>
-      <Box sx={{ position: 'relative', '&:hover .folder-menu-icon': { opacity: 1 } }}>
-        <ListItemButton
-          onClick={handleToggle}
-          onContextMenu={(e) => onContext('folder', path, e)}
-          sx={{
-            pl: 2 + level * 2,
-            position: 'relative',
-            '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
-            '&::before':
-              level > 0
-                ? {
-                    content: '""',
-                    position: 'absolute',
-                    left: 20 + (level - 1) * 20,
-                    top: 0,
-                    bottom: 0,
-                    width: '1px',
-                    backgroundColor: '#e0e0e0',
-                  }
-                : undefined,
-          }}
-          aria-expanded={open}
-          aria-label={`Toggle folder ${node.label}`}
-        >
-          {open ? <FolderOpenIcon color="primary" sx={{ mr: 1 }} /> : <FolderIcon color="primary" sx={{ mr: 1 }} />}
-          <ListItemText primary={<Typography variant="body1" sx={{ fontWeight: 500 }}>{node.label}</Typography>} />
-          <IconButton
-            className="folder-menu-icon"
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              onContext('folder', path, e as unknown as React.MouseEvent);
-            }}
-            sx={{ opacity: forceShowMenu ? 1 : 0, transition: 'opacity 0.2s' }}
-            aria-label={`Folder menu for ${node.label}`}
-          >
-            <MoreIcon fontSize="small" />
-          </IconButton>
-          {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-        </ListItemButton>
-      </Box>
-
-      <Collapse in={open} timeout="auto" unmountOnExit>
-        <List
-          component="div"
-          disablePadding
-          sx={{
-            position: 'relative',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              left: 20 + level * 20,
-              top: 0,
-              bottom: 0,
-              width: '1px',
-              backgroundColor: '#e0e0e0',
-            },
-          }}
-        >
-          {node.children.map((child) =>
-            child.kind === 'folder' ? (
-              <FolderItem
-                key={child.id}
-                node={child}
-                level={level + 1}
-                onFileClick={onFileClick}
-                onContext={onContext}
-                path={[...path, child.id]}
-                forceShowMenu={forceShowMenu}
-                isFolderOpen={isFolderOpen}
-                onToggle={onToggle}
-              />
-            ) : (
-              <FileItem
-                key={child.id}
-                node={child}
-                level={level + 1}
-                onClick={() => onFileClick([...path, child.id], child.name)}
-                onContext={(e) => onContext('file', [...path, child.id], e)}
-              />
-            ),
-          )}
-        </List>
-      </Collapse>
-    </>
-  );
-});
-
-const FileItem = memo(function FileItem({
-  node,
-  onClick,
-  level = 0,
-  onContext,
-}: {
-  node: FileLeaf;
-  onClick: () => void;
-  level?: number;
-  onContext: (e: React.MouseEvent) => void;
-}) {
-  return (
-    <ListItemButton
-      sx={{
-        pl: 4 + level * 2,
-        position: 'relative',
-        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
-        '&::before':
-          level > 0
-            ? {
-                content: '""',
-                position: 'absolute',
-                left: 20 + (level - 1) * 20,
-                top: 0,
-                bottom: 0,
-                width: '1px',
-                backgroundColor: '#e0e0e0',
-              }
-            : undefined,
-      }}
-      onClick={onClick}
-      onContextMenu={onContext}
-      aria-label={`Open file ${node.name}`}
-    >
-      <FileIcon color="action" sx={{ mr: 1 }} />
-      <ListItemText primary={<Typography variant="body1">{node.name}</Typography>} />
-    </ListItemButton>
-  );
-});
-
-// ===== Default tree structure =====
-const getDefaultTree = (): FolderNode => ({
-  kind: 'folder',
-  label: 'Từ vựng theo chủ đề',
-  id: genId(),
-  children: [
-    { kind: 'folder', label: 'Thực phẩm & Ăn uống', id: genId(), children: [{ kind: 'file', name: 'vocab1.txt', id: genId() }] },
-    {
-      kind: 'folder',
-      label: 'Hoạt động hàng ngày',
-      id: genId(),
-      children: [
-        { kind: 'folder', label: 'Vận động', id: genId(), children: [{ kind: 'file', name: 'vocab2.txt', id: genId() }] },
-        { kind: 'folder', label: 'Sinh hoạt', id: genId(), children: [{ kind: 'file', name: 'vocab3.txt', id: genId() }] },
-      ],
-    },
-    {
-      kind: 'folder',
-      label: 'Học tập',
-      id: genId(),
-      children: [
-        {
-          kind: 'folder',
-          label: 'Tài liệu',
-          id: genId(),
-          children: [
-            { kind: 'folder', label: 'Sách vở', id: genId(), children: [{ kind: 'file', name: 'vocab4.txt', id: genId() }] },
-          ],
-        },
-      ],
-    },
-  ],
-});
-
-// ===== Main =====
-const ManagerFile: React.FC = () => {
+// ===== Main Component =====
+const VocabularyPage: React.FC = () => {
   // Load from localStorage on init, fallback to seed data
   const [vocabMap, setVocabMap] = useState<Record<string, VocabItem[]>>(() => {
     const stored = loadVocabFromStorage();
@@ -512,9 +173,7 @@ const ManagerFile: React.FC = () => {
   const [newFileName, setNewFileName] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<null | { path: string[]; type: 'folder' | 'file'; label: string; fileNames: string[] }>(null);
-  const [snack, setSnack] = useState<{ open: boolean; msg: string; sev: 'success' | 'info' | 'warning' | 'error' }>(
-    { open: false, msg: '', sev: 'success' },
-  );
+  const [snack, setSnack] = useState<SnackState>({ open: false, msg: '', sev: 'success' });
 
   // ===== Vocab form dialog =====
   const [vocabFormOpen, setVocabFormOpen] = useState(false);
@@ -798,7 +457,7 @@ const ManagerFile: React.FC = () => {
           const text = String(reader.result || '');
           // parse CSV lines: word,type,vnMeaning,pronunciation
           const items: VocabItem[] = text
-            .split(/\r?\n/) // ✅ đừng xuống dòng giữa / và /
+            .split(/\r?\n/)
             .map((l) => l.trim())
             .filter(Boolean)
             .map((l) => {
@@ -826,7 +485,7 @@ const ManagerFile: React.FC = () => {
             return copy;
           });
           updateVocabMap((m) => ({ ...m, [finalFileName]: items.length ? items : (m[finalFileName] || []) }));
-          showSnack(`Đã nhập tệp \"${finalFileName}\".`);
+          showSnack(`Đã nhập tệp "${finalFileName}".`);
         } catch (err) {
           console.error(err);
           showSnack('Không thể đọc tệp.', 'error');
@@ -834,7 +493,7 @@ const ManagerFile: React.FC = () => {
       };
       reader.readAsText(file);
     },
-    [menu, tree],
+    [menu, tree, updateTree, updateVocabMap],
   );
 
   const handleExportFile = useCallback(() => {
@@ -872,7 +531,7 @@ const ManagerFile: React.FC = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-    showSnack(`Đã export tệp \"${fileName}\".`);
+    showSnack(`Đã export tệp "${fileName}".`);
     closeMenu();
   }, [menu, tree, vocabMap, closeMenu]);
 
@@ -941,7 +600,7 @@ const ManagerFile: React.FC = () => {
     setClip(null);
     showSnack('Đã dán.');
     closeMenu();
-  }, [menu, clip, tree, vocabMap, closeMenu, updateTree, updateVocabMap]);
+  }, [menu, clip, vocabMap, closeMenu, updateTree, updateVocabMap]);
 
   // Delete: mở confirm cho file / folder
   const startDelete = useCallback(() => {
@@ -949,7 +608,7 @@ const ManagerFile: React.FC = () => {
     const located = findNodeByPath(tree, menu.path);
     if (!located) return;
     const label = located.node.kind === 'folder' ? located.node.label : located.node.name;
-    const fileNames = gatherFileNames(located.node);
+    const fileNames = getAllFileNames(located.node);
     setPendingDelete({ path: menu.path, type: menu.type, label, fileNames });
     setConfirmOpen(true);
   }, [menu, tree]);
@@ -1356,147 +1015,47 @@ const ManagerFile: React.FC = () => {
         )}
       </Menu>
 
-      {/* Rename dialog */}
-      <Dialog open={renameOpen} onClose={() => setRenameOpen(false)}>
-        <DialogTitle>Đổi tên</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            fullWidth
-            margin="dense"
-            label="Tên"
-            value={renameValue}
-            onChange={(e) => setRenameValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') confirmRename();
-            }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRenameOpen(false)}>Hủy</Button>
-          <Button variant="contained" onClick={confirmRename}>Lưu</Button>
-        </DialogActions>
-      </Dialog>
+      {/* Dialogs */}
+      <RenameDialog
+        open={renameOpen}
+        value={renameValue}
+        onChange={setRenameValue}
+        onClose={() => setRenameOpen(false)}
+        onConfirm={confirmRename}
+      />
 
-      {/* New subfolder dialog */}
-      <Dialog open={newFolderOpen} onClose={() => setNewFolderOpen(false)}>
-        <DialogTitle>Tạo thư mục con</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            fullWidth
-            margin="dense"
-            label="Tên thư mục"
-            value={newFolderName}
-            onChange={(e) => setNewFolderName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') confirmNewSubfolder();
-            }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setNewFolderOpen(false)}>Hủy</Button>
-          <Button variant="contained" onClick={confirmNewSubfolder}>Tạo</Button>
-        </DialogActions>
-      </Dialog>
+      <NewFolderDialog
+        open={newFolderOpen}
+        value={newFolderName}
+        onChange={setNewFolderName}
+        onClose={() => setNewFolderOpen(false)}
+        onConfirm={confirmNewSubfolder}
+      />
 
-      {/* New file dialog */}
-      <Dialog open={newFileOpen} onClose={() => setNewFileOpen(false)}>
-        <DialogTitle>Tạo file từ vựng mới</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            fullWidth
-            margin="dense"
-            label="Tên file"
-            value={newFileName}
-            onChange={(e) => setNewFileName(e.target.value)}
-            placeholder="từ_vựng_mới.txt"
-            helperText="File sẽ có phần mở rộng .txt tự động nếu chưa có"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && newFileName.trim()) confirmNewFile();
-            }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setNewFileOpen(false)}>Hủy</Button>
-          <Button variant="contained" onClick={confirmNewFile} disabled={!newFileName.trim()}>
-            Tạo
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <NewFileDialog
+        open={newFileOpen}
+        value={newFileName}
+        onChange={setNewFileName}
+        onClose={() => setNewFileOpen(false)}
+        onConfirm={confirmNewFile}
+      />
 
-      {/* Confirm delete dialog */}
-      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-        <DialogTitle>Xác nhận xoá</DialogTitle>
-        <DialogContent>
-          <Typography>Bạn có chắc muốn xoá <b>{pendingDelete?.label}</b>{pendingDelete?.type === 'folder' ? ' và toàn bộ nội dung bên trong' : ''}?</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmOpen(false)}>Hủy</Button>
-          <Button color="error" variant="contained" onClick={confirmDelete}>Xoá</Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDeleteDialog
+        open={confirmOpen}
+        type={pendingDelete?.type || 'file'}
+        label={pendingDelete?.label || ''}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={confirmDelete}
+      />
 
-      {/* Vocab form dialog */}
-      <Dialog open={vocabFormOpen} onClose={() => setVocabFormOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{vocabFormMode === 'add' ? 'Thêm từ vựng' : 'Sửa từ vựng'}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              autoFocus
-              fullWidth
-              label="Từ vựng *"
-              value={vocabFormData.word}
-              onChange={(e) => setVocabFormData((prev) => ({ ...prev, word: e.target.value }))}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && vocabFormData.word.trim()) {
-                  handleSaveVocab();
-                }
-              }}
-            />
-            <TextField
-              fullWidth
-              label="Nghĩa tiếng Việt"
-              value={vocabFormData.vnMeaning}
-              onChange={(e) => setVocabFormData((prev) => ({ ...prev, vnMeaning: e.target.value }))}
-            />
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <FormControl fullWidth>
-                <InputLabel>Từ loại</InputLabel>
-                <Select
-                  value={vocabFormData.type}
-                  label="Từ loại"
-                  onChange={(e) => setVocabFormData((prev) => ({ ...prev, type: e.target.value }))}
-                >
-                  <MenuItem value="">
-                    <em>Chọn loại từ</em>
-                  </MenuItem>
-                  {WORD_TYPES.map((type) => (
-                    <MenuItem key={type.value} value={type.value}>
-                      {type.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-                <FormHelperText>Chọn loại từ trong tiếng Anh</FormHelperText>
-              </FormControl>
-              <TextField
-                fullWidth
-                label="Phát âm"
-                value={vocabFormData.pronunciation}
-                onChange={(e) => setVocabFormData((prev) => ({ ...prev, pronunciation: e.target.value }))}
-                placeholder="ˈæp.əl"
-              />
-            </Box>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setVocabFormOpen(false)}>Hủy</Button>
-          <Button variant="contained" onClick={handleSaveVocab} disabled={!vocabFormData.word.trim()}>
-            {vocabFormMode === 'add' ? 'Thêm' : 'Lưu'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <VocabFormDialog
+        open={vocabFormOpen}
+        mode={vocabFormMode}
+        data={vocabFormData}
+        onChange={setVocabFormData}
+        onClose={() => setVocabFormOpen(false)}
+        onSave={handleSaveVocab}
+      />
 
       <Snackbar
         open={snack.open}
@@ -1512,4 +1071,5 @@ const ManagerFile: React.FC = () => {
   );
 };
 
-export default ManagerFile;
+export default VocabularyPage;
+ 

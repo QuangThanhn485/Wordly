@@ -245,11 +245,11 @@ const Navbar: React.FC = () => {
           </ListItemLink>
 
           <ListItemLink
-            to="/source-data"
-            selected={isActive('/source-data')}
-            sx={listItemStyle(open, isActive('/source-data'), theme)}
+            to="/vocabulary"
+            selected={isActive('/vocabulary')}
+            sx={listItemStyle(open, isActive('/vocabulary'), theme)}
           >
-            <Tooltip title="Source Data" placement="right" disableHoverListener={open}>
+            <Tooltip title="Từ vựng" placement="right" disableHoverListener={open}>
               <ListItemIcon sx={iconStyle(open)}>
                 <BarChartIcon />
               </ListItemIcon>
