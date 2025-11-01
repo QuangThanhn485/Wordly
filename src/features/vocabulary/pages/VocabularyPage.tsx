@@ -228,21 +228,16 @@ const VocabularyPage: React.FC = () => {
   }, [tree.id]);
 
   const collapseAll = useCallback(() => {
-    // Only keep level 1 folders (direct children of root) open
-    const level1FolderIds = new Set<string>([tree.id]); // Keep root open
-    tree.children.forEach((child) => {
-      if (child.kind === 'folder') {
-        level1FolderIds.add(child.id);
-      }
-    });
-    setOpenFolders(level1FolderIds);
-  }, [tree]);
+    // Only keep root open, close all other folders (level 1 folders will be visible but collapsed)
+    setOpenFolders(new Set<string>([tree.id]));
+  }, [tree.id]);
 
   const isFolderOpen = useCallback((folderId: string) => {
     return openFolders.has(folderId);
   }, [openFolders]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
 
   const showSnack = (msg: string, sev: 'success' | 'info' | 'warning' | 'error' = 'success') =>
     setSnack({ open: true, msg, sev });
@@ -535,6 +530,148 @@ const VocabularyPage: React.FC = () => {
     closeMenu();
   }, [menu, tree, vocabMap, closeMenu]);
 
+  const handleExportFolder = useCallback(() => {
+    if (!menu || menu.type !== 'folder') return;
+    const located = findNodeByPath(tree, menu.path);
+    if (!located || located.node.kind !== 'folder') return;
+    
+    const folderNode = located.node;
+    const folderName = folderNode.label;
+    
+    // Collect all file names in this folder recursively
+    const allFileNames = getAllFileNames(folderNode);
+    
+    // Create vocabulary data for all files in folder
+    const folderVocabData: Record<string, VocabItem[]> = {};
+    allFileNames.forEach((fileName) => {
+      if (vocabMap[fileName]) {
+        folderVocabData[fileName] = vocabMap[fileName];
+      }
+    });
+    
+    // Create export data structure
+    const exportData = {
+      folderStructure: folderNode,
+      vocabularyData: folderVocabData,
+      exportDate: new Date().toISOString(),
+      version: '1.0',
+    };
+    
+    // Convert to JSON
+    const jsonContent = JSON.stringify(exportData, null, 2);
+    
+    // Create and download file
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${folderName.replace(/\s+/g, '_')}_folder.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    showSnack(`Đã export thư mục "${folderName}" (${allFileNames.length} files).`);
+    closeMenu();
+  }, [menu, tree, vocabMap, closeMenu]);
+
+  const startImportFolder = useCallback(() => {
+    if (!menu) return;
+    folderInputRef.current?.click();
+  }, [menu]);
+
+  const handleImportFolder = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = '';
+      if (!file || !menu) return;
+      
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const text = String(reader.result || '');
+          const importData = JSON.parse(text);
+          
+          // Validate import data structure
+          if (!importData.folderStructure || !importData.vocabularyData) {
+            showSnack('File import không đúng định dạng.', 'error');
+            return;
+          }
+          
+          const folderNode: FolderNode = importData.folderStructure;
+          const folderVocabData: Record<string, VocabItem[]> = importData.vocabularyData;
+          
+          const targetFolderPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
+          const located = findNodeByPath(tree, targetFolderPath);
+          
+          if (!located || located.node.kind !== 'folder') {
+            showSnack('Không tìm thấy thư mục đích.', 'error');
+            return;
+          }
+          
+          // Ensure unique folder name
+          const uniqueFolderName = ensureUniqueName(located.node.children, folderNode.label, true);
+          folderNode.label = uniqueFolderName;
+          
+          // Regenerate all IDs to avoid conflicts
+          const clonedFolder = cloneNode(folderNode) as FolderNode;
+          
+          // Get all file names and rename them to be unique
+          const allFiles = getAllFileNames(clonedFolder);
+          const fileNameMapping: Record<string, string> = {};
+          
+          // Build file name mapping (old name -> new unique name)
+          const renameFilesInFolder = (node: FolderNode | FileLeaf, existingNames: Set<string>) => {
+            if (node.kind === 'file') {
+              const oldName = node.name;
+              const newName = ensureUniqueName(
+                Array.from(existingNames).map(name => ({ kind: 'file' as const, name, id: '' })),
+                oldName,
+                false
+              );
+              if (newName !== oldName) {
+                node.name = newName;
+                fileNameMapping[oldName] = newName;
+              }
+              existingNames.add(newName);
+            } else {
+              node.children.forEach(child => renameFilesInFolder(child, existingNames));
+            }
+          };
+          
+          const allExistingFileNames = new Set(Object.keys(vocabMap));
+          renameFilesInFolder(clonedFolder, allExistingFileNames);
+          
+          // Update tree
+          updateTree((prevTree) => {
+            const copy = structuredClone(prevTree);
+            const located2 = findNodeByPath(copy, targetFolderPath);
+            if (!located2 || located2.node.kind !== 'folder') return prevTree;
+            located2.node.children.push(clonedFolder);
+            return copy;
+          });
+          
+          // Update vocabulary data with renamed file names
+          updateVocabMap((prevMap) => {
+            const newData = { ...prevMap };
+            Object.keys(folderVocabData).forEach((oldFileName) => {
+              const newFileName = fileNameMapping[oldFileName] || oldFileName;
+              newData[newFileName] = folderVocabData[oldFileName];
+            });
+            return newData;
+          });
+          
+          showSnack(`Đã import thư mục "${uniqueFolderName}" (${allFiles.length} files).`);
+        } catch (err) {
+          console.error(err);
+          showSnack('Không thể đọc file. Đảm bảo file đúng định dạng JSON.', 'error');
+        }
+      };
+      reader.readAsText(file);
+    },
+    [menu, tree, vocabMap, updateTree, updateVocabMap],
+  );
+
   const doCopy = useCallback(() => {
     if (!menu) return;
     const located = findNodeByPath(tree, menu.path);
@@ -646,6 +783,7 @@ const VocabularyPage: React.FC = () => {
     >
       {/* Hidden file input for Import */}
       <input ref={fileInputRef} type="file" accept=".txt,text/plain" hidden onChange={handleImportFile} />
+      <input ref={folderInputRef} type="file" accept=".json,application/json" hidden onChange={handleImportFolder} />
 
       {/* Sidebar */}
       <Paper
@@ -959,6 +1097,15 @@ const VocabularyPage: React.FC = () => {
             <MenuItem onClick={startNewFile}>
               <ListItemIcon><FileIcon fontSize="small" /></ListItemIcon>
               <ListItemText>Tạo file</ListItemText>
+            </MenuItem>
+            <Divider />
+            <MenuItem onClick={handleExportFolder}>
+              <ListItemIcon><ExportIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Export thư mục (.json)</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={startImportFolder}>
+              <ListItemIcon><ImportIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Import thư mục (.json)</ListItemText>
             </MenuItem>
             <MenuItem onClick={startImport}>
               <ListItemIcon><ImportIcon fontSize="small" /></ListItemIcon>
