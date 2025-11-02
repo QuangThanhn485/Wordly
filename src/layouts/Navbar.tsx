@@ -31,25 +31,45 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import HeadphonesIcon from '@mui/icons-material/Headphones';
+import EditIcon from '@mui/icons-material/Edit';
+import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoice';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { useThemeMode } from 'contexts/ThemeContext';
 
 const drawerWidth = 240;
-const collapsedWidth = 80;
+const collapsedWidth = 72;
 
 const iconStyle = (open: boolean) => ({
   minWidth: 0,
-  mr: open ? 2 : 'auto',
+  mr: open ? 1.5 : 'auto',
   justifyContent: 'center',
   display: 'flex',
   color: 'inherit',
+  '& svg': {
+    fontSize: '1.25rem', // Consistent icon size: 20px
+  },
+});
+
+const subIconStyle = (open: boolean) => ({
+  minWidth: 0,
+  mr: open ? 1.5 : 'auto',
+  justifyContent: 'center',
+  display: 'flex',
+  color: 'inherit',
+  '& svg': {
+    fontSize: '1.125rem', // Smaller for submenu: 18px
+  },
 });
 
 const listItemStyle = (open: boolean, active: boolean, theme: any) => ({
-  pl: open ? 2 : 1.5,
-  borderRadius: 2,
-  mx: 1,
-  mb: 0.5,
+  pl: open ? 1.5 : 1,
+  pr: open ? 1.5 : 1,
+  py: 0.75, // Reduced vertical padding for more compact look
+  borderRadius: 1.5,
+  mx: 0.75,
+  mb: 0.25, // Reduced margin between items
+  minHeight: 40, // Consistent height
   backgroundColor: active
     ? theme.palette.mode === 'dark'
       ? 'rgba(255, 255, 255, 0.1)'
@@ -128,19 +148,19 @@ const Navbar: React.FC = () => {
               >
                 <MenuIcon />
               </IconButton>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
                 <Avatar
                   src="/logo.png"
                   alt="Wordly Logo"
                   sx={{
-                    width: 32,
-                    height: 32,
+                    width: 28,
+                    height: 28,
                     bgcolor: theme.palette.primary.main,
                   }}
                 >
-                  <AutoStoriesIcon fontSize="small" />
+                  <AutoStoriesIcon sx={{ fontSize: '1rem' }} />
                 </Avatar>
-                <Typography variant="h6" noWrap component="div" fontWeight={600}>
+                <Typography variant="h6" noWrap component="div" fontWeight={600} sx={{ fontSize: '1.125rem' }}>
                   Wordly
                 </Typography>
               </Box>
@@ -176,24 +196,24 @@ const Navbar: React.FC = () => {
               display: 'flex',
               justifyContent: open ? 'space-between' : 'center',
               alignItems: 'center',
-              p: 2,
-              pb: 1.5,
+              p: 1.5,
+              pb: 1,
             }}
           >
             {open ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
                 <Avatar
                   src="/logo.png"
                   alt="Wordly Logo"
                   sx={{
-                    width: 32,
-                    height: 32,
+                    width: 28,
+                    height: 28,
                     bgcolor: theme.palette.primary.main,
                   }}
                 >
-                  <AutoStoriesIcon fontSize="small" />
+                  <AutoStoriesIcon sx={{ fontSize: '1rem' }} />
                 </Avatar>
-                <Typography variant="h6" fontWeight={600}>
+                <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.125rem' }}>
                   Wordly
                 </Typography>
               </Box>
@@ -202,21 +222,25 @@ const Navbar: React.FC = () => {
                 src="/logo.png"
                 alt="Wordly Logo"
                 sx={{
-                  width: 32,
-                  height: 32,
+                  width: 28,
+                  height: 28,
                   bgcolor: theme.palette.primary.main,
                 }}
               >
-                <AutoStoriesIcon fontSize="small" />
+                <AutoStoriesIcon sx={{ fontSize: '1rem' }} />
               </Avatar>
             )}
             <IconButton
               onClick={handleToggleDrawer}
               size="small"
               sx={{
+                p: 0.75,
                 color: theme.palette.text.secondary,
                 '&:hover': {
                   backgroundColor: theme.palette.action.hover,
+                },
+                '& svg': {
+                  fontSize: '1.25rem',
                 },
               }}
               aria-label={open ? 'Collapse sidebar' : 'Expand sidebar'}
@@ -228,7 +252,7 @@ const Navbar: React.FC = () => {
 
         <Divider />
 
-        <List sx={{ p: 1 }}>
+        <List sx={{ px: 0.75, py: 0.5 }}>
           <ListItemLink
             to="/"
             selected={isActive('/')}
@@ -240,7 +264,13 @@ const Navbar: React.FC = () => {
               </ListItemIcon>
             </Tooltip>
             {open && (
-              <ListItemText primary="Home" primaryTypographyProps={{ fontWeight: 500 }} />
+              <ListItemText 
+                primary="Home" 
+                primaryTypographyProps={{ 
+                  fontWeight: 500,
+                  fontSize: '0.875rem', // 14px
+                }} 
+              />
             )}
           </ListItemLink>
 
@@ -257,7 +287,10 @@ const Navbar: React.FC = () => {
             {open && (
               <ListItemText
                 primary="Source Data"
-                primaryTypographyProps={{ fontWeight: 500 }}
+                primaryTypographyProps={{ 
+                  fontWeight: 500,
+                  fontSize: '0.875rem',
+                }}
               />
             )}
           </ListItemLink>
@@ -272,60 +305,160 @@ const Navbar: React.FC = () => {
                 <AutoStoriesIcon />
               </ListItemIcon>
             </Tooltip>
-            {open && <ListItemText primary="Train" primaryTypographyProps={{ fontWeight: 500 }} />}
-            {open && (trainOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />)}
+            {open && (
+              <>
+                <ListItemText 
+                  primary="Train" 
+                  primaryTypographyProps={{ 
+                    fontWeight: 500,
+                    fontSize: '0.875rem',
+                  }} 
+                />
+                {trainOpen ? (
+                  <ExpandLessIcon sx={{ fontSize: '1.125rem', ml: 0.5 }} />
+                ) : (
+                  <ExpandMoreIcon sx={{ fontSize: '1.125rem', ml: 0.5 }} />
+                )}
+              </>
+            )}
           </ListItemButton>
 
           <Collapse in={trainOpen} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
+            <List component="div" disablePadding sx={{ py: 0.25 }}>
               <ListItemLink
                 to="/train-start"
                 selected={isActive('/train-start')}
                 sx={{
                   ...listItemStyle(open, isActive('/train-start'), theme),
-                  pl: open ? 4 : 2.5,
+                  pl: open ? 3.5 : 2,
+                  py: 0.625,
+                  minHeight: 36,
                 }}
               >
-                <ListItemIcon sx={iconStyle(open)}>
-                  <RocketLaunchIcon fontSize="small" />
+                <ListItemIcon sx={subIconStyle(open)}>
+                  <RocketLaunchIcon />
                 </ListItemIcon>
-                {open && <ListItemText primary="Start" />}
+                {open && (
+                  <ListItemText 
+                    primary="Flashcards Reading" 
+                    primaryTypographyProps={{ fontSize: '0.8125rem' }}
+                  />
+                )}
               </ListItemLink>
 
               <ListItemLink
-                to="/train/result"
-                selected={isActive('/train/result')}
+                to="/train/listening"
+                selected={isActive('/train/listening')}
                 sx={{
-                  ...listItemStyle(open, isActive('/train/result'), theme),
-                  pl: open ? 4 : 2.5,
+                  ...listItemStyle(open, isActive('/train/listening'), theme),
+                  pl: open ? 3.5 : 2,
+                  py: 0.625,
+                  minHeight: 36,
                 }}
               >
-                <ListItemIcon sx={iconStyle(open)}>
-                  <BarChartIcon fontSize="small" />
+                <ListItemIcon sx={subIconStyle(open)}>
+                  <HeadphonesIcon />
                 </ListItemIcon>
-                {open && <ListItemText primary="Result" />}
+                {open && (
+                  <ListItemText 
+                    primary="Flashcards Listening" 
+                    primaryTypographyProps={{ fontSize: '0.8125rem' }}
+                  />
+                )}
               </ListItemLink>
 
               <ListItemLink
-                to="/train/lib"
-                selected={isActive('/train/lib')}
+                to="/train/read-write"
+                selected={isActive('/train/read-write')}
                 sx={{
-                  ...listItemStyle(open, isActive('/train/lib'), theme),
-                  pl: open ? 4 : 2.5,
+                  ...listItemStyle(open, isActive('/train/read-write'), theme),
+                  pl: open ? 3.5 : 2,
+                  py: 0.625,
+                  minHeight: 36,
                 }}
               >
-                <ListItemIcon sx={iconStyle(open)}>
-                  <LibraryBooksIcon fontSize="small" />
+                <ListItemIcon sx={subIconStyle(open)}>
+                  <EditIcon />
                 </ListItemIcon>
-                {open && <ListItemText primary="Lib" />}
+                {open && (
+                  <ListItemText 
+                    primary="Read & Write" 
+                    primaryTypographyProps={{ fontSize: '0.8125rem' }}
+                  />
+                )}
+              </ListItemLink>
+
+              <ListItemLink
+                to="/train/listen-write"
+                selected={isActive('/train/listen-write')}
+                sx={{
+                  ...listItemStyle(open, isActive('/train/listen-write'), theme),
+                  pl: open ? 3.5 : 2,
+                  py: 0.625,
+                  minHeight: 36,
+                }}
+              >
+                <ListItemIcon sx={subIconStyle(open)}>
+                  <KeyboardVoiceIcon />
+                </ListItemIcon>
+                {open && (
+                  <ListItemText 
+                    primary="Listen & Write" 
+                    primaryTypographyProps={{ fontSize: '0.8125rem' }}
+                  />
+                )}
               </ListItemLink>
             </List>
           </Collapse>
+
+          {/* Result - moved outside Train menu */}
+          <ListItemLink
+            to="/train/result"
+            selected={isActive('/train/result')}
+            sx={listItemStyle(open, isActive('/train/result'), theme)}
+          >
+            <Tooltip title="Result" placement="right" disableHoverListener={open}>
+              <ListItemIcon sx={iconStyle(open)}>
+                <BarChartIcon />
+              </ListItemIcon>
+            </Tooltip>
+            {open && (
+              <ListItemText 
+                primary="Result" 
+                primaryTypographyProps={{ 
+                  fontWeight: 500,
+                  fontSize: '0.875rem',
+                }} 
+              />
+            )}
+          </ListItemLink>
+
+          {/* Lib - moved outside Train menu */}
+          <ListItemLink
+            to="/train/lib"
+            selected={isActive('/train/lib')}
+            sx={listItemStyle(open, isActive('/train/lib'), theme)}
+          >
+            <Tooltip title="Lib" placement="right" disableHoverListener={open}>
+              <ListItemIcon sx={iconStyle(open)}>
+                <LibraryBooksIcon />
+              </ListItemIcon>
+            </Tooltip>
+            {open && (
+              <ListItemText 
+                primary="Lib" 
+                primaryTypographyProps={{ 
+                  fontWeight: 500,
+                  fontSize: '0.875rem',
+                }} 
+              />
+            )}
+          </ListItemLink>
         </List>
 
         <Box sx={{ mt: 'auto' }}>
           <Divider />
-          <List sx={{ p: 1 }}>
+          <List sx={{ px: 0.75, py: 0.5 }}>
             <ListItemLink
               to="/login"
               selected={isActive('/login')}
@@ -337,7 +470,13 @@ const Navbar: React.FC = () => {
                 </ListItemIcon>
               </Tooltip>
               {open && (
-                <ListItemText primary="Login" primaryTypographyProps={{ fontWeight: 500 }} />
+                <ListItemText 
+                  primary="Login" 
+                  primaryTypographyProps={{ 
+                    fontWeight: 500,
+                    fontSize: '0.875rem',
+                  }} 
+                />
               )}
             </ListItemLink>
 
@@ -354,21 +493,29 @@ const Navbar: React.FC = () => {
               {open && (
                 <ListItemText
                   primary="Register"
-                  primaryTypographyProps={{ fontWeight: 500 }}
+                  primaryTypographyProps={{ 
+                    fontWeight: 500,
+                    fontSize: '0.875rem',
+                  }}
                 />
               )}
             </ListItemLink>
           </List>
           <Divider />
 
-          <Box sx={{ p: 1.5, display: 'flex', justifyContent: 'center' }}>
+          <Box sx={{ p: 1, display: 'flex', justifyContent: 'center' }}>
             <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
               <IconButton
                 onClick={toggleTheme}
+                size="small"
                 sx={{
+                  p: 0.75,
                   color: theme.palette.text.secondary,
                   '&:hover': {
                     backgroundColor: theme.palette.action.hover,
+                  },
+                  '& svg': {
+                    fontSize: '1.125rem',
                   },
                 }}
                 aria-label="Toggle theme"
