@@ -47,6 +47,13 @@ function pickRandomIndex(arrLength: number, exclude: Set<number>): number {
   return candidates[r];
 }
 
+// Padding-top cho cards grid - điều chỉnh tại đây để thay đổi khoảng cách giữa sticky bar và cards
+const GRID_PADDING_TOP = {
+  xs: '10px', // Mobile: chỉ cần gap nhỏ, sticky bar sẽ tự stick không che mất card
+  sm: '10px', // Tablet: chỉ cần gap nhỏ
+  md: '10px'  // Desktop: chỉ cần gap nhỏ
+};
+
 const TrainStart = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -374,29 +381,35 @@ const TrainStart = () => {
         : (target.en || '—'); // EN-VI mode: show English in top bar
 
   return (
-    <Container
-      maxWidth="xl"
+    <Box
       sx={{
-        px: { xs: 2, sm: 3, md: 4 },
-        py: { xs: 2, sm: 3 },
+        width: '100%',
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
         position: 'relative',
+        // Không set overflow - để window scroll tự nhiên cho sticky
+        boxSizing: 'border-box',
       }}
     >
+      {/* Sticky Top Bar - Đơn giản, rõ ràng */}
       <Box
         sx={{
           position: 'sticky',
-          top: { xs: 56, sm: 56, md: 0, lg: 0, xl: 0 },
-          zIndex: (t) => t.zIndex.appBar + 1,
+          top: { xs: '56px', sm: '64px', md: 0 }, // Stick ngay dưới AppBar trên mobile, ở top trên desktop
+          zIndex: (t) => t.zIndex.appBar - 1, // Dưới AppBar, trên content
           bgcolor: 'background.paper',
           borderBottom: `1px solid ${theme.palette.divider}`,
           px: { xs: 1.5, sm: 3 },
-          py: { xs: 1, sm: 1.5 },
-          mb: 2,
+          py: { xs: 0.75, sm: 1.5 },
+          width: '100%',
           display: 'flex',
           flexDirection: { xs: 'column', sm: 'row' },
           alignItems: { xs: 'flex-start', sm: 'center' },
           justifyContent: 'space-between',
-          gap: 2,
+          gap: { xs: 1, sm: 2 },
+          boxShadow: 'none',
+          flexShrink: 0,
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -406,7 +419,7 @@ const TrainStart = () => {
             fontWeight="bold"
             color="primary"
             sx={{
-              fontSize: { xs: '0.95rem', sm: '1.05rem', md: '1.2rem' },
+              fontSize: { xs: '0.875rem', sm: '1.05rem', md: '1.2rem' }, // Smaller on mobile
               lineHeight: 1.3,
               wordBreak: 'break-word',
               whiteSpace: 'normal',
@@ -435,10 +448,11 @@ const TrainStart = () => {
         <Box
           sx={{
             display: 'flex',
-            gap: 1.5,
+            gap: { xs: 1, sm: 1.5 },
             width: { xs: '100%', sm: 'auto' },
             justifyContent: { xs: 'space-between', sm: 'flex-start' },
             alignItems: 'center',
+            flexWrap: 'nowrap',
           }}
         >
           <Chip
@@ -446,7 +460,14 @@ const TrainStart = () => {
             label={`${score} / ${total}`}
             variant="outlined"
             size={isMobile ? 'small' : 'medium'}
-            sx={{ borderRadius: 1, borderColor: theme.palette.divider, bgcolor: 'background.default' }}
+            sx={{ 
+              borderRadius: 1, 
+              borderColor: theme.palette.divider, 
+              bgcolor: 'background.default',
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              '& .MuiChip-label': { px: { xs: 0.75, sm: 1.5 } },
+              flexShrink: 0,
+            }}
           />
           <Chip
             icon={<ErrorOutlineIcon fontSize="small" color="error" />}
@@ -458,6 +479,9 @@ const TrainStart = () => {
               borderColor: theme.palette.error.light,
               color: 'error.main',
               bgcolor: theme.palette.error.light + '20',
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              '& .MuiChip-label': { px: { xs: 0.75, sm: 1.5 } },
+              flexShrink: 0,
             }}
           />
           <Button
@@ -465,14 +489,32 @@ const TrainStart = () => {
             color="primary"
             size={isMobile ? 'small' : 'medium'}
             onClick={handleRestart}
-            sx={{ minWidth: { xs: 64, sm: 80 } }}
+            sx={{ 
+              minWidth: { xs: 'auto', sm: 80 },
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              px: { xs: 1, sm: 2 },
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+            }}
           >
             Restart
           </Button>
         </Box>
       </Box>
 
-      {isLoading ? (
+      {/* Main Content */}
+      <Box
+        sx={{
+          width: '100%',
+          maxWidth: { xs: '100%', sm: '1536px' },
+          mx: 'auto',
+          px: { xs: 2, sm: 3, md: 4 },
+          pb: { xs: 1.5, sm: 2, md: 3 },
+          flex: 1,
+          boxSizing: 'border-box',
+        }}
+      >
+        {isLoading ? (
         <Box
           sx={{
             display: 'grid',
@@ -484,6 +526,7 @@ const TrainStart = () => {
             },
             gap: { xs: 2, sm: 2.5, md: 3 },
             pb: { xs: 12, sm: 14 },
+            pt: GRID_PADDING_TOP, // Padding để tránh sticky bar che mất card đầu tiên
           }}
         >
           {[...Array(8)].map((_, idx) => (
@@ -494,7 +537,7 @@ const TrainStart = () => {
         <Box
           sx={{
             display: 'grid',
-            gap: { xs: 2, sm: 2.5, md: 3 },
+            gap: { xs: 1.5, sm: 2.5, md: 3 }, // Reduced gap on mobile
             gridTemplateColumns: {
               xs: 'repeat(1, minmax(0, 1fr))',
               sm: 'repeat(2, minmax(0, 1fr))',
@@ -503,6 +546,7 @@ const TrainStart = () => {
             },
             alignItems: 'stretch',
             pb: { xs: 12, sm: 14 },
+            pt: GRID_PADDING_TOP, // Padding để tránh sticky bar che mất card đầu tiên
           }}
         >
           {items.map((it, idx) => (
@@ -526,7 +570,8 @@ const TrainStart = () => {
             </Box>
           ))}
         </Box>
-      )}
+        )}
+      </Box>
       
       {/* Completion Modal */}
       <CompletionModal
@@ -537,7 +582,7 @@ const TrainStart = () => {
         onRestart={handleCompletionRestart}
         onNextMode={handleCompletionNext}
       />
-    </Container>
+    </Box>
   );
 };
 

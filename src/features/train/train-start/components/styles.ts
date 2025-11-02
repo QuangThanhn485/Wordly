@@ -83,11 +83,11 @@ const boxRotate = (flipped: boolean) => ({
 
 const cardContainer = {
   width: '100%',
-  height: { xs: 180, sm: 200, md: 220 },
+  height: { xs: 160, sm: 200, md: 220 }, // Reduced height on mobile
   perspective: 1000,
   cursor: 'pointer',
   mx: 'auto',
-  my: { xs: 0.5, sm: 1 },
+  my: { xs: 0.25, sm: 1 }, // Reduced margin on mobile
   userSelect: 'none' as const,
   touchAction: 'manipulation' as const,
 };

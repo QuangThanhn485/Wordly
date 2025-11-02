@@ -165,7 +165,13 @@ const Navbar: React.FC = () => {
     setOpen(!isMobile);
   }, [isMobile]);
 
-  const handleToggleDrawer = () => setOpen((prev) => !prev);
+  const handleToggleDrawer = React.useCallback((e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setOpen((prev) => !prev);
+  }, []);
   const handleTrainClick = () => setTrainOpen((prev) => !prev);
 
   const isActive = React.useCallback(
@@ -186,36 +192,73 @@ const Navbar: React.FC = () => {
     <>
       {isMobile && (
         <>
-          <AppBar position="fixed" elevation={0}>
-            <Toolbar>
+          <AppBar 
+            position="fixed" 
+            elevation={1}
+            sx={{
+              zIndex: (theme) => theme.zIndex.appBar, // Use standard appBar z-index
+            }}
+          >
+            <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
               <IconButton
                 edge="start"
                 color="inherit"
                 aria-label="menu"
-                onClick={handleToggleDrawer}
-                sx={{ mr: 2 }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleToggleDrawer(e);
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                }}
+                sx={{ 
+                  mr: 2,
+                  // Ensure touch-friendly size on mobile
+                  minWidth: 48,
+                  minHeight: 48,
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
+                  '-webkit-tap-highlight-color': 'transparent',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  position: 'relative',
+                  zIndex: 1,
+                  '&:active': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  },
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                  },
+                }}
               >
-                <MenuIcon />
+                <MenuIcon sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem' }, pointerEvents: 'none' }} />
               </IconButton>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flex: 1 }}>
                 <Avatar
                   src="/logo.png"
                   alt="Wordly Logo"
                   sx={{
-                    width: 28,
-                    height: 28,
+                    width: { xs: 32, sm: 36 },
+                    height: { xs: 32, sm: 36 },
                     bgcolor: theme.palette.primary.main,
                   }}
                 >
-                  <AutoStoriesIcon sx={{ fontSize: '1rem' }} />
+                  <AutoStoriesIcon sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }} />
                 </Avatar>
-                <Typography variant="h6" noWrap component="div" fontWeight={600} sx={{ fontSize: '1.125rem' }}>
+                <Typography 
+                  variant="h6" 
+                  noWrap 
+                  component="div" 
+                  fontWeight={600} 
+                  sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}
+                >
                   Wordly
                 </Typography>
               </Box>
             </Toolbar>
           </AppBar>
-          <Toolbar />
+          <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }} />
         </>
       )}
 
@@ -223,20 +266,33 @@ const Navbar: React.FC = () => {
         variant={isMobile ? 'temporary' : 'permanent'}
         open={open}
         onClose={() => setOpen(false)}
+        ModalProps={{
+          keepMounted: true, // Better mobile performance
+        }}
         sx={{
           width: open ? drawerWidth : collapsedWidth,
           flexShrink: 0,
           '& .MuiDrawer-paper': {
             width: open ? drawerWidth : collapsedWidth,
             overflowX: 'hidden',
-            transition: theme.transitions.create('width', {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.standard,
-            }),
+            transition: isMobile
+              ? theme.transitions.create('transform', {
+                  easing: theme.transitions.easing.sharp,
+                  duration: theme.transitions.duration.enteringScreen,
+                })
+              : theme.transitions.create('width', {
+                  easing: theme.transitions.easing.sharp,
+                  duration: theme.transitions.duration.standard,
+                }),
             boxSizing: 'border-box',
             bgcolor: theme.palette.background.paper,
             borderRight: `1px solid ${theme.palette.divider}`,
+            // Better mobile touch handling
+            touchAction: 'pan-y',
+            WebkitOverflowScrolling: 'touch',
           },
+          // Higher z-index for mobile overlay - must be higher than AppBar
+          zIndex: isMobile ? theme.zIndex.drawer : 'auto',
         }}
       >
         {!isMobile && (
@@ -317,7 +373,7 @@ const Navbar: React.FC = () => {
                 primary="Home" 
                 primaryTypographyProps={{ 
                   fontWeight: 500,
-                  fontSize: '0.875rem', // 14px
+                  fontSize: { xs: '0.9375rem', sm: '0.875rem' }, // 15px on mobile, 14px on desktop
                 }} 
               />
             )}
@@ -338,7 +394,7 @@ const Navbar: React.FC = () => {
                 primary="Source Data"
                 primaryTypographyProps={{ 
                   fontWeight: 500,
-                  fontSize: '0.875rem',
+                  fontSize: { xs: '0.9375rem', sm: '0.875rem' },
                 }}
               />
             )}
@@ -363,7 +419,7 @@ const Navbar: React.FC = () => {
                         component="span"
                         sx={{
                           fontWeight: 500,
-                          fontSize: '0.875rem',
+                          fontSize: { xs: '0.9375rem', sm: '0.875rem' },
                         }}
                       >
                         Train
@@ -415,7 +471,7 @@ const Navbar: React.FC = () => {
                 {open && (
                   <ListItemText 
                     primary="Flashcards Reading" 
-                    primaryTypographyProps={{ fontSize: '0.8125rem' }}
+                    primaryTypographyProps={{ fontSize: { xs: '0.875rem', sm: '0.8125rem' } }}
                   />
                 )}
               </ListItemLink>
@@ -436,7 +492,7 @@ const Navbar: React.FC = () => {
                 {open && (
                   <ListItemText 
                     primary="Flashcards Listening" 
-                    primaryTypographyProps={{ fontSize: '0.8125rem' }}
+                    primaryTypographyProps={{ fontSize: { xs: '0.875rem', sm: '0.8125rem' } }}
                   />
                 )}
               </ListItemLink>
@@ -457,7 +513,7 @@ const Navbar: React.FC = () => {
                 {open && (
                   <ListItemText 
                     primary="Read & Write" 
-                    primaryTypographyProps={{ fontSize: '0.8125rem' }}
+                    primaryTypographyProps={{ fontSize: { xs: '0.875rem', sm: '0.8125rem' } }}
                   />
                 )}
               </ListItemLink>
@@ -478,7 +534,7 @@ const Navbar: React.FC = () => {
                 {open && (
                   <ListItemText 
                     primary="Listen & Write" 
-                    primaryTypographyProps={{ fontSize: '0.8125rem' }}
+                    primaryTypographyProps={{ fontSize: { xs: '0.875rem', sm: '0.8125rem' } }}
                   />
                 )}
               </ListItemLink>
@@ -501,7 +557,7 @@ const Navbar: React.FC = () => {
                 primary="Result" 
                 primaryTypographyProps={{ 
                   fontWeight: 500,
-                  fontSize: '0.875rem',
+                  fontSize: { xs: '0.9375rem', sm: '0.875rem' },
                 }} 
               />
             )}

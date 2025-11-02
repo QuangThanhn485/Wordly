@@ -57,9 +57,10 @@ export const WordCard: React.FC<WordCardProps> = ({
               sx={{ 
                 display: 'block', 
                 textAlign: 'center', 
-                mb: 0.5,
+                mb: { xs: 0.25, sm: 0.5 },
                 opacity: 0.8,
                 fontWeight: 500,
+                fontSize: { xs: '0.6875rem', sm: '0.75rem' }, // Smaller on mobile
               }}
             >
               {showLang === 'vi' ? 'EN' : 'VI'}
@@ -69,7 +70,7 @@ export const WordCard: React.FC<WordCardProps> = ({
               align="center"
               fontWeight="bold"
               sx={{
-                fontSize: { xs: '1.2rem', sm: '1.35rem', md: '1.5rem' },
+                fontSize: { xs: '1rem', sm: '1.35rem', md: '1.5rem' }, // Smaller on mobile
                 lineHeight: 1.25,
                 wordBreak: 'break-word',
                 // Ensure text is always readable with high contrast
@@ -84,9 +85,10 @@ export const WordCard: React.FC<WordCardProps> = ({
               variant="body2"
               align="center"
               sx={{ 
-                mt: 1.25, 
+                mt: { xs: 0.75, sm: 1.25 },
                 userSelect: 'none',
                 opacity: 0.7,
+                fontSize: { xs: '0.75rem', sm: '0.875rem' }, // Smaller on mobile
               }}
             >
               Tap a card to answer
@@ -104,10 +106,11 @@ export const WordCard: React.FC<WordCardProps> = ({
               variant="subtitle2" 
               align="center" 
               sx={{ 
-                mb: 0.5,
+                mb: { xs: 0.25, sm: 0.5 },
                 opacity: 0.8,
                 fontWeight: 500,
                 color: 'inherit',
+                fontSize: { xs: '0.6875rem', sm: '0.75rem' },
               }}
             >
               EN
@@ -118,8 +121,9 @@ export const WordCard: React.FC<WordCardProps> = ({
               fontWeight={700} 
               sx={{ 
                 wordBreak: 'break-word', 
-                mb: 1,
+                mb: { xs: 0.5, sm: 1 },
                 color: 'inherit',
+                fontSize: { xs: '0.875rem', sm: '1rem' },
               }}
             >
               {en}
@@ -129,10 +133,11 @@ export const WordCard: React.FC<WordCardProps> = ({
               variant="subtitle2" 
               align="center" 
               sx={{ 
-                mb: 0.25,
+                mb: { xs: 0.125, sm: 0.25 },
                 opacity: 0.8,
                 fontWeight: 500,
                 color: 'inherit',
+                fontSize: { xs: '0.6875rem', sm: '0.75rem' },
               }}
             >
               VI
@@ -141,9 +146,9 @@ export const WordCard: React.FC<WordCardProps> = ({
               variant="body1" 
               align="center" 
               sx={{ 
-                fontSize: { xs: '0.95rem', sm: '1rem' }, 
+                fontSize: { xs: '0.8125rem', sm: '1rem' },
                 wordBreak: 'break-word', 
-                mb: 1,
+                mb: { xs: 0.5, sm: 1 },
                 color: 'inherit',
               }}
             >
