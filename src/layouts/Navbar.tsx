@@ -155,14 +155,20 @@ const Navbar: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const [open, setOpen] = React.useState<boolean>(() => !isMobile);
+  // Trên mobile: drawer mặc định đóng. Trên desktop: drawer mặc định mở
+  const [open, setOpen] = React.useState<boolean>(false);
   const [trainOpen, setTrainOpen] = React.useState<boolean>(() =>
     location.pathname.startsWith('/train'),
   );
 
-  // nếu breakpoint đổi (desktop <-> mobile), đồng bộ lại trạng thái mở của drawer
+  // Đồng bộ trạng thái drawer khi breakpoint thay đổi (desktop <-> mobile)
+  // Trên desktop: mở drawer. Trên mobile: đóng drawer
   React.useEffect(() => {
-    setOpen(!isMobile);
+    if (!isMobile) {
+      setOpen(true); // Desktop: mở drawer
+    } else {
+      setOpen(false); // Mobile: đóng drawer
+    }
   }, [isMobile]);
 
   const handleToggleDrawer = React.useCallback((e?: React.MouseEvent) => {
@@ -175,7 +181,16 @@ const Navbar: React.FC = () => {
   const handleTrainClick = () => setTrainOpen((prev) => !prev);
 
   const isActive = React.useCallback(
-    (path: string) => location.pathname === path || location.pathname.startsWith(path),
+    (path: string) => {
+      // Home chỉ active khi pathname chính xác là '/'
+      if (path === '/') {
+        return location.pathname === '/';
+      }
+      // Các path khác: active khi pathname bắt đầu bằng path và ký tự tiếp theo là '/' hoặc kết thúc
+      return location.pathname === path || 
+             (location.pathname.startsWith(path) && 
+              (location.pathname[path.length] === '/' || location.pathname.length === path.length));
+    },
     [location.pathname],
   );
 
@@ -234,7 +249,21 @@ const Navbar: React.FC = () => {
               >
                 <MenuIcon sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem' }, pointerEvents: 'none' }} />
               </IconButton>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flex: 1 }}>
+              <Box 
+                component={RouterLink}
+                to="/"
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1.25, 
+                  flex: 1,
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  '&:hover': {
+                    opacity: 0.9,
+                  },
+                }}
+              >
                 <Avatar
                   src="/logo.png"
                   alt="Wordly Logo"
@@ -242,6 +271,7 @@ const Navbar: React.FC = () => {
                     width: { xs: 32, sm: 36 },
                     height: { xs: 32, sm: 36 },
                     bgcolor: theme.palette.primary.main,
+                    flexShrink: 0,
                   }}
                 >
                   <AutoStoriesIcon sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }} />
@@ -295,6 +325,7 @@ const Navbar: React.FC = () => {
           zIndex: isMobile ? theme.zIndex.drawer : 'auto',
         }}
       >
+        {/* Logo header - Desktop */}
         {!isMobile && (
           <Box
             sx={{
@@ -352,6 +383,44 @@ const Navbar: React.FC = () => {
             >
               {open ? <ChevronLeftIcon /> : <ChevronRightIcon />}
             </IconButton>
+          </Box>
+        )}
+
+        {/* Logo header - Mobile */}
+        {isMobile && (
+          <Box
+            component={RouterLink}
+            to="/"
+            onClick={() => setOpen(false)} // Đóng drawer khi click logo
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.25,
+              p: 1.5,
+              pb: 1,
+              textDecoration: 'none',
+              color: 'inherit',
+              '&:hover': {
+                opacity: 0.9,
+                backgroundColor: theme.palette.action.hover,
+              },
+            }}
+          >
+            <Avatar
+              src="/logo.png"
+              alt="Wordly Logo"
+              sx={{
+                width: 28,
+                height: 28,
+                bgcolor: theme.palette.primary.main,
+                flexShrink: 0,
+              }}
+            >
+              <AutoStoriesIcon sx={{ fontSize: '1rem' }} />
+            </Avatar>
+            <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.125rem' }}>
+              Wordly
+            </Typography>
           </Box>
         )}
 
