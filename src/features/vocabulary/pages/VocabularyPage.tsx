@@ -70,6 +70,13 @@ import { TreeIndex } from '../utils/treeIndex';
 import {
   saveVocabToStorage,
   loadVocabFromStorage,
+  saveVocabFile,
+  loadVocabFile,
+  deleteVocabFile,
+  loadVocabCounts,
+  updateVocabCount,
+  renameVocabCount,
+  syncVocabCount,
   saveTreeToStorage,
   loadTreeFromStorage,
 } from '../utils/storageUtils';
@@ -130,10 +137,10 @@ const saveViewModeToStorage = (mode: 'tree' | 'grid') => {
 
 // ===== Main Component =====
 const VocabularyPage: React.FC = () => {
-  // Load from localStorage on init, fallback to seed data
+  // Lazy load vocabMap - start empty, load files on-demand
   const [vocabMap, setVocabMap] = useState<Record<string, VocabItem[]>>(() => {
-    const stored = loadVocabFromStorage();
-    return stored || { ...seedVocab };
+    // Only load seed data on init, actual files will be loaded lazily
+    return { ...seedVocab };
   });
   
   const [tree, setTree] = useState<FolderNode>(() => {
@@ -147,10 +154,57 @@ const VocabularyPage: React.FC = () => {
   }, [tree]);
   
   // Helper to update vocabMap and save to localStorage
+  // OPTIMIZED: Uses per-file storage for faster saves
   const updateVocabMap = useCallback((updater: (prev: Record<string, VocabItem[]>) => Record<string, VocabItem[]>) => {
     setVocabMap((prev) => {
       const next = updater(prev);
-      saveVocabToStorage(next);
+      
+      // Optimized: Only save changed files instead of entire map
+      // Find which files changed by comparing prev and next
+      const changedFiles = new Set<string>();
+      
+      // Check for added/modified files
+      for (const fileName in next) {
+        if (next.hasOwnProperty(fileName)) {
+          const prevVocab = prev[fileName];
+          const nextVocab = next[fileName];
+          
+          // File is new or changed
+          if (!prevVocab || JSON.stringify(prevVocab) !== JSON.stringify(nextVocab)) {
+            changedFiles.add(fileName);
+          }
+        }
+      }
+      
+      // Check for deleted files
+      for (const fileName in prev) {
+        if (prev.hasOwnProperty(fileName) && !next[fileName]) {
+          deleteVocabFile(fileName);
+        }
+      }
+      
+      // Save only changed files (FAST - per-file storage)
+      // saveVocabFile automatically updates counts in storage
+      Array.from(changedFiles).forEach((fileName) => {
+        saveVocabFile(fileName, next[fileName]);
+      });
+      
+      // Update counts in state (for immediate UI update)
+      setVocabCountMap((prevCounts) => {
+        const updated = { ...prevCounts };
+        let hasChanges = false;
+        
+        Array.from(changedFiles).forEach((fileName) => {
+          const newCount = next[fileName]?.length || 0;
+          if (updated[fileName] !== newCount) {
+            updated[fileName] = newCount;
+            hasChanges = true;
+          }
+        });
+        
+        return hasChanges ? updated : prevCounts;
+      });
+      
       return next;
     });
   }, []);
@@ -173,16 +227,31 @@ const VocabularyPage: React.FC = () => {
   }, [selectedPath, treeIndex]);
   const selectedTitle = useMemo(() => selectedFile?.name.replace(/\.txt$/i, '') ?? '', [selectedFile]);
   
-  // Create vocab count map for display - optimized with single pass
-  const vocabCountMap = useMemo(() => {
-    const countMap: Record<string, number> = {};
-    // Single pass through vocabMap keys - O(n) instead of O(n) with forEach
-    for (const fileName in vocabMap) {
-      if (vocabMap.hasOwnProperty(fileName)) {
-        countMap[fileName] = vocabMap[fileName]?.length || 0;
+  // Load vocab counts from storage (FAST - no need to load full vocab data)
+  // This allows displaying counts immediately without clicking files
+  const [vocabCountMap, setVocabCountMap] = useState<Record<string, number>>(() => {
+    return loadVocabCounts();
+  });
+  
+  // Sync counts from vocabMap when it changes (in-memory data takes precedence)
+  React.useEffect(() => {
+    setVocabCountMap((prevCounts) => {
+      const updated = { ...prevCounts };
+      let hasChanges = false;
+      
+      // Update counts from vocabMap (if loaded)
+      for (const fileName in vocabMap) {
+        if (vocabMap.hasOwnProperty(fileName)) {
+          const newCount = vocabMap[fileName]?.length || 0;
+          if (updated[fileName] !== newCount) {
+            updated[fileName] = newCount;
+            hasChanges = true;
+          }
+        }
       }
-    }
-    return countMap;
+      
+      return hasChanges ? updated : prevCounts;
+    });
   }, [vocabMap]);
 
   // ===== View mode state =====
@@ -405,10 +474,27 @@ const VocabularyPage: React.FC = () => {
     }
   }, [selectedFile, vocabMap, selectedVocabs]);
 
-  // Clear selection when file changes
+  // Load vocab data when file is selected (LAZY LOADING)
   React.useEffect(() => {
     setSelectedVocabs(new Set());
-  }, [selectedFile]);
+    
+    if (selectedFile && !vocabMap[selectedFile.name]) {
+      // Load vocab data for this file (FAST - per-file storage)
+      const vocab = loadVocabFile(selectedFile.name);
+      if (vocab) {
+        setVocabMap((prev) => ({
+          ...prev,
+          [selectedFile.name]: vocab,
+        }));
+      } else {
+        // File doesn't exist in storage, initialize empty
+        setVocabMap((prev) => ({
+          ...prev,
+          [selectedFile.name]: [],
+        }));
+      }
+    }
+  }, [selectedFile, vocabMap]);
 
   // ===== Actions =====
   const handleFileClick = useCallback((filePath: string[], fileName: string) => {
@@ -556,7 +642,7 @@ const VocabularyPage: React.FC = () => {
       return copy;
     });
     
-    // also if file renamed, move vocab content key
+    // also if file renamed, move vocab content key and count
     if (menu.type === 'file' && located.node.kind === 'file') {
       const old = located.node.name;
       if (vocabMap[old]) {
@@ -565,6 +651,16 @@ const VocabularyPage: React.FC = () => {
           return { ...rest, [finalName]: vals };
         });
       }
+      // Rename count key
+      renameVocabCount(old, finalName);
+      // Update count map state
+      setVocabCountMap((prev) => {
+        if (prev[old] !== undefined) {
+          const { [old]: count, ...rest } = prev;
+          return { ...rest, [finalName]: count };
+        }
+        return prev;
+      });
       if (selectedPath && selectedPath.join('/') === menu.path.join('/')) setSelectedPath(menu.path);
     }
     setRenameOpen(false);
