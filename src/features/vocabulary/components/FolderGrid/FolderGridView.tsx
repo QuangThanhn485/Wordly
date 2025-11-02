@@ -104,7 +104,8 @@ export const FolderGridView: React.FC<FolderGridViewProps> = ({
         >
           {items.map((item) => {
             const isSelected = item.kind === 'file' && item.name === selectedFileName;
-            const label = item.kind === 'folder' ? item.label : item.name;
+            // Remove .txt extension from file name for display
+            const label = item.kind === 'folder' ? item.label : item.name.replace(/\.txt$/i, '');
 
             return (
               <GridCard

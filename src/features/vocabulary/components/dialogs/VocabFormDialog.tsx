@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -20,12 +20,60 @@ interface VocabFormDialogProps {
   open: boolean;
   mode: 'add' | 'edit';
   data: VocabItem;
-  onChange: (data: VocabItem) => void;
+  onChange?: (data: VocabItem) => void; // Optional - only for compatibility
   onClose: () => void;
-  onSave: () => void;
+  onSave: (data: VocabItem) => void; // Receives data as parameter
 }
 
-export const VocabFormDialog: React.FC<VocabFormDialogProps> = ({ open, mode, data, onChange, onClose, onSave }) => {
+export const VocabFormDialog: React.FC<VocabFormDialogProps> = React.memo(({ open, mode, data, onChange, onClose, onSave }) => {
+  // Use local state for instant input response - sync with prop only on open/change
+  const [localData, setLocalData] = React.useState(data);
+  
+  // Sync local state when data prop changes (e.g., when dialog opens with new data)
+  React.useEffect(() => {
+    setLocalData(data);
+  }, [data]);
+
+  // Update local state instantly - NO parent sync during typing
+  // Only sync when dialog closes or save is clicked
+  const handleWordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setLocalData((prev) => ({ ...prev, word: newValue }));
+  }, []);
+
+  const handleVnMeaningChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setLocalData((prev) => ({ ...prev, vnMeaning: newValue }));
+  }, []);
+
+  const handleTypeChange = useCallback((e: { target: { value: unknown } }) => {
+    const newValue = e.target.value as string;
+    setLocalData((prev) => ({ ...prev, type: newValue }));
+  }, []);
+
+  const handlePronunciationChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setLocalData((prev) => ({ ...prev, pronunciation: newValue }));
+  }, []);
+
+  // Sync to parent only when saving
+  const handleSave = useCallback(() => {
+    onSave(localData); // Pass local state directly to save handler
+  }, [localData, onSave]);
+
+  const handleClose = useCallback(() => {
+    // Optionally sync before close to preserve unsaved changes
+    // onChange(localData);
+    onClose();
+  }, [onClose]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && localData.word.trim()) {
+      handleSave();
+    }
+  }, [localData.word, handleSave]);
+
+  const isSaveDisabled = useMemo(() => !localData.word.trim(), [localData.word]);
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{mode === 'add' ? 'Thêm từ vựng' : 'Sửa từ vựng'}</DialogTitle>
@@ -35,27 +83,23 @@ export const VocabFormDialog: React.FC<VocabFormDialogProps> = ({ open, mode, da
             autoFocus
             fullWidth
             label="Từ vựng *"
-            value={data.word}
-            onChange={(e) => onChange({ ...data, word: e.target.value })}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && data.word.trim()) {
-                onSave();
-              }
-            }}
+            value={localData.word}
+            onChange={handleWordChange}
+            onKeyDown={handleKeyDown}
           />
           <TextField
             fullWidth
             label="Nghĩa tiếng Việt"
-            value={data.vnMeaning}
-            onChange={(e) => onChange({ ...data, vnMeaning: e.target.value })}
+            value={localData.vnMeaning}
+            onChange={handleVnMeaningChange}
           />
           <Box sx={{ display: 'flex', gap: 2 }}>
             <FormControl fullWidth>
               <InputLabel>Từ loại</InputLabel>
               <Select
-                value={data.type}
+                value={localData.type}
                 label="Từ loại"
-                onChange={(e) => onChange({ ...data, type: e.target.value })}
+                onChange={handleTypeChange}
               >
                 <MenuItem value="">
                   <em>Chọn loại từ</em>
@@ -71,20 +115,22 @@ export const VocabFormDialog: React.FC<VocabFormDialogProps> = ({ open, mode, da
             <TextField
               fullWidth
               label="Phát âm"
-              value={data.pronunciation}
-              onChange={(e) => onChange({ ...data, pronunciation: e.target.value })}
+              value={localData.pronunciation}
+              onChange={handlePronunciationChange}
               placeholder="ˈæp.əl"
             />
           </Box>
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Hủy</Button>
-        <Button variant="contained" onClick={onSave} disabled={!data.word.trim()}>
+        <Button onClick={handleClose}>Hủy</Button>
+        <Button variant="contained" onClick={handleSave} disabled={isSaveDisabled}>
           {mode === 'add' ? 'Thêm' : 'Lưu'}
         </Button>
       </DialogActions>
     </Dialog>
   );
-};
+});
+
+VocabFormDialog.displayName = 'VocabFormDialog';
 

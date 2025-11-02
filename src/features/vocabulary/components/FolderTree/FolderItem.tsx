@@ -1,4 +1,4 @@
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { Box, Collapse, IconButton, List, ListItemButton, ListItemText, Typography } from '@mui/material';
 import {
   Folder as FolderIcon,
@@ -9,6 +9,42 @@ import {
   MoreVert as MoreIcon,
 } from '@mui/icons-material';
 import type { FolderNode, FileLeaf } from '../../types';
+
+// ===== Sort Helper =====
+/**
+ * Sorts children: folders first (alphabetically), then files (alphabetically)
+ * Both sorted by their display name (label for folders, name for files)
+ */
+const sortChildren = (children: Array<FolderNode | FileLeaf>): Array<FolderNode | FileLeaf> => {
+  // Separate folders and files
+  const folders: FolderNode[] = [];
+  const files: FileLeaf[] = [];
+  
+  children.forEach((child) => {
+    if (child.kind === 'folder') {
+      folders.push(child);
+    } else {
+      files.push(child);
+    }
+  });
+  
+  // Sort folders by label (case-insensitive, Vietnamese-aware)
+  folders.sort((a, b) => {
+    const labelA = a.label.toLowerCase().trim();
+    const labelB = b.label.toLowerCase().trim();
+    return labelA.localeCompare(labelB, 'vi'); // Use Vietnamese locale for proper sorting
+  });
+  
+  // Sort files by name (remove .txt extension for comparison, case-insensitive)
+  files.sort((a, b) => {
+    const nameA = a.name.replace(/\.txt$/i, '').toLowerCase().trim();
+    const nameB = b.name.replace(/\.txt$/i, '').toLowerCase().trim();
+    return nameA.localeCompare(nameB, 'vi'); // Use Vietnamese locale for proper sorting
+  });
+  
+  // Return folders first, then files
+  return [...folders, ...files];
+};
 
 // ===== File Item Component =====
 export const FileItem = memo(function FileItem({
@@ -124,6 +160,9 @@ const FolderItemComponent = function FolderItem({
     }
   }, [onToggle, node.id, isFolderOpen]);
 
+  // Sort children alphabetically (folders first, then files)
+  const sortedChildren = useMemo(() => sortChildren(node.children), [node.children]);
+
   return (
     <>
       <Box sx={{ position: 'relative', '&:hover .folder-menu-icon': { opacity: 1 } }}>
@@ -189,7 +228,7 @@ const FolderItemComponent = function FolderItem({
             },
           }}
         >
-          {node.children.map((child) =>
+          {sortedChildren.map((child) =>
             child.kind === 'folder' ? (
               <FolderItem
                 key={child.id}

@@ -42,6 +42,7 @@ import {
   DeleteOutline as DeleteIcon,
   Add as AddIcon,
   Edit as EditIcon,
+  MoreVert as MoreVertIcon,
   UnfoldLess as UnfoldLessIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
@@ -234,24 +235,34 @@ const VocabularyPage: React.FC = () => {
   });
   
   // Sync counts from vocabMap when it changes (in-memory data takes precedence)
+  // OPTIMIZED: Use ref to track if sync is needed, avoid blocking input
+  const vocabMapRef = React.useRef(vocabMap);
+  vocabMapRef.current = vocabMap;
+  
   React.useEffect(() => {
-    setVocabCountMap((prevCounts) => {
-      const updated = { ...prevCounts };
-      let hasChanges = false;
-      
-      // Update counts from vocabMap (if loaded)
-      for (const fileName in vocabMap) {
-        if (vocabMap.hasOwnProperty(fileName)) {
-          const newCount = vocabMap[fileName]?.length || 0;
-          if (updated[fileName] !== newCount) {
-            updated[fileName] = newCount;
-            hasChanges = true;
+    // Use requestIdleCallback or setTimeout to avoid blocking UI
+    const timeoutId = setTimeout(() => {
+      setVocabCountMap((prevCounts) => {
+        const updated = { ...prevCounts };
+        let hasChanges = false;
+        
+        // Update counts from vocabMap (if loaded)
+        const currentMap = vocabMapRef.current;
+        for (const fileName in currentMap) {
+          if (currentMap.hasOwnProperty(fileName)) {
+            const newCount = currentMap[fileName]?.length || 0;
+            if (updated[fileName] !== newCount) {
+              updated[fileName] = newCount;
+              hasChanges = true;
+            }
           }
         }
-      }
-      
-      return hasChanges ? updated : prevCounts;
-    });
+        
+        return hasChanges ? updated : prevCounts;
+      });
+    }, 0); // Defer to next tick to avoid blocking input
+    
+    return () => clearTimeout(timeoutId);
   }, [vocabMap]);
 
   // ===== View mode state =====
@@ -307,6 +318,18 @@ const VocabularyPage: React.FC = () => {
 
   // ===== Checkbox selection =====
   const [selectedVocabs, setSelectedVocabs] = useState<Set<string>>(new Set());
+
+  // ===== Row menu state =====
+  const [rowMenuAnchor, setRowMenuAnchor] = useState<{ anchorEl: HTMLElement; word: string; index: number } | null>(null);
+  
+  const handleRowMenuOpen = useCallback((e: React.MouseEvent<HTMLElement>, word: string, index: number) => {
+    e.stopPropagation();
+    setRowMenuAnchor({ anchorEl: e.currentTarget, word, index });
+  }, []);
+  
+  const handleRowMenuClose = useCallback(() => {
+    setRowMenuAnchor(null);
+  }, []);
 
   // ===== Sidebar collapse/expand state =====
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
@@ -403,8 +426,8 @@ const VocabularyPage: React.FC = () => {
     setVocabFormOpen(true);
   }, []);
 
-  const handleSaveVocab = useCallback(() => {
-    if (!selectedFile || !vocabFormData.word.trim()) {
+  const handleSaveVocab = useCallback((data: VocabItem) => {
+    if (!selectedFile || !data.word.trim()) {
       showSnack('Vui lòng nhập từ vựng.', 'warning');
       return;
     }
@@ -413,19 +436,19 @@ const VocabularyPage: React.FC = () => {
     updateVocabMap((prev) => {
       const vocabList = prev[fileName] || [];
       if (vocabFormMode === 'add') {
-        const newList = [...vocabList, { ...vocabFormData }];
+        const newList = [...vocabList, { ...data }];
         return { ...prev, [fileName]: newList };
       } else {
         // edit mode
         if (vocabFormIndex === null) return prev;
         const newList = [...vocabList];
-        newList[vocabFormIndex] = { ...vocabFormData };
+        newList[vocabFormIndex] = { ...data };
         return { ...prev, [fileName]: newList };
       }
     });
     setVocabFormOpen(false);
     showSnack(vocabFormMode === 'add' ? 'Đã thêm từ vựng.' : 'Đã cập nhật từ vựng.');
-  }, [selectedFile, vocabFormData, vocabFormMode, vocabFormIndex, updateVocabMap]);
+  }, [selectedFile, vocabFormMode, vocabFormIndex, updateVocabMap]);
 
   const handleDeleteSelectedVocabs = useCallback(() => {
     if (!selectedFile || selectedVocabs.size === 0) return;
@@ -477,7 +500,7 @@ const VocabularyPage: React.FC = () => {
   // Load vocab data when file is selected (LAZY LOADING)
   React.useEffect(() => {
     setSelectedVocabs(new Set());
-    
+
     if (selectedFile && !vocabMap[selectedFile.name]) {
       // Load vocab data for this file (FAST - per-file storage)
       const vocab = loadVocabFile(selectedFile.name);
@@ -494,6 +517,18 @@ const VocabularyPage: React.FC = () => {
         }));
       }
     }
+  }, [selectedFile, vocabMap]);
+
+  // Sort vocabulary list alphabetically by word (Vietnamese-aware)
+  const sortedVocabList = useMemo(() => {
+    if (!selectedFile) return [];
+    const vocabList = vocabMap[selectedFile.name] || [];
+    // Create a copy to avoid mutating the original array
+    return [...vocabList].sort((a, b) => {
+      const wordA = a.word.toLowerCase().trim();
+      const wordB = b.word.toLowerCase().trim();
+      return wordA.localeCompare(wordB, 'vi'); // Use Vietnamese locale for proper sorting
+    });
   }, [selectedFile, vocabMap]);
 
   // ===== Actions =====
@@ -1321,8 +1356,8 @@ const VocabularyPage: React.FC = () => {
                     <TableRow>
                       <StyledTableCell padding="checkbox">
                         <Checkbox
-                          indeterminate={selectedVocabs.size > 0 && selectedVocabs.size < (vocabMap[selectedFile.name] || []).length}
-                          checked={(vocabMap[selectedFile.name] || []).length > 0 && selectedVocabs.size === (vocabMap[selectedFile.name] || []).length}
+                          indeterminate={selectedVocabs.size > 0 && selectedVocabs.size < sortedVocabList.length}
+                          checked={sortedVocabList.length > 0 && selectedVocabs.size === sortedVocabList.length}
                           onChange={handleSelectAllVocabs}
                           size={isSmDown ? 'small' : 'medium'}
                         />
@@ -1335,7 +1370,13 @@ const VocabularyPage: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {(vocabMap[selectedFile.name] || []).map((item, index) => (
+                    {sortedVocabList.map((item, index) => {
+                      // Find original index for editing (needed for updateVocabMap)
+                      const originalList = vocabMap[selectedFile.name] || [];
+                      const originalIndex = originalList.findIndex(v => v.word === item.word);
+                      const itemIndex = originalIndex >= 0 ? originalIndex : index;
+                      
+                      return (
                       <StyledTableRow key={item.word} hover>
                         <StyledTableCell padding="checkbox">
                           <Checkbox
@@ -1346,19 +1387,48 @@ const VocabularyPage: React.FC = () => {
                         </StyledTableCell>
                         <StyledTableCell 
                           sx={{ fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}
-                          onClick={() => openEditVocabForm(item, index)}
+                          onClick={() => openEditVocabForm(item, itemIndex)}
                         >
-                          {item.word}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                speak(item.word);
+                              }}
+                              sx={{
+                                p: 0.5,
+                                minWidth: 'auto',
+                                '&:hover': { 
+                                  backgroundColor: 'primary.light', 
+                                  color: 'primary.main',
+                                  borderRadius: 1,
+                                },
+                              }}
+                              aria-label={`Phát âm ${item.word}`}
+                            >
+                              <VolumeUpIcon 
+                                sx={{ 
+                                  fontSize: '1.1em', // Slightly larger than text to match visual weight
+                                  color: 'text.secondary',
+                                  '&:hover': {
+                                    color: 'primary.main',
+                                  },
+                                }} 
+                              />
+                            </IconButton>
+                            <Box component="span">{item.word}</Box>
+                          </Box>
                         </StyledTableCell>
                         <StyledTableCell 
                           sx={{ wordBreak: 'break-word', cursor: 'pointer' }}
-                          onClick={() => openEditVocabForm(item, index)}
+                          onClick={() => openEditVocabForm(item, itemIndex)}
                         >
                           {item.vnMeaning}
                         </StyledTableCell>
                         <StyledTableCell 
                           sx={{ cursor: 'pointer' }}
-                          onClick={() => openEditVocabForm(item, index)}
+                          onClick={() => openEditVocabForm(item, itemIndex)}
                         >
                           <Box
                             component="span"
@@ -1377,36 +1447,55 @@ const VocabularyPage: React.FC = () => {
                         </StyledTableCell>
                         <StyledTableCell 
                           sx={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
-                          onClick={() => openEditVocabForm(item, index)}
+                          onClick={() => openEditVocabForm(item, itemIndex)}
                         >
                           / {item.pronunciation} /
                         </StyledTableCell>
                         <StyledTableCell align="center">
-                          <Stack direction="row" spacing={0.5} justifyContent="center">
-                            <Tooltip title="Sửa" arrow>
-                              <IconButton
-                                size={isSmDown ? 'small' : 'medium'}
-                                onClick={() => openEditVocabForm(item, index)}
-                                sx={{ '&:hover': { backgroundColor: 'primary.light', color: 'primary.main' } }}
-                                aria-label={`Edit ${item.word}`}
-                              >
-                                <EditIcon fontSize={isSmDown ? 'small' : 'medium'} />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Phát âm" arrow>
-                              <IconButton
-                                size={isSmDown ? 'small' : 'medium'}
-                                onClick={() => speak(item.word)}
-                                sx={{ '&:hover': { backgroundColor: 'primary.light', color: 'primary.main' } }}
-                                aria-label={`Speak ${item.word}`}
-                              >
-                                <VolumeUpIcon fontSize={isSmDown ? 'small' : 'medium'} />
-                              </IconButton>
-                            </Tooltip>
-                          </Stack>
+                          <IconButton
+                            size={isSmDown ? 'small' : 'medium'}
+                            onClick={(e) => handleRowMenuOpen(e, item.word, itemIndex)}
+                            sx={{ '&:hover': { backgroundColor: 'primary.light', color: 'primary.main' } }}
+                            aria-label={`Menu cho ${item.word}`}
+                          >
+                            <MoreVertIcon fontSize={isSmDown ? 'small' : 'medium'} />
+                          </IconButton>
+                          <Menu
+                            anchorEl={rowMenuAnchor?.anchorEl}
+                            open={rowMenuAnchor !== null && rowMenuAnchor.word === item.word}
+                            onClose={handleRowMenuClose}
+                            anchorOrigin={{
+                              vertical: 'bottom',
+                              horizontal: 'right',
+                            }}
+                            transformOrigin={{
+                              vertical: 'top',
+                              horizontal: 'right',
+                            }}
+                          >
+                            <MenuItem onClick={() => {
+                              handleRowMenuClose();
+                              openEditVocabForm(item, itemIndex);
+                            }}>
+                              <ListItemIcon>
+                                <EditIcon fontSize="small" />
+                              </ListItemIcon>
+                              <ListItemText>Sửa</ListItemText>
+                            </MenuItem>
+                            <MenuItem onClick={handleRowMenuClose} disabled>
+                              <ListItemText>Item 1 (Tính năng tương lai)</ListItemText>
+                            </MenuItem>
+                            <MenuItem onClick={handleRowMenuClose} disabled>
+                              <ListItemText>Item 2 (Tính năng tương lai)</ListItemText>
+                            </MenuItem>
+                            <MenuItem onClick={handleRowMenuClose} disabled>
+                              <ListItemText>Item 3 (Tính năng tương lai)</ListItemText>
+                            </MenuItem>
+                          </Menu>
                         </StyledTableCell>
                       </StyledTableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>
