@@ -16,18 +16,29 @@ export const FileItem = memo(function FileItem({
   onClick,
   level = 0,
   onContext,
+  vocabCount,
+  selected = false,
 }: {
   node: FileLeaf;
   onClick: () => void;
   level?: number;
   onContext: (e: React.MouseEvent) => void;
+  vocabCount?: number;
+  selected?: boolean;
 }) {
   return (
     <ListItemButton
+      selected={selected}
       sx={{
         pl: 4 + level * 2,
         position: 'relative',
         '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
+        '&.Mui-selected': {
+          backgroundColor: 'rgba(25, 118, 210, 0.12)',
+          '&:hover': {
+            backgroundColor: 'rgba(25, 118, 210, 0.16)',
+          },
+        },
         '&::before':
           level > 0
             ? {
@@ -46,13 +57,31 @@ export const FileItem = memo(function FileItem({
       aria-label={`File ${node.name}`}
     >
       <FileIcon sx={{ fontSize: '1rem', mr: 1, color: 'text.secondary' }} />
-      <ListItemText primary={<Typography variant="body2">{node.name.replace(/\.txt$/i, '')}</Typography>} />
+      <ListItemText 
+        primary={
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            <Typography variant="body2">{node.name.replace(/\.txt$/i, '')}</Typography>
+            {vocabCount !== undefined && (
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: 'text.secondary', 
+                  ml: 1,
+                  fontWeight: 500
+                }}
+              >
+                ({vocabCount})
+              </Typography>
+            )}
+          </Box>
+        } 
+      />
     </ListItemButton>
   );
 });
 
 // ===== Folder Item Component (Recursive) =====
-export const FolderItem = memo(function FolderItem({
+const FolderItemComponent = function FolderItem({
   node,
   level = 0,
   onFileClick,
@@ -61,6 +90,8 @@ export const FolderItem = memo(function FolderItem({
   forceShowMenu = false,
   isFolderOpen,
   onToggle,
+  vocabCountMap,
+  selectedFileId,
 }: {
   node: FolderNode;
   level?: number;
@@ -68,15 +99,30 @@ export const FolderItem = memo(function FolderItem({
   onContext: (type: 'folder' | 'file', path: string[], event: React.MouseEvent) => void;
   path: string[]; // ids from root to this node
   forceShowMenu?: boolean;
-  isFolderOpen?: (id: string) => boolean;
+  isFolderOpen?: ((id: string) => boolean) | Set<string>; // Can be function or Set for direct lookup
   onToggle?: (folderId: string, open: boolean) => void;
+  vocabCountMap?: Record<string, number>; // fileName -> count
+  selectedFileId?: string | null; // Currently selected file ID
 }) {
-  const open = isFolderOpen ? isFolderOpen(node.id) : false;
+  // Optimize: check if isFolderOpen is a Set (direct lookup) or function
+  const open = !isFolderOpen 
+    ? false
+    : typeof isFolderOpen === 'function' 
+      ? isFolderOpen(node.id) 
+      : (isFolderOpen instanceof Set ? isFolderOpen.has(node.id) : false);
+  
+  
   const handleToggle = useCallback(() => {
     if (onToggle) {
-      onToggle(node.id, !open);
+      // Toggle based on current state from prop (not stale closure)
+      const currentOpen = !isFolderOpen 
+        ? false
+        : typeof isFolderOpen === 'function' 
+          ? isFolderOpen(node.id) 
+          : (isFolderOpen instanceof Set ? isFolderOpen.has(node.id) : false);
+      onToggle(node.id, !currentOpen);
     }
-  }, [onToggle, node.id, open]);
+  }, [onToggle, node.id, isFolderOpen]);
 
   return (
     <>
@@ -122,7 +168,11 @@ export const FolderItem = memo(function FolderItem({
         </ListItemButton>
       </Box>
 
-      <Collapse in={open} timeout="auto" unmountOnExit>
+      <Collapse 
+        in={open} 
+        timeout={300}
+        unmountOnExit={false}
+      >
         <List
           component="div"
           disablePadding
@@ -151,6 +201,8 @@ export const FolderItem = memo(function FolderItem({
                 forceShowMenu={forceShowMenu}
                 isFolderOpen={isFolderOpen}
                 onToggle={onToggle}
+                vocabCountMap={vocabCountMap}
+                selectedFileId={selectedFileId}
               />
             ) : (
               <FileItem
@@ -159,6 +211,8 @@ export const FolderItem = memo(function FolderItem({
                 level={level + 1}
                 onClick={() => onFileClick([...path, child.id], child.name)}
                 onContext={(e) => onContext('file', [...path, child.id], e)}
+                vocabCount={vocabCountMap?.[child.name]}
+                selected={child.id === selectedFileId}
               />
             ),
           )}
@@ -166,5 +220,8 @@ export const FolderItem = memo(function FolderItem({
       </Collapse>
     </>
   );
-});
+};
+
+// Memoize component for performance - React will handle re-renders when props change
+export const FolderItem = memo(FolderItemComponent);
 

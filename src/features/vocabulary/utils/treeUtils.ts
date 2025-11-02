@@ -1,10 +1,10 @@
 import type { FolderNode, FileLeaf } from '../types';
 
 // ===== ID Generator =====
-export const genId = (() => {
-  let i = 0;
-  return () => `n_${++i}`;
-})();
+// Generate truly unique ID using timestamp + random string
+export const genId = () => {
+  return `n_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+};
 
 // ===== Clone Node =====
 export const cloneNode = (node: FolderNode | FileLeaf): FolderNode | FileLeaf => {

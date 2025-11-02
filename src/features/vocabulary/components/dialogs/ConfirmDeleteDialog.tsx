@@ -3,21 +3,35 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography }
 
 interface ConfirmDeleteDialogProps {
   open: boolean;
-  type: 'folder' | 'file';
+  type: 'folder' | 'file' | 'vocab';
   label: string;
+  count?: number; // For vocab: number of words to delete
   onClose: () => void;
   onConfirm: () => void;
 }
 
-export const ConfirmDeleteDialog: React.FC<ConfirmDeleteDialogProps> = ({ open, type, label, onClose, onConfirm }) => {
+export const ConfirmDeleteDialog: React.FC<ConfirmDeleteDialogProps> = ({ open, type, label, count, onClose, onConfirm }) => {
+  const getMessage = () => {
+    if (type === 'vocab') {
+      return (
+        <Typography>
+          Bạn có chắc muốn xoá <b>{count || 0} từ vựng</b> đã chọn?
+        </Typography>
+      );
+    }
+    return (
+      <Typography>
+        Bạn có chắc muốn xoá <b>{label}</b>
+        {type === 'folder' ? ' và toàn bộ nội dung bên trong' : ''}?
+      </Typography>
+    );
+  };
+
   return (
     <Dialog open={open} onClose={onClose}>
       <DialogTitle>Xác nhận xoá</DialogTitle>
       <DialogContent>
-        <Typography>
-          Bạn có chắc muốn xoá <b>{label}</b>
-          {type === 'folder' ? ' và toàn bộ nội dung bên trong' : ''}?
-        </Typography>
+        {getMessage()}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Hủy</Button>
