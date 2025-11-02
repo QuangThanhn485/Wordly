@@ -51,15 +51,19 @@ export const WordCard: React.FC<WordCardProps> = ({
       <Box sx={boxRotate(flipped)}>
         <Card sx={cardFront(theme)}>
           <CardContent sx={{ width: '100%' }}>
-            {showLang === 'en' && (
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ display: 'block', textAlign: 'center', mb: 0.5 }}
-              >
-                EN
-              </Typography>
-            )}
+            {/* Show language label based on mode */}
+            <Typography
+              variant="caption"
+              sx={{ 
+                display: 'block', 
+                textAlign: 'center', 
+                mb: 0.5,
+                opacity: 0.8,
+                fontWeight: 500,
+              }}
+            >
+              {showLang === 'vi' ? 'EN' : 'VI'}
+            </Typography>
             <Typography
               variant="h5"
               align="center"
@@ -68,15 +72,22 @@ export const WordCard: React.FC<WordCardProps> = ({
                 fontSize: { xs: '1.2rem', sm: '1.35rem', md: '1.5rem' },
                 lineHeight: 1.25,
                 wordBreak: 'break-word',
+                // Ensure text is always readable with high contrast
+                color: 'inherit',
               }}
             >
-              {en}
+              {/* VI-EN mode (showLang === 'vi'): show English on cards */}
+              {/* EN-VI mode (showLang === 'en'): show Vietnamese on cards */}
+              {showLang === 'vi' ? en : vi}
             </Typography>
             <Typography
               variant="body2"
-              color="text.secondary"
               align="center"
-              sx={{ mt: 1.25, userSelect: 'none' }}
+              sx={{ 
+                mt: 1.25, 
+                userSelect: 'none',
+                opacity: 0.7,
+              }}
             >
               Tap a card to answer
             </Typography>
@@ -89,17 +100,53 @@ export const WordCard: React.FC<WordCardProps> = ({
               <Chip icon={<CheckCircleIcon />} label="Correct" size="small" sx={solvedBadgeSx(theme)} />
             </Box>
 
-            <Typography variant="subtitle2" color="text.secondary" align="center" sx={{ mb: 0.5 }}>
+            <Typography 
+              variant="subtitle2" 
+              align="center" 
+              sx={{ 
+                mb: 0.5,
+                opacity: 0.8,
+                fontWeight: 500,
+                color: 'inherit',
+              }}
+            >
               EN
             </Typography>
-            <Typography variant="h6" align="center" fontWeight={700} sx={{ wordBreak: 'break-word', mb: 1 }}>
+            <Typography 
+              variant="h6" 
+              align="center" 
+              fontWeight={700} 
+              sx={{ 
+                wordBreak: 'break-word', 
+                mb: 1,
+                color: 'inherit',
+              }}
+            >
               {en}
             </Typography>
 
-            <Typography variant="subtitle2" color="text.secondary" align="center" sx={{ mb: 0.25 }}>
+            <Typography 
+              variant="subtitle2" 
+              align="center" 
+              sx={{ 
+                mb: 0.25,
+                opacity: 0.8,
+                fontWeight: 500,
+                color: 'inherit',
+              }}
+            >
               VI
             </Typography>
-            <Typography variant="body1" align="center" sx={{ fontSize: { xs: '0.95rem', sm: '1rem' }, wordBreak: 'break-word', mb: 1 }}>
+            <Typography 
+              variant="body1" 
+              align="center" 
+              sx={{ 
+                fontSize: { xs: '0.95rem', sm: '1rem' }, 
+                wordBreak: 'break-word', 
+                mb: 1,
+                color: 'inherit',
+              }}
+            >
               {vi}
             </Typography>
 

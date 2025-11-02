@@ -15,7 +15,7 @@ export default function AppRoutes() {
         { index: true, element: <Home /> },
         { path: 'about', element: <About /> },
         { path: 'vocabulary', element: <VocabularyPage /> },
-        { path: 'train-start', element: <TrainStart /> },
+        { path: 'train/flashcards-reading', element: <TrainStart /> },
       ],
     },
     {

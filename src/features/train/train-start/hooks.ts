@@ -1,17 +1,21 @@
 // src/features/train/train-start/hooks.ts
 import { useEffect, useState } from 'react';
-import { getWords } from './api';
+import { useSearchParams } from 'react-router-dom';
+import { getWords, type TrainWordItem } from './api';
 
 export const useTrainWords = () => {
-  const [words, setWords] = useState<string[]>([]);
+  const [searchParams] = useSearchParams();
+  const fileName = searchParams.get('file');
+  const [words, setWords] = useState<TrainWordItem[]>([]);
   const [isLoading, setLoading] = useState(true);
 
   useEffect(() => {
-    getWords().then((data) => {
+    setLoading(true);
+    getWords(fileName || undefined).then((data) => {
       setWords(data);
       setLoading(false);
     });
-  }, []);
+  }, [fileName]);
 
   return { words, isLoading };
 };

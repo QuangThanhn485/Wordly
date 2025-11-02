@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -48,6 +49,7 @@ import {
   ChevronRight as ChevronRightIcon,
   ViewList as ViewListIcon,
   ViewModule as ViewModuleIcon,
+  RocketLaunch as RocketLaunchIcon,
 } from '@mui/icons-material';
 
 // Import types
@@ -138,6 +140,8 @@ const saveViewModeToStorage = (mode: 'tree' | 'grid') => {
 
 // ===== Main Component =====
 const VocabularyPage: React.FC = () => {
+  const navigate = useNavigate();
+  
   // Lazy load vocabMap - start empty, load files on-demand
   const [vocabMap, setVocabMap] = useState<Record<string, VocabItem[]>>(() => {
     // Only load seed data on init, actual files will be loaded lazily
@@ -1327,6 +1331,20 @@ const VocabularyPage: React.FC = () => {
                     Xóa đã chọn ({selectedVocabs.size})
                   </Button>
                 )}
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size={isSmDown ? 'small' : 'medium'}
+                  startIcon={<RocketLaunchIcon />}
+                  onClick={() => {
+                    if (selectedFile) {
+                      navigate(`/train/flashcards-reading?file=${encodeURIComponent(selectedFile.name)}`);
+                    }
+                  }}
+                  sx={{ fontWeight: 600 }}
+                >
+                  Start Train
+                </Button>
                 <Button
                   variant="contained"
                   size={isSmDown ? 'small' : 'medium'}

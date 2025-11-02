@@ -34,8 +34,10 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import HeadphonesIcon from '@mui/icons-material/Headphones';
 import EditIcon from '@mui/icons-material/Edit';
 import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoice';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useSearchParams } from 'react-router-dom';
 import { useThemeMode } from 'contexts/ThemeContext';
+import { loadTrainingSession } from 'features/train/train-start/sessionStorage';
+import { Chip } from '@mui/material';
 
 const drawerWidth = 240;
 const collapsedWidth = 72;
@@ -104,7 +106,54 @@ const Navbar: React.FC = () => {
   const theme = useTheme();
   const { toggleTheme, mode } = useThemeMode();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
+  
+  // Get train file name from localStorage session (persists across page changes/browser closes)
+  const [trainFileName, setTrainFileName] = React.useState<string | null>(() => {
+    // Load on mount
+    const session = loadTrainingSession();
+    return session?.fileName || null;
+  });
+  
+  // Update train file name when URL params change OR when localStorage session changes
+  React.useEffect(() => {
+    const session = loadTrainingSession();
+    const fileName = session?.fileName || null;
+    setTrainFileName(fileName);
+  }, [searchParams, location.pathname]); // Re-check when URL params change (user navigates)
+  
+  // Listen for storage events (when session is saved from other tabs/components)
+  React.useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'wordly_train_session') {
+        const session = loadTrainingSession();
+        const fileName = session?.fileName || null;
+        setTrainFileName(fileName);
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+  
+  // Poll localStorage periodically to catch changes in the same tab
+  // (since storage events only fire across tabs)
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      const session = loadTrainingSession();
+      const fileName = session?.fileName || null;
+      setTrainFileName((prev) => {
+        // Only update if changed to avoid unnecessary re-renders
+        if (prev !== fileName) {
+          return fileName;
+        }
+        return prev;
+      });
+    }, 1000); // Check every second
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const [open, setOpen] = React.useState<boolean>(() => !isMobile);
   const [trainOpen, setTrainOpen] = React.useState<boolean>(() =>
@@ -308,11 +357,36 @@ const Navbar: React.FC = () => {
             {open && (
               <>
                 <ListItemText 
-                  primary="Train" 
-                  primaryTypographyProps={{ 
-                    fontWeight: 500,
-                    fontSize: '0.875rem',
-                  }} 
+                  primary={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                      <Typography
+                        component="span"
+                        sx={{
+                          fontWeight: 500,
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        Train
+                      </Typography>
+                      {trainFileName && (
+                        <Chip
+                          label={trainFileName.replace(/\.txt$/i, '')}
+                          size="small"
+                          sx={{
+                            height: 20,
+                            fontSize: '0.6875rem', // 11px
+                            fontWeight: 500,
+                            '& .MuiChip-label': {
+                              px: 0.75,
+                              py: 0,
+                            },
+                          }}
+                          color="primary"
+                          variant="outlined"
+                        />
+                      )}
+                    </Box>
+                  } 
                 />
                 {trainOpen ? (
                   <ExpandLessIcon sx={{ fontSize: '1.125rem', ml: 0.5 }} />
@@ -326,10 +400,10 @@ const Navbar: React.FC = () => {
           <Collapse in={trainOpen} timeout="auto" unmountOnExit>
             <List component="div" disablePadding sx={{ py: 0.25 }}>
               <ListItemLink
-                to="/train-start"
-                selected={isActive('/train-start')}
+                to="/train/flashcards-reading"
+                selected={isActive('/train/flashcards-reading')}
                 sx={{
-                  ...listItemStyle(open, isActive('/train-start'), theme),
+                  ...listItemStyle(open, isActive('/train/flashcards-reading'), theme),
                   pl: open ? 3.5 : 2,
                   py: 0.625,
                   minHeight: 36,
