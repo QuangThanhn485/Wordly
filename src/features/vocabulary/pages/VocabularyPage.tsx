@@ -50,6 +50,7 @@ import {
   ViewList as ViewListIcon,
   ViewModule as ViewModuleIcon,
   RocketLaunch as RocketLaunchIcon,
+  ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 
 // Import types
@@ -103,9 +104,10 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
     backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[100],
     fontWeight: 'bold',
     color: theme.palette.mode === 'dark' ? theme.palette.common.white : theme.palette.text.primary,
+    fontSize: theme.breakpoints.down('sm') ? '0.75rem' : undefined, // Desktop giữ fontSize mặc định
   },
   [`&.${tableCellClasses.body}`]: {
-    fontSize: 14,
+    fontSize: theme.breakpoints.down('sm') ? '0.75rem' : undefined, // Desktop giữ fontSize mặc định (14px)
     color: theme.palette.mode === 'dark' ? theme.palette.common.white : theme.palette.text.primary,
   },
 }));
@@ -232,6 +234,9 @@ const VocabularyPage: React.FC = () => {
   }, [selectedPath, treeIndex]);
   const selectedTitle = useMemo(() => selectedFile?.name.replace(/\.txt$/i, '') ?? '', [selectedFile]);
   
+  // Mobile view mode: 'folder' = show folder tree, 'vocab' = show vocab list
+  const [mobileViewMode, setMobileViewMode] = useState<'folder' | 'vocab'>('folder');
+  
   // Load vocab counts from storage (FAST - no need to load full vocab data)
   // This allows displaying counts immediately without clicking files
   const [vocabCountMap, setVocabCountMap] = useState<Record<string, number>>(() => {
@@ -284,14 +289,28 @@ const VocabularyPage: React.FC = () => {
 
   // ===== Context menu state =====
   const [menu, setMenu] = useState<
-    | { type: 'folder' | 'file'; path: string[]; mouseX: number; mouseY: number }
+    | { type: 'folder' | 'file'; path: string[]; mouseX: number; mouseY: number; anchorEl?: HTMLElement | null }
     | null
   >(null);
-  const openContext = useCallback((type: 'folder' | 'file', path: string[], event: React.MouseEvent) => {
+  const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
+  const openContext = useCallback((type: 'folder' | 'file', path: string[], event: React.MouseEvent | React.MouseEvent<HTMLElement>) => {
     event.preventDefault();
-    setMenu({ type, path, mouseX: event.clientX - 2, mouseY: event.clientY - 4 });
+    event.stopPropagation();
+    // Lưu anchorEl nếu là click từ button (mobile), mouseX/Y nếu là context menu (desktop)
+    const anchorEl = 'currentTarget' in event && event.currentTarget ? event.currentTarget as HTMLElement : null;
+    setMenu({ 
+      type, 
+      path, 
+      mouseX: 'clientX' in event ? event.clientX - 2 : 0, 
+      mouseY: 'clientY' in event ? event.clientY - 4 : 0,
+      anchorEl 
+    });
+    setMenuAnchorEl(anchorEl);
   }, []);
-  const closeMenu = useCallback(() => setMenu(null), []);
+  const closeMenu = useCallback(() => {
+    setMenu(null);
+    setMenuAnchorEl(null);
+  }, []);
 
   // ===== Clipboard for cut/copy/paste =====
   const [clip, setClip] = useState<null | { mode: 'cut' | 'copy'; node: FolderNode | FileLeaf }>(null);
@@ -539,7 +558,22 @@ const VocabularyPage: React.FC = () => {
   const handleFileClick = useCallback((filePath: string[], fileName: string) => {
     setSelectedPath(filePath);
     setSelectedVocabs(new Set());
-  }, []);
+    // Trên mobile: chuyển sang vocab list view khi chọn file
+    if (isMdDown) {
+      setMobileViewMode('vocab');
+    }
+  }, [isMdDown]);
+  
+  // Handle back button trên mobile để quay lại folder view
+  const handleBackToFolder = useCallback(() => {
+    setMobileViewMode('folder');
+    setSelectedPath(null);
+    setSelectedVocabs(new Set());
+    // Đảm bảo sidebar mở khi quay lại folder view trên mobile
+    if (isMdDown) {
+      setSidebarOpen(true);
+    }
+  }, [isMdDown]);
 
   // ===== Grid view navigation =====
   const currentFolder = useMemo(() => {
@@ -603,10 +637,14 @@ const VocabularyPage: React.FC = () => {
       setGridModalOpen(false);
       setViewMode('tree');
       saveViewModeToStorage('tree');
+      // Trên mobile: chuyển sang vocab list view khi chọn file
+      if (isMdDown) {
+        setMobileViewMode('vocab');
+      }
       // Reset to root folder for next time
       setCurrentFolderId(tree.id);
     }
-  }, [tree]);
+  }, [tree, isMdDown]);
 
   const handleBreadcrumbNavigate = useCallback((folderId: string) => {
     setCurrentFolderId(folderId);
@@ -796,7 +834,7 @@ const VocabularyPage: React.FC = () => {
           }
           
           const items: VocabItem[] = importData.vocabulary;
-          
+
           const targetFolderPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
           // Use fileName from JSON or fallback to file.name
           const base = importData.fileName || file.name.replace(/\.json$/i, '.txt');
@@ -1144,7 +1182,8 @@ const VocabularyPage: React.FC = () => {
   return (
     <Box
       sx={{
-        height: '100vh',
+        minHeight: { xs: '100vh', md: '100vh' }, // Cho phép mở rộng hơn 100vh trên mobile
+        height: { xs: 'auto', md: '100vh' }, // Auto trên mobile để cho phép mở rộng theo nội dung
         display: 'flex',
         flexDirection: { xs: 'column', md: 'row' },
       }}
@@ -1158,18 +1197,35 @@ const VocabularyPage: React.FC = () => {
         elevation={0}
         sx={{
           width: {
-            xs: sidebarOpen ? '100%' : 0,
+            xs: sidebarOpen && (mobileViewMode === 'folder' || !isMdDown) ? '100%' : 0,
             md: sidebarOpen ? sidebarWidth : 0,
           },
           flexShrink: 0,
           borderRight: { xs: 'none', md: `1px solid ${theme.palette.divider}` },
           borderBottom: { xs: `1px solid ${theme.palette.divider}`, md: 'none' },
-          height: { xs: '40vh', sm: '45vh', md: '100%' },
+          height: { 
+            xs: mobileViewMode === 'folder' ? 'auto' : 0, // Auto trên mobile để tự mở rộng theo nội dung
+            sm: mobileViewMode === 'folder' ? 'auto' : 0,
+            md: '100%' 
+          },
+          minHeight: {
+            xs: mobileViewMode === 'folder' ? '100vh' : 0, // Ít nhất bằng viewport height
+            sm: mobileViewMode === 'folder' ? '100vh' : 0,
+            md: 'auto',
+          },
           borderRadius: 0,
-          display: 'flex',
+          display: {
+            xs: mobileViewMode === 'folder' ? 'flex' : 'none',
+            md: 'flex',
+          },
           flexDirection: 'column',
-          overflow: 'hidden',
-          transition: theme.transitions.create(['width'], {
+          overflow: { xs: 'visible', md: 'hidden' }, // Mobile: visible để window scroll, Desktop: hidden
+          overflowY: { xs: 'visible', md: 'auto' }, // Mobile: visible, Desktop: auto
+          bgcolor: { 
+            xs: theme.palette.mode === 'dark' ? '#1e1e1e' : 'background.default', 
+            md: theme.palette.mode === 'dark' ? '#1e1e1e' : 'background.paper' 
+          }, // Dark mode: #1e1e1e để nhìn dịu hơn, mobile dùng background.default để khớp với body
+          transition: theme.transitions.create(['width', 'height'], {
             duration: theme.transitions.duration.standard,
             easing: theme.transitions.easing.easeInOut,
           }),
@@ -1177,7 +1233,17 @@ const VocabularyPage: React.FC = () => {
       >
         {sidebarOpen && (
           <>
-            <Box sx={{ px: 2, pt: 3, pb: 2, flexShrink: 0 }}>
+            {/* Sticky Header - "Kho từ vựng" */}
+            <Box sx={{ 
+              px: 2, 
+              pt: 3, 
+              pb: 2, 
+              flexShrink: 0,
+              position: 'sticky',
+              top: { xs: '56px', sm: '64px', md: 0 }, // Dưới AppBar trên mobile
+              zIndex: (t) => t.zIndex.appBar - 1, // Dưới AppBar
+              bgcolor: 'background.paper',
+            }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <MenuBookIcon color="primary" sx={{ mr: 1 }} />
@@ -1221,7 +1287,19 @@ const VocabularyPage: React.FC = () => {
               <Divider sx={{ mb: 0 }} />
             </Box>
 
-            <Box sx={{ flex: 1, overflowY: 'auto', px: 2, pt: 0 }}>
+            {/* Folder Tree List - Loại bỏ scroll riêng trên mobile để sticky hoạt động */}
+            <Box sx={{ 
+              flex: '1 1 auto', // Cho phép mở rộng tự do
+              minHeight: 0,
+              overflowY: { xs: 'visible', md: 'auto' }, // Mobile: visible để window scroll, Desktop: auto cho scroll riêng
+              px: 2, 
+              pt: 0,
+              pb: { xs: 4, md: 2 }, // Padding bottom trên mobile để scroll được hết nội dung
+              bgcolor: { 
+                xs: theme.palette.mode === 'dark' ? '#1e1e1e' : 'background.default', 
+                md: theme.palette.mode === 'dark' ? '#1e1e1e' : 'transparent' 
+              }, // Dark mode: #1e1e1e để nhìn dịu hơn, mobile dùng background.default để khớp với body khi scroll
+            }}>
               <List>
                 <FolderItem
                   node={tree}
@@ -1287,39 +1365,89 @@ const VocabularyPage: React.FC = () => {
       <Box
         sx={{
           flex: 1,
-          display: 'flex',
+          display: {
+            xs: mobileViewMode === 'vocab' ? 'flex' : 'none',
+            md: 'flex',
+          },
           flexDirection: 'column',
           minWidth: 0,
-          height: { xs: '60vh', sm: '55vh', md: '100%' },
+          height: { 
+            xs: mobileViewMode === 'vocab' ? 'calc(100vh - 56px)' : '60vh', // Full height minus AppBar on mobile when vocab view
+            sm: mobileViewMode === 'vocab' ? 'calc(100vh - 64px)' : '55vh',
+            md: '100%' 
+          },
           position: 'relative',
         }}
       >
-        <Box sx={{ px: 3, pt: 2.5, pb: 2, flexShrink: 0 }}>
+        {/* Sticky Header - Tên file + buttons */}
+        <Box 
+          sx={{ 
+            px: { xs: 1.5, sm: 2, md: 3 }, 
+            pt: { xs: 1.5, sm: 2, md: 2.5 }, 
+            pb: { xs: 1.5, sm: 1.5, md: 2 }, 
+            flexShrink: 0,
+            position: 'sticky',
+            top: { xs: '56px', sm: '64px', md: 0 }, // Dưới AppBar trên mobile
+            zIndex: (t) => t.zIndex.appBar - 1, // Dưới AppBar
+            bgcolor: 'background.paper',
+          }}
+        >
           {selectedFile ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                <CategoryIcon color="primary" sx={{ mr: 1.5, flexShrink: 0 }} />
+                {/* Back button - chỉ hiển thị trên mobile */}
+                {isMdDown && (
+                  <IconButton
+                    onClick={handleBackToFolder}
+                    sx={{ 
+                      mr: 1, 
+                      flexShrink: 0,
+                      color: 'text.primary',
+                    }}
+                    aria-label="Quay lại danh sách thư mục"
+                  >
+                    <ArrowBackIcon sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />
+                  </IconButton>
+                )}
+                <CategoryIcon color="primary" sx={{ mr: { xs: 1, sm: 1.5, md: 1.5 }, flexShrink: 0, fontSize: { xs: '1.25rem', sm: '1.5rem', md: undefined } }} />
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography 
-                    variant={isSmDown ? 'h6' : 'h5'} 
+                    variant={isSmDown ? 'subtitle1' : 'h6'} 
                     color="primary"
                     sx={{ 
                       fontWeight: 700,
+                      fontSize: { xs: '0.875rem', sm: '1rem', md: undefined }, // Desktop giữ fontSize mặc định của variant
                       wordBreak: 'break-word',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                     }}
                   >
-                    {selectedTitle}
-                  </Typography>
+                  {selectedTitle}
+                </Typography>
                   {vocabCountMap[selectedFile.name] !== undefined && (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                    <Typography 
+                      variant="caption" 
+                      color="text.secondary" 
+                      sx={{ 
+                        display: 'block', 
+                        mt: 0.25,
+                        fontSize: { xs: '0.6875rem', sm: '0.75rem' },
+                      }}
+                    >
                       {vocabCountMap[selectedFile.name]} từ vựng
                     </Typography>
                   )}
-                </Box>
               </Box>
-              <Stack direction="row" spacing={1}>
+              </Box>
+              <Stack 
+                direction="row" 
+                spacing={{ xs: 0.5, sm: 1 }}
+                sx={{ 
+                  flexWrap: { xs: 'wrap', sm: 'nowrap' },
+                  gap: { xs: 0.5, sm: 0 },
+                  width: { xs: '100%', sm: 'auto' },
+                }}
+              >
                 {selectedVocabs.size > 0 && (
                   <Button
                     variant="outlined"
@@ -1327,8 +1455,12 @@ const VocabularyPage: React.FC = () => {
                     size={isSmDown ? 'small' : 'medium'}
                     startIcon={<DeleteIcon />}
                     onClick={handleDeleteSelectedVocabs}
+                    sx={{ 
+                      fontSize: { xs: '0.6875rem', sm: undefined }, // Desktop giữ fontSize mặc định
+                      px: { xs: 1, sm: 2 },
+                    }}
                   >
-                    Xóa đã chọn ({selectedVocabs.size})
+                    Xóa ({selectedVocabs.size})
                   </Button>
                 )}
                 <Button
@@ -1341,17 +1473,25 @@ const VocabularyPage: React.FC = () => {
                       navigate(`/train/flashcards-reading?file=${encodeURIComponent(selectedFile.name)}`);
                     }
                   }}
-                  sx={{ fontWeight: 600 }}
+                  sx={{ 
+                    fontWeight: 600,
+                    fontSize: { xs: '0.6875rem', sm: undefined }, // Desktop giữ fontSize mặc định
+                    px: { xs: 1, sm: 2 },
+                  }}
                 >
-                  Start Train
+                  Train
                 </Button>
                 <Button
                   variant="contained"
                   size={isSmDown ? 'small' : 'medium'}
                   startIcon={<AddIcon />}
                   onClick={openAddVocabForm}
+                  sx={{ 
+                    fontSize: { xs: '0.6875rem', sm: undefined }, // Desktop giữ fontSize mặc định
+                    px: { xs: 1, sm: 2 },
+                  }}
                 >
-                  Thêm từ vựng
+                  {isSmDown ? 'Thêm' : 'Thêm từ vựng'}
                 </Button>
               </Stack>
             </Box>
@@ -1365,10 +1505,35 @@ const VocabularyPage: React.FC = () => {
           )}
         </Box>
 
-        <Box sx={{ flex: 1, overflowY: 'auto', px: { xs: 2, md: 3 }, pb: { xs: 2, md: 3 } }}>
+        {/* Content Area - Danh sách từ vựng */}
+        <Box sx={{ 
+          flex: 1, 
+          overflow: 'hidden', // Không cho scroll ở đây, để TableContainer handle scroll
+          px: { xs: 2, md: 3 }, 
+          pb: { xs: 2, md: 3 },
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0, // Quan trọng để flex child có thể shrink
+        }}>
           {selectedFile ? (
-            <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}` }}>
-              <TableContainer sx={{ maxHeight: { xs: '50vh', md: 'unset' } }}>
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                border: `1px solid ${theme.palette.divider}`,
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: 0,
+              }}
+            >
+              <TableContainer sx={{ 
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                maxHeight: '100%', // Sử dụng 100% của parent flex container
+                overflow: 'auto', // Cho phép scroll khi cần
+                overflowX: 'hidden', // Không scroll ngang
+              }}>
                 <Table aria-label="vocabulary table" stickyHeader={isMdDown} size={isSmDown ? 'small' : 'medium'} sx={{ minWidth: 650 }}>
                   <TableHead>
                     <TableRow>
@@ -1470,14 +1635,14 @@ const VocabularyPage: React.FC = () => {
                           / {item.pronunciation} /
                         </StyledTableCell>
                         <StyledTableCell align="center">
-                          <IconButton
-                            size={isSmDown ? 'small' : 'medium'}
+                              <IconButton
+                                size={isSmDown ? 'small' : 'medium'}
                             onClick={(e) => handleRowMenuOpen(e, item.word, itemIndex)}
-                            sx={{ '&:hover': { backgroundColor: 'primary.light', color: 'primary.main' } }}
+                                sx={{ '&:hover': { backgroundColor: 'primary.light', color: 'primary.main' } }}
                             aria-label={`Menu cho ${item.word}`}
-                          >
+                              >
                             <MoreVertIcon fontSize={isSmDown ? 'small' : 'medium'} />
-                          </IconButton>
+                              </IconButton>
                           <Menu
                             anchorEl={rowMenuAnchor?.anchorEl}
                             open={rowMenuAnchor !== null && rowMenuAnchor.word === item.word}
@@ -1547,17 +1712,54 @@ const VocabularyPage: React.FC = () => {
       <Menu
         open={Boolean(menu)}
         onClose={closeMenu}
-        anchorReference="anchorPosition"
-        anchorPosition={menu ? { top: menu.mouseY, left: menu.mouseX } : undefined}
+        anchorReference={isMdDown ? "anchorEl" : "anchorPosition"}
+        anchorPosition={!isMdDown && menu ? { top: menu.mouseY, left: menu.mouseX } : undefined}
+        anchorEl={isMdDown ? menuAnchorEl : null}
+        transformOrigin={isMdDown ? { horizontal: 'right', vertical: 'top' } : undefined}
+        anchorOrigin={isMdDown ? { horizontal: 'right', vertical: 'bottom' } : undefined}
+        PaperProps={{
+          sx: {
+            minWidth: isMdDown ? '200px' : 'auto',
+            maxWidth: isMdDown ? 'calc(100vw - 32px)' : 'none',
+          },
+        }}
       >
         {menu?.type === 'folder' ? [
-          <MenuItem key="new-folder" onClick={startNewSubfolder}>
-            <ListItemIcon><NewFolderIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Tạo thư mục con</ListItemText>
+          <MenuItem 
+            key="new-folder" 
+            onClick={startNewSubfolder}
+            sx={{
+              fontSize: { xs: '0.875rem', sm: '1rem' },
+              py: { xs: 1.25, sm: 1 },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+              <NewFolderIcon fontSize={isSmDown ? 'small' : 'medium'} />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Tạo thư mục con"
+              primaryTypographyProps={{
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+              }}
+            />
           </MenuItem>,
-          <MenuItem key="new-file" onClick={startNewFile}>
-            <ListItemIcon><FileIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Tạo file</ListItemText>
+          <MenuItem 
+            key="new-file" 
+            onClick={startNewFile}
+            sx={{
+              fontSize: { xs: '0.875rem', sm: '1rem' },
+              py: { xs: 1.25, sm: 1 },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+              <FileIcon fontSize={isSmDown ? 'small' : 'medium'} />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Tạo file"
+              primaryTypographyProps={{
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+              }}
+            />
           </MenuItem>,
           <Divider key="divider-1" />,
           <MenuItem key="export-folder" onClick={handleExportFolder}>
@@ -1565,7 +1767,7 @@ const VocabularyPage: React.FC = () => {
             <ListItemText>Export thư mục (.json)</ListItemText>
           </MenuItem>,
           <MenuItem key="import-folder" onClick={startImportFolder}>
-            <ListItemIcon><ImportIcon fontSize="small" /></ListItemIcon>
+              <ListItemIcon><ImportIcon fontSize="small" /></ListItemIcon>
             <ListItemText>Import thư mục (.json)</ListItemText>
           </MenuItem>,
           <MenuItem key="import-file" onClick={startImport}>
@@ -1574,48 +1776,48 @@ const VocabularyPage: React.FC = () => {
           </MenuItem>,
           <Divider key="divider-2" />,
           <MenuItem key="rename" onClick={startRename}>
-            <ListItemIcon><RenameIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Đổi tên</ListItemText>
+              <ListItemIcon><RenameIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Đổi tên</ListItemText>
           </MenuItem>,
           <MenuItem key="cut" onClick={doCut}>
-            <ListItemIcon><CutIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Cắt</ListItemText>
+              <ListItemIcon><CutIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Cắt</ListItemText>
           </MenuItem>,
           <MenuItem key="copy" onClick={doCopy}>
-            <ListItemIcon><CopyIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Sao chép</ListItemText>
+              <ListItemIcon><CopyIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Sao chép</ListItemText>
           </MenuItem>,
           <MenuItem key="paste" disabled={!clip} onClick={doPaste}>
-            <ListItemIcon><PasteIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Dán</ListItemText>
+              <ListItemIcon><PasteIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Dán</ListItemText>
           </MenuItem>,
           <Divider key="divider-3" />,
           <MenuItem key="delete" onClick={startDelete}>
-            <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Xoá thư mục</ListItemText>
+              <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Xoá thư mục</ListItemText>
           </MenuItem>,
         ] : [
           <MenuItem key="export-file" onClick={handleExportFile}>
-            <ListItemIcon><ExportIcon fontSize="small" /></ListItemIcon>
+              <ListItemIcon><ExportIcon fontSize="small" /></ListItemIcon>
             <ListItemText>Export file (.json)</ListItemText>
           </MenuItem>,
           <Divider key="divider-1" />,
           <MenuItem key="rename" onClick={startRename}>
-            <ListItemIcon><RenameIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Đổi tên</ListItemText>
+              <ListItemIcon><RenameIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Đổi tên</ListItemText>
           </MenuItem>,
           <MenuItem key="cut" onClick={doCut}>
-            <ListItemIcon><CutIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Cắt</ListItemText>
+              <ListItemIcon><CutIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Cắt</ListItemText>
           </MenuItem>,
           <MenuItem key="copy" onClick={doCopy}>
-            <ListItemIcon><CopyIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Sao chép</ListItemText>
+              <ListItemIcon><CopyIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Sao chép</ListItemText>
           </MenuItem>,
           <Divider key="divider-2" />,
           <MenuItem key="delete" onClick={startDelete}>
-            <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Xoá file</ListItemText>
+              <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Xoá file</ListItemText>
           </MenuItem>,
         ]}
       </Menu>

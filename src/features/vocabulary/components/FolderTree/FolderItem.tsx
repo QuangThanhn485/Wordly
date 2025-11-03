@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo } from 'react';
-import { Box, Collapse, IconButton, List, ListItemButton, ListItemText, Typography } from '@mui/material';
+import { Box, Collapse, IconButton, List, ListItemButton, ListItemText, Typography, useMediaQuery, useTheme } from '@mui/material';
 import {
   Folder as FolderIcon,
   FolderOpen as FolderOpenIcon,
@@ -54,65 +54,92 @@ export const FileItem = memo(function FileItem({
   onContext,
   vocabCount,
   selected = false,
+  forceShowMenu = false,
 }: {
   node: FileLeaf;
   onClick: () => void;
   level?: number;
-  onContext: (e: React.MouseEvent) => void;
+  onContext: (e: React.MouseEvent<HTMLElement>) => void;
   vocabCount?: number;
   selected?: boolean;
+  forceShowMenu?: boolean;
 }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
+  const showMenuButton = forceShowMenu || isMobile;
+
   return (
-    <ListItemButton
-      selected={selected}
-      sx={{
-        pl: 4 + level * 2,
-        position: 'relative',
-        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
-        '&.Mui-selected': {
-          backgroundColor: 'rgba(25, 118, 210, 0.12)',
-          '&:hover': {
-            backgroundColor: 'rgba(25, 118, 210, 0.16)',
+    <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+      <ListItemButton
+        selected={selected}
+        sx={{
+          pl: 4 + level * 2,
+          pr: showMenuButton ? 4 : 2,
+          position: 'relative',
+          flex: 1,
+          '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
+          '&.Mui-selected': {
+            backgroundColor: 'rgba(25, 118, 210, 0.12)',
+            '&:hover': {
+              backgroundColor: 'rgba(25, 118, 210, 0.16)',
+            },
           },
-        },
-        '&::before':
-          level > 0
-            ? {
-                content: '""',
-                position: 'absolute',
-                left: 20 + (level - 1) * 20,
-                top: 0,
-                bottom: 0,
-                width: '1px',
-                backgroundColor: '#e0e0e0',
-              }
-            : undefined,
-      }}
-      onClick={onClick}
-      onContextMenu={onContext}
-      aria-label={`File ${node.name}`}
-    >
-      <FileIcon sx={{ fontSize: '1rem', mr: 1, color: 'text.secondary' }} />
-      <ListItemText 
-        primary={
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-            <Typography variant="body2">{node.name.replace(/\.txt$/i, '')}</Typography>
-            {vocabCount !== undefined && (
-              <Typography 
-                variant="caption" 
-                sx={{ 
-                  color: 'text.secondary', 
-                  ml: 1,
-                  fontWeight: 500
-                }}
-              >
-                ({vocabCount})
-              </Typography>
-            )}
-          </Box>
-        } 
-      />
-    </ListItemButton>
+          '&::before':
+            level > 0
+              ? {
+                  content: '""',
+                  position: 'absolute',
+                  left: 20 + (level - 1) * 20,
+                  top: 0,
+                  bottom: 0,
+                  width: '1px',
+                  backgroundColor: '#e0e0e0',
+                }
+              : undefined,
+        }}
+        onClick={onClick}
+        onContextMenu={isMobile ? undefined : onContext} // Disable context menu on mobile, use button instead
+        aria-label={`File ${node.name}`}
+      >
+        <FileIcon sx={{ fontSize: '1rem', mr: 1, color: 'text.secondary' }} />
+        <ListItemText 
+          primary={
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <Typography variant="body2">{node.name.replace(/\.txt$/i, '')}</Typography>
+              {vocabCount !== undefined && (
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: 'text.secondary', 
+                    ml: 1,
+                    fontWeight: 500
+                  }}
+                >
+                  ({vocabCount})
+                </Typography>
+              )}
+            </Box>
+          } 
+        />
+      </ListItemButton>
+      {showMenuButton && (
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            onContext(e);
+          }}
+          sx={{ 
+            position: 'absolute',
+            right: 4,
+            opacity: 1,
+          }}
+          aria-label={`File menu for ${node.name}`}
+        >
+          <MoreIcon fontSize="small" />
+        </IconButton>
+      )}
+    </Box>
   );
 });
 
@@ -132,7 +159,7 @@ const FolderItemComponent = function FolderItem({
   node: FolderNode;
   level?: number;
   onFileClick: (filePath: string[], fileName: string) => void;
-  onContext: (type: 'folder' | 'file', path: string[], event: React.MouseEvent) => void;
+  onContext: (type: 'folder' | 'file', path: string[], event: React.MouseEvent<HTMLElement>) => void;
   path: string[]; // ids from root to this node
   forceShowMenu?: boolean;
   isFolderOpen?: ((id: string) => boolean) | Set<string>; // Can be function or Set for direct lookup
@@ -140,6 +167,10 @@ const FolderItemComponent = function FolderItem({
   vocabCountMap?: Record<string, number>; // fileName -> count
   selectedFileId?: string | null; // Currently selected file ID
 }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
+  const showMenuButton = forceShowMenu || isMobile;
+
   // Optimize: check if isFolderOpen is a Set (direct lookup) or function
   const open = !isFolderOpen 
     ? false
@@ -165,13 +196,15 @@ const FolderItemComponent = function FolderItem({
 
   return (
     <>
-      <Box sx={{ position: 'relative', '&:hover .folder-menu-icon': { opacity: 1 } }}>
+      <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
         <ListItemButton
           onClick={handleToggle}
-          onContextMenu={(e) => onContext('folder', path, e)}
+          onContextMenu={isMobile ? undefined : (e) => onContext('folder', path, e)} // Disable context menu on mobile
           sx={{
             pl: 2 + level * 2,
+            pr: showMenuButton ? 4 : 2,
             position: 'relative',
+            flex: 1,
             '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
             '&::before':
               level > 0
@@ -191,20 +224,25 @@ const FolderItemComponent = function FolderItem({
         >
           {open ? <FolderOpenIcon color="primary" sx={{ mr: 1 }} /> : <FolderIcon color="primary" sx={{ mr: 1 }} />}
           <ListItemText primary={<Typography variant="body1" sx={{ fontWeight: 500 }}>{node.label}</Typography>} />
+          {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+        </ListItemButton>
+        {showMenuButton && (
           <IconButton
-            className="folder-menu-icon"
             size="small"
             onClick={(e) => {
               e.stopPropagation();
-              onContext('folder', path, e as unknown as React.MouseEvent);
+              onContext('folder', path, e);
             }}
-            sx={{ opacity: forceShowMenu ? 1 : 0, transition: 'opacity 0.2s' }}
+            sx={{ 
+              position: 'absolute',
+              right: 4,
+              opacity: 1,
+            }}
             aria-label={`Folder menu for ${node.label}`}
           >
             <MoreIcon fontSize="small" />
           </IconButton>
-          {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-        </ListItemButton>
+        )}
       </Box>
 
       <Collapse 
@@ -252,6 +290,7 @@ const FolderItemComponent = function FolderItem({
                 onContext={(e) => onContext('file', [...path, child.id], e)}
                 vocabCount={vocabCountMap?.[child.name]}
                 selected={child.id === selectedFileId}
+                forceShowMenu={forceShowMenu}
               />
             ),
           )}
