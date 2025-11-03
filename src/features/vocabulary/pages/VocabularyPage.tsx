@@ -104,10 +104,10 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
     backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[100],
     fontWeight: 'bold',
     color: theme.palette.mode === 'dark' ? theme.palette.common.white : theme.palette.text.primary,
-    fontSize: theme.breakpoints.down('sm') ? '0.75rem' : undefined, // Desktop giữ fontSize mặc định
+    fontSize: theme.breakpoints.down('sm') ? '0.875rem' : '1rem', // Mobile: 14px, Desktop: 16px
   },
   [`&.${tableCellClasses.body}`]: {
-    fontSize: theme.breakpoints.down('sm') ? '0.75rem' : undefined, // Desktop giữ fontSize mặc định (14px)
+    fontSize: theme.breakpoints.down('sm') ? '0.875rem' : '1rem', // Mobile: 14px, Desktop: 16px
     color: theme.palette.mode === 'dark' ? theme.palette.common.white : theme.palette.text.primary,
   },
 }));
@@ -1534,7 +1534,7 @@ const VocabularyPage: React.FC = () => {
                 overflow: 'auto', // Cho phép scroll khi cần
                 overflowX: 'hidden', // Không scroll ngang
               }}>
-                <Table aria-label="vocabulary table" stickyHeader={isMdDown} size={isSmDown ? 'small' : 'medium'} sx={{ minWidth: 650 }}>
+                <Table aria-label="vocabulary table" stickyHeader={isMdDown} size="medium" sx={{ minWidth: 650 }}>
                   <TableHead>
                     <TableRow>
                       <StyledTableCell padding="checkbox">
@@ -1620,7 +1620,7 @@ const VocabularyPage: React.FC = () => {
                               py: 0.5,
                               bgcolor: 'grey.100',
                               borderRadius: 1,
-                              fontSize: 12,
+                              fontSize: { xs: '0.75rem', sm: '0.875rem' }, // Mobile: 12px, Desktop: 14px
                               color: 'grey.800',
                               whiteSpace: 'nowrap',
                             }}
