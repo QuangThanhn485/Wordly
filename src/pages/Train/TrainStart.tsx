@@ -27,6 +27,7 @@ import {
 } from 'features/train/train-start/sessionStorage';
 import { recordMistakes } from 'features/train/train-start/mistakesStorage';
 import { CompletionModal, type SessionMistake } from 'features/train/train-start/components/CompletionModal';
+import { speakEnglish } from '@/utils/speechUtils';
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
@@ -190,24 +191,8 @@ const TrainStart = () => {
     osc.stop(ctx.currentTime + 0.26);
   };
 
-  const speakEN = (text: string) => {
-    const synth = window.speechSynthesis;
-    if (!synth) return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US';
-    const voices = synth.getVoices();
-    const v =
-      voices.find((x) => x.lang?.toLowerCase().startsWith('en-us')) ||
-      voices.find((x) => x.lang?.toLowerCase().startsWith('en-gb')) ||
-      voices.find((x) => x.lang?.toLowerCase().startsWith('en'));
-    if (v) u.voice = v;
-    u.rate = 1;
-    u.pitch = 1;
-    try {
-      synth.cancel();
-    } catch {}
-    synth.speak(u);
-  };
+  // Use enhanced speech utility for better pronunciation
+  // Direct use of speakEnglish utility - no wrapper needed
 
   const handleLanguageToggle = (_: React.MouseEvent<HTMLElement>, newLang: 'vi' | 'en' | null) => {
     if (newLang) {
@@ -257,7 +242,7 @@ const TrainStart = () => {
       if (isCorrect) {
         setFlipped((f) => ({ ...f, [idx]: true }));
         setScore((v) => v + 1);
-        speakEN(items[targetIdx].en); // Always speak the English word of the target
+        speakEnglish(items[targetIdx].en, { lang: 'en-US' }); // Always speak the English word of the target
         const exclude = new Set<number>();
         Object.keys(flipped).forEach((k) => {
           if (flipped[+k]) exclude.add(+k);

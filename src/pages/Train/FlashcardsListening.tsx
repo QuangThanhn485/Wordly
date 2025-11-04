@@ -36,6 +36,7 @@ import {
 } from 'features/train/train-listen/sessionStorage';
 import { recordMistakes } from 'features/train/train-listen/mistakesStorage';
 import { CompletionModal, type SessionMistake } from 'features/train/train-listen/components/CompletionModal';
+import { speakEnglish } from '@/utils/speechUtils';
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
@@ -226,24 +227,8 @@ const FlashcardsListening = () => {
     osc.stop(ctx.currentTime + 0.26);
   };
 
-  const speakEN = useCallback((text: string) => {
-    const synth = window.speechSynthesis;
-    if (!synth) return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US';
-    const voices = synth.getVoices();
-    const v =
-      voices.find((x) => x.lang?.toLowerCase().startsWith('en-us')) ||
-      voices.find((x) => x.lang?.toLowerCase().startsWith('en-gb')) ||
-      voices.find((x) => x.lang?.toLowerCase().startsWith('en'));
-    if (v) u.voice = v;
-    u.rate = 1;
-    u.pitch = 1;
-    try {
-      synth.cancel();
-    } catch {}
-    synth.speak(u);
-  }, []);
+  // Use enhanced speech utility for better pronunciation
+  // Direct use of speakEnglish utility - no wrapper needed
 
   const handleLanguageToggle = (_: React.MouseEvent<HTMLElement>, newLang: 'vi' | 'en' | null) => {
     if (newLang) {
@@ -263,8 +248,8 @@ const FlashcardsListening = () => {
     setHasStarted(true);
     setShowHintModal(false);
     // Always speak English word
-    speakEN(target.en);
-  }, [items, targetIdx, isLoading, speakEN]);
+    speakEnglish(target.en, { lang: 'en-US' });
+  }, [items, targetIdx, isLoading]);
 
   // Handle replay audio button - play current word again
   const handleReplayAudio = useCallback(() => {
@@ -276,8 +261,8 @@ const FlashcardsListening = () => {
     if (!target) return;
     
     // Always speak English word
-    speakEN(target.en);
-  }, [hasStarted, items, targetIdx, isLoading, speakEN]);
+    speakEnglish(target.en, { lang: 'en-US' });
+  }, [hasStarted, items, targetIdx, isLoading]);
 
   // Handle show answer button - open hint modal
   const handleShowAnswer = useCallback(() => {
@@ -329,7 +314,7 @@ const FlashcardsListening = () => {
         setFlipped((f) => ({ ...f, [idx]: true }));
         setScore((v) => v + 1);
         // Always speak the English word of the target
-        speakEN(items[targetIdx].en);
+        speakEnglish(items[targetIdx].en, { lang: 'en-US' });
         setShowHintModal(false); // Hide hint modal when correct
         const exclude = new Set<number>();
         Object.keys(flipped).forEach((k) => {
@@ -342,7 +327,7 @@ const FlashcardsListening = () => {
         if (newTargetIdx >= 0 && newTargetIdx < items.length && items[newTargetIdx]) {
           // Small delay before playing next word
           setTimeout(() => {
-            speakEN(items[newTargetIdx].en);
+            speakEnglish(items[newTargetIdx].en, { lang: 'en-US' });
           }, 300);
         }
       } else {
@@ -366,7 +351,7 @@ const FlashcardsListening = () => {
         }
       }
     },
-    [items, targetIdx, flipped, language, isLoading, hasStarted, speakEN]
+    [items, targetIdx, flipped, language, isLoading, hasStarted]
   );
 
   // Check if all cards are flipped (100% completion)

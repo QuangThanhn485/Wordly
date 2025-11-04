@@ -84,7 +84,7 @@ import {
   saveTreeToStorage,
   loadTreeFromStorage,
 } from '../utils/storageUtils';
-import { speak } from '../utils/speechUtils';
+import { speak } from '@/utils/speechUtils';
 
 // Import components
 import { FolderItem } from '../components/FolderTree';
