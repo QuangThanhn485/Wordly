@@ -546,10 +546,10 @@ const Navbar: React.FC = () => {
               </ListItemLink>
 
               <ListItemLink
-                to="/train/listening"
-                selected={isActive('/train/listening')}
+                to="/train/flashcards-listening"
+                selected={isActive('/train/flashcards-listening')}
                 sx={{
-                  ...listItemStyle(open, isActive('/train/listening'), theme),
+                  ...listItemStyle(open, isActive('/train/flashcards-listening'), theme),
                   pl: open ? 3.5 : 2,
                   py: 0.625,
                   minHeight: 36,

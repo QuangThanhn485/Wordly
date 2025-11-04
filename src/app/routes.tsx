@@ -4,6 +4,7 @@ import Home from '@/pages/Home';
 import { VocabularyPage } from '@/features/vocabulary';
 import About from '@/pages/About';
 import TrainStart from '@/pages/Train/TrainStart';
+import FlashcardsListening from '@/pages/Train/FlashcardsListening';
 import Login from '@/features/auth/pages/Login';
 
 export default function AppRoutes() {
@@ -16,6 +17,7 @@ export default function AppRoutes() {
         { path: 'about', element: <About /> },
         { path: 'vocabulary', element: <VocabularyPage /> },
         { path: 'train/flashcards-reading', element: <TrainStart /> },
+        { path: 'train/flashcards-listening', element: <FlashcardsListening /> },
       ],
     },
     {

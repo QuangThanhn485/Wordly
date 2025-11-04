@@ -1,4 +1,4 @@
-// src/features/train/train-start/api.ts
+// src/features/train/train-listen/api.ts
 import { loadVocabFile } from '@/features/vocabulary/utils/storageUtils';
 import type { VocabItem } from '@/features/vocabulary/types';
 
@@ -29,3 +29,4 @@ export const getWords = async (fileName?: string): Promise<TrainWordItem[]> => {
     }, 100); // Reduced delay for better UX
   });
 };
+
