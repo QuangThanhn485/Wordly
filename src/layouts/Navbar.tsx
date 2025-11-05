@@ -37,6 +37,7 @@ import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoice';
 import { Link as RouterLink, useLocation, useSearchParams } from 'react-router-dom';
 import { useThemeMode } from 'contexts/ThemeContext';
 import { loadTrainingSession } from 'features/train/train-start/sessionStorage';
+import { loadTrainingSession as loadRWTrainingSession } from 'features/train/train-read-write/sessionStorage';
 import { Chip } from '@mui/material';
 
 const drawerWidth = 240;
@@ -116,11 +117,25 @@ const Navbar: React.FC = () => {
     return session?.fileName || null;
   });
   
+  // Get read-write file name from localStorage session
+  const [rwFileName, setRWFileName] = React.useState<string | null>(() => {
+    // Load on mount
+    const session = loadRWTrainingSession();
+    return session?.fileName || null;
+  });
+  
   // Update train file name when URL params change OR when localStorage session changes
   React.useEffect(() => {
     const session = loadTrainingSession();
     const fileName = session?.fileName || null;
     setTrainFileName(fileName);
+  }, [searchParams, location.pathname]); // Re-check when URL params change (user navigates)
+  
+  // Update read-write file name when URL params change OR when localStorage session changes
+  React.useEffect(() => {
+    const session = loadRWTrainingSession();
+    const fileName = session?.fileName || null;
+    setRWFileName(fileName);
   }, [searchParams, location.pathname]); // Re-check when URL params change (user navigates)
   
   // Listen for storage events (when session is saved from other tabs/components)
@@ -130,6 +145,10 @@ const Navbar: React.FC = () => {
         const session = loadTrainingSession();
         const fileName = session?.fileName || null;
         setTrainFileName(fileName);
+      } else if (e.key === 'wordly_train_rw_session') {
+        const session = loadRWTrainingSession();
+        const fileName = session?.fileName || null;
+        setRWFileName(fileName);
       }
     };
     
@@ -147,6 +166,15 @@ const Navbar: React.FC = () => {
         // Only update if changed to avoid unnecessary re-renders
         if (prev !== fileName) {
           return fileName;
+        }
+        return prev;
+      });
+      
+      const rwSession = loadRWTrainingSession();
+      const rwFile = rwSession?.fileName || null;
+      setRWFileName((prev) => {
+        if (prev !== rwFile) {
+          return rwFile;
         }
         return prev;
       });
@@ -567,7 +595,7 @@ const Navbar: React.FC = () => {
               </ListItemLink>
 
               <ListItemLink
-                to="/train/read-write"
+                to={rwFileName ? `/train/read-write?file=${encodeURIComponent(rwFileName)}` : '/train/read-write'}
                 selected={isActive('/train/read-write')}
                 sx={{
                   ...listItemStyle(open, isActive('/train/read-write'), theme),
