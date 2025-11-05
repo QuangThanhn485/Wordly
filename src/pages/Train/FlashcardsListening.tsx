@@ -127,7 +127,7 @@ const FlashcardsListening = () => {
   const [targetIdx, setTargetIdx] = useState<number>(() => pickRandomIndex(total, new Set()));
   const [score, setScore] = useState(0);
   const [mistakes, setMistakes] = useState(0);
-  const [language, setLanguage] = useState<'vi' | 'en'>('vi');
+  const [language, setLanguage] = useState<'vi' | 'en'>('en'); // Default to EN-VI mode for listening
   const [hasStarted, setHasStarted] = useState(false); // Track if user has clicked start button
   const [showHintModal, setShowHintModal] = useState(false); // Track if hint modal is shown
   
@@ -162,7 +162,7 @@ const FlashcardsListening = () => {
       setHasStarted(false);
       setShowHintModal(false);
       setTargetIdx(pickRandomIndex(items.length, new Set()));
-      setLanguage('vi');
+      setLanguage('en'); // Default to EN-VI mode for listening
       return;
     }
     
@@ -176,7 +176,7 @@ const FlashcardsListening = () => {
         setScore(session.score || 0);
         setMistakes(session.mistakes || 0);
         setTargetIdx(session.targetIdx >= 0 ? session.targetIdx : pickRandomIndex(items.length, new Set()));
-        setLanguage(session.language || 'vi');
+        setLanguage(session.language || 'en'); // Default to EN-VI mode for listening if no saved language
         setHasStarted(session.hasStarted || false);
         setShowHintModal(false); // Always hide hint modal on restore
         return; // Session restored
@@ -193,7 +193,7 @@ const FlashcardsListening = () => {
     setHasStarted(false);
     setShowHintModal(false);
     setTargetIdx(pickRandomIndex(items.length, new Set()));
-    setLanguage('vi');
+    setLanguage('en'); // Default to EN-VI mode for listening
   }, [currentFileName, isLoading, items.length, sessionRestored]);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
