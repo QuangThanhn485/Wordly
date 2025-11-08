@@ -88,6 +88,7 @@ import { speak } from '@/utils/speechUtils';
 import { saveTrainingSession as saveReadingSession } from '@/features/train/train-start/sessionStorage';
 import { saveTrainingSession as saveListeningSession } from '@/features/train/train-listen/sessionStorage';
 import { saveTrainingSession as saveReadWriteSession } from '@/features/train/train-read-write/sessionStorage';
+import { saveTrainingSession as saveListenWriteSession } from '@/features/train/train-listen-write/sessionStorage';
 
 // Import components
 import { FolderItem } from '../components/FolderTree';
@@ -1504,6 +1505,16 @@ const VocabularyPage: React.FC = () => {
                       
                       // Update read-write session
                       saveReadWriteSession({
+                        ...baseSession,
+                        currentWordIndex: 0,
+                        completedWords: [],
+                        mode: 'vi-en' as const,
+                        score: 0,
+                        mistakes: 0,
+                      });
+                      
+                      // Update listen-write session
+                      saveListenWriteSession({
                         ...baseSession,
                         currentWordIndex: 0,
                         completedWords: [],

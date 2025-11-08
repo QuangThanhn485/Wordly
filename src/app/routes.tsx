@@ -6,6 +6,7 @@ import About from '@/pages/About';
 import TrainStart from '@/pages/Train/TrainStart';
 import FlashcardsListening from '@/pages/Train/FlashcardsListening';
 import ReadWritePage from '@/pages/Train/ReadWritePage';
+import ListenWritePage from '@/pages/Train/ListenWritePage';
 import Login from '@/features/auth/pages/Login';
 
 export default function AppRoutes() {
@@ -20,6 +21,7 @@ export default function AppRoutes() {
         { path: 'train/flashcards-reading', element: <TrainStart /> },
         { path: 'train/flashcards-listening', element: <FlashcardsListening /> },
         { path: 'train/read-write', element: <ReadWritePage /> },
+        { path: 'train/listen-write', element: <ListenWritePage /> },
       ],
     },
     {
