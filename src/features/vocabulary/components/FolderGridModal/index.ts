@@ -1,0 +1,2 @@
+export { FolderGridModal } from './FolderGridModal';
+

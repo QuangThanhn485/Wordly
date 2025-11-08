@@ -15,30 +15,29 @@ import TranslateIcon from '@mui/icons-material/Translate';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTrainWords } from 'features/train/train-start';
 import { WordCard } from 'features/train/train-start';
+import { 
+  saveTrainingSession, 
+  loadTrainingSession, 
+  clearTrainingSession,
+  isSessionForFile,
+  type TrainingSession 
+} from 'features/train/train-start/sessionStorage';
+import { recordMistakes } from 'features/train/train-start/mistakesStorage';
+import { CompletionModal, type SessionMistake } from 'features/train/train-start/components/CompletionModal';
+import { speakEnglish } from '@/utils/speechUtils';
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
-const viDict: Record<string, string> = {
-  apple: 'quả táo',
-  orange: 'quả cam',
-  banana: 'quả chuối',
-  cat: 'con mèo',
-  dog: 'con chó',
-  book: 'cuốn sách',
-};
-const viOf = (en: string) => viDict[normalize(en)] || en;
-
-type WordItem = { en: string; vi: string; meaning?: string };
+type WordItem = { en: string; vi: string };
 
 function adaptWords(input: any[]): WordItem[] {
   if (!Array.isArray(input)) return [];
-  return input
-    .map((w) => (typeof w === 'string' ? { en: w } : null))
-    .filter(Boolean)
-    .map(({ en }: any) => ({ en, vi: viOf(en), meaning: undefined }));
+  // Input is already TrainWordItem[] from api, just return as-is
+  return input.filter((w) => w && typeof w === 'object' && w.en && w.vi);
 }
 
 function pickRandomIndex(arrLength: number, exclude: Set<number>): number {
@@ -49,15 +48,52 @@ function pickRandomIndex(arrLength: number, exclude: Set<number>): number {
   return candidates[r];
 }
 
+// Padding-top cho cards grid - điều chỉnh tại đây để thay đổi khoảng cách giữa sticky bar và cards
+const GRID_PADDING_TOP = {
+  xs: '10px', // Mobile: chỉ cần gap nhỏ, sticky bar sẽ tự stick không che mất card
+  sm: '10px', // Tablet: chỉ cần gap nhỏ
+  md: '10px'  // Desktop: chỉ cần gap nhỏ
+};
+
 const TrainStart = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentFileName = searchParams.get('file');
+  const [sessionRestored, setSessionRestored] = useState(false); // Track if we've attempted to restore session
+
+  // Check for saved session on mount - if no file in URL but session exists, restore it
+  // BUT if URL has a different file, that takes priority (user selected a new file)
+  useEffect(() => {
+    if (sessionRestored) return; // Only run once on mount
+    
+    const savedSession = loadTrainingSession();
+    
+    // Priority 1: If URL has a file parameter, use it (user selected a file)
+    if (currentFileName) {
+      // Check if this is a different file than the saved session
+      if (savedSession && savedSession.fileName !== currentFileName) {
+        // Different file - clear old session immediately
+        clearTrainingSession();
+      }
+      setSessionRestored(true);
+      return;
+    }
+    
+    // Priority 2: No file in URL - restore from saved session if available
+    if (savedSession && savedSession.fileName) {
+      setSearchParams({ file: savedSession.fileName }, { replace: true });
+    }
+    
+    setSessionRestored(true);
+  }, [currentFileName, sessionRestored, setSearchParams]);
 
   const { words: rawWords, isLoading } = useTrainWords();
   const items = useMemo(() => adaptWords(rawWords ?? []), [rawWords]);
   const total = items.length;
 
+  // Initialize state with defaults first
   const [flipped, setFlipped] = useState<Record<number, boolean>>({});
   const [wrongIdx, setWrongIdx] = useState<number | null>(null);
   const [wrongTick, setWrongTick] = useState(0);
@@ -65,15 +101,64 @@ const TrainStart = () => {
   const [score, setScore] = useState(0);
   const [mistakes, setMistakes] = useState(0);
   const [language, setLanguage] = useState<'vi' | 'en'>('vi');
+  
+  // Track mistakes per word for current session: word -> count
+  const [wordMistakes, setWordMistakes] = useState<Map<string, number>>(new Map());
+  
+  // Completion modal state
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
 
+  // Track previous file name to detect file changes
+  const prevFileNameRef = useRef<string | null>(null);
+
+  // Load saved session when items are ready
   useEffect(() => {
+    if (isLoading || items.length === 0 || !currentFileName || !sessionRestored) return;
+    
+    // Check if file has changed
+    const fileChanged = prevFileNameRef.current !== null && prevFileNameRef.current !== currentFileName;
+    prevFileNameRef.current = currentFileName;
+    
+    // If file changed, clear session immediately
+    if (fileChanged) {
+      clearTrainingSession();
+      // Reset state for new file
+      setFlipped({});
+      setWrongIdx(null);
+      setWrongTick(0);
+      setScore(0);
+      setMistakes(0);
+      setWordMistakes(new Map());
+      setShowCompletionModal(false);
+      setTargetIdx(pickRandomIndex(items.length, new Set()));
+      setLanguage('vi');
+      return;
+    }
+    
+    // File hasn't changed - try to restore session
+    const session = loadTrainingSession();
+    if (isSessionForFile(session, currentFileName)) {
+      // Validate session data matches current items
+      if (session && session.targetIdx >= 0 && session.targetIdx < items.length) {
+        // Restore session state
+        setFlipped(session.flipped || {});
+        setScore(session.score || 0);
+        setMistakes(session.mistakes || 0);
+        setTargetIdx(session.targetIdx >= 0 ? session.targetIdx : pickRandomIndex(items.length, new Set()));
+        setLanguage(session.language || 'vi');
+        return; // Session restored
+      }
+    }
+    
+    // No valid session - start fresh
     setFlipped({});
     setWrongIdx(null);
     setWrongTick(0);
     setScore(0);
     setMistakes(0);
     setTargetIdx(pickRandomIndex(items.length, new Set()));
-  }, [items.length]);
+    setLanguage('vi');
+  }, [currentFileName, isLoading, items.length, sessionRestored]);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const getAudioCtx = () => {
@@ -106,38 +191,58 @@ const TrainStart = () => {
     osc.stop(ctx.currentTime + 0.26);
   };
 
-  const speakEN = (text: string) => {
-    const synth = window.speechSynthesis;
-    if (!synth) return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US';
-    const voices = synth.getVoices();
-    const v =
-      voices.find((x) => x.lang?.toLowerCase().startsWith('en-us')) ||
-      voices.find((x) => x.lang?.toLowerCase().startsWith('en-gb')) ||
-      voices.find((x) => x.lang?.toLowerCase().startsWith('en'));
-    if (v) u.voice = v;
-    u.rate = 1;
-    u.pitch = 1;
-    try {
-      synth.cancel();
-    } catch {}
-    synth.speak(u);
-  };
+  // Use enhanced speech utility for better pronunciation
+  // Direct use of speakEnglish utility - no wrapper needed
 
   const handleLanguageToggle = (_: React.MouseEvent<HTMLElement>, newLang: 'vi' | 'en' | null) => {
-    if (newLang) setLanguage(newLang);
+    if (newLang) {
+      setLanguage(newLang);
+      // Note: Session will be auto-saved via useEffect
+    }
   };
+
+  // Save session to localStorage whenever relevant state changes
+  useEffect(() => {
+    if (!currentFileName || isLoading || items.length === 0) return;
+    
+    const session: TrainingSession = {
+      fileName: currentFileName,
+      score,
+      mistakes,
+      flipped,
+      targetIdx,
+      language,
+      timestamp: Date.now(),
+    };
+    saveTrainingSession(session);
+  }, [currentFileName, score, mistakes, flipped, targetIdx, language, isLoading, items.length]);
 
   const handleAttempt = useCallback(
     (idx: number) => {
-      if (targetIdx < 0 || idx < 0 || idx >= items.length) return;
+      // Guard clauses: prevent click when loading or items not ready
+      if (isLoading || items.length === 0) return;
+      if (targetIdx < 0 || targetIdx >= items.length) return;
+      if (idx < 0 || idx >= items.length) return;
       if (flipped[idx]) return;
-      const isCorrect = normalize(items[idx].en) === normalize(items[targetIdx].en);
+      
+      // Ensure target item exists before accessing
+      if (!items[targetIdx] || !items[idx]) return;
+      
+      // Check answer based on language mode
+      // VI-EN mode: top bar shows Vietnamese (target.vi), cards show English
+      //   - User needs to click the card with English that matches the Vietnamese in top bar
+      //   - So we check if the clicked card's English matches target's English
+      // EN-VI mode: top bar shows English (target.en), cards show Vietnamese
+      //   - User needs to click the card with Vietnamese that matches the English in top bar
+      //   - So we check if the clicked card's Vietnamese matches target's Vietnamese
+      const isCorrect = language === 'vi'
+        ? normalize(items[idx].en) === normalize(items[targetIdx].en) // VI-EN: match English
+        : normalize(items[idx].vi) === normalize(items[targetIdx].vi); // EN-VI: match Vietnamese
+      
       if (isCorrect) {
         setFlipped((f) => ({ ...f, [idx]: true }));
         setScore((v) => v + 1);
-        speakEN(items[idx].en);
+        speakEnglish(items[targetIdx].en, { lang: 'en-US' }); // Always speak the English word of the target
         const exclude = new Set<number>();
         Object.keys(flipped).forEach((k) => {
           if (flipped[+k]) exclude.add(+k);
@@ -148,6 +253,15 @@ const TrainStart = () => {
         setWrongIdx(idx);
         setWrongTick((t) => t + 1);
         setMistakes((m) => m + 1);
+        
+        // Track mistake for this word
+        const wrongWord = items[targetIdx].en;
+        setWordMistakes((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(wrongWord, (newMap.get(wrongWord) || 0) + 1);
+          return newMap;
+        });
+        
         playErrorTone();
         if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
           try {
@@ -156,45 +270,131 @@ const TrainStart = () => {
         }
       }
     },
-    [items, targetIdx, flipped]
+    [items, targetIdx, flipped, language, isLoading]
   );
 
-  const handleRestart = () => {
+  // Check if all cards are flipped (100% completion)
+  const allFlipped = useMemo(() => {
+    if (items.length === 0) return false;
+    return Object.keys(flipped).length === items.length && 
+           Object.values(flipped).every(v => v === true);
+  }, [flipped, items.length]);
+  
+  // Show completion modal when 100% completed
+  useEffect(() => {
+    if (allFlipped && !isLoading && items.length > 0) {
+      setShowCompletionModal(true);
+    }
+  }, [allFlipped, isLoading, items.length]);
+  
+  // Prepare mistakes data for modal
+  const sessionMistakes: SessionMistake[] = useMemo(() => {
+    const mistakesList: SessionMistake[] = [];
+    wordMistakes.forEach((count, word) => {
+      const item = items.find(it => it.en === word);
+      if (item) {
+        mistakesList.push({
+          word: item.en,
+          viMeaning: item.vi,
+          count,
+        });
+      }
+    });
+    // Sort by mistake count (descending)
+    return mistakesList.sort((a, b) => b.count - a.count);
+  }, [wordMistakes, items]);
+  
+  const handleRestart = useCallback(() => {
     setFlipped({});
     setWrongIdx(null);
     setWrongTick(0);
     setScore(0);
     setMistakes(0);
+    setWordMistakes(new Map());
+    setShowCompletionModal(false);
     setTargetIdx(pickRandomIndex(items.length, new Set()));
+    // Clear saved session on restart
+    if (currentFileName) {
+      clearTrainingSession();
+    }
+  }, [items.length, currentFileName]);
+  
+  // Save mistakes to localStorage and handle actions
+  const saveMistakesAndAction = useCallback((action: 'exit' | 'restart' | 'next') => {
+    // Always save mistakes if there are any (even if no fileName, we still track them)
+    if (sessionMistakes.length > 0 && currentFileName) {
+      // Save mistakes to localStorage
+      recordMistakes(sessionMistakes, currentFileName, 'flashcards-reading');
+    }
+    
+    // Execute action
+    if (action === 'restart') {
+      handleRestart();
+    } else if (action === 'exit') {
+      setShowCompletionModal(false);
+    } else if (action === 'next') {
+      // TODO: Implement next training mode
+      setShowCompletionModal(false);
+    }
+  }, [currentFileName, sessionMistakes, handleRestart]);
+  
+  const handleCompletionExit = () => {
+    saveMistakesAndAction('exit');
+  };
+  
+  const handleCompletionRestart = () => {
+    saveMistakesAndAction('restart');
+  };
+  
+  const handleCompletionNext = () => {
+    saveMistakesAndAction('next');
   };
 
-  const target = items[targetIdx] || null;
-  const viLabel = target?.vi || '—';
+  // Ensure targetIdx is valid and items are loaded before accessing
+  const target = (items.length > 0 && targetIdx >= 0 && targetIdx < items.length && !isLoading) 
+    ? items[targetIdx] 
+    : null;
+  
+  // Determine what to show in top bar and cards based on language mode
+  // Hide top bar label when completed (100% flipped)
+  const topBarLabel = allFlipped
+    ? 'Completed!'  // Show completion message
+    : isLoading || !target
+      ? 'Loading...'  // Show loading state
+      : language === 'vi'
+        ? (target.vi || '—')  // VI-EN mode: show Vietnamese in top bar
+        : (target.en || '—'); // EN-VI mode: show English in top bar
 
   return (
-    <Container
-      maxWidth="xl"
+    <Box
       sx={{
-        px: { xs: 2, sm: 3, md: 4 },
-        py: { xs: 2, sm: 3 },
+        width: '100%',
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
         position: 'relative',
+        // Không set overflow - để window scroll tự nhiên cho sticky
+        boxSizing: 'border-box',
       }}
     >
+      {/* Sticky Top Bar - Đơn giản, rõ ràng */}
       <Box
         sx={{
           position: 'sticky',
-          top: { xs: 56, sm: 56, md: 0, lg: 0, xl: 0 },
-          zIndex: (t) => t.zIndex.appBar + 1,
+          top: { xs: '56px', sm: '64px', md: 0 }, // Stick ngay dưới AppBar trên mobile, ở top trên desktop
+          zIndex: (t) => t.zIndex.appBar - 1, // Dưới AppBar, trên content
           bgcolor: 'background.paper',
           borderBottom: `1px solid ${theme.palette.divider}`,
           px: { xs: 1.5, sm: 3 },
-          py: { xs: 1, sm: 1.5 },
-          mb: 2,
+          py: { xs: 0.75, sm: 1.5 },
+          width: '100%',
           display: 'flex',
           flexDirection: { xs: 'column', sm: 'row' },
           alignItems: { xs: 'flex-start', sm: 'center' },
           justifyContent: 'space-between',
-          gap: 2,
+          gap: { xs: 1, sm: 2 },
+          boxShadow: 'none',
+          flexShrink: 0,
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -204,13 +404,13 @@ const TrainStart = () => {
             fontWeight="bold"
             color="primary"
             sx={{
-              fontSize: { xs: '0.95rem', sm: '1.05rem', md: '1.2rem' },
+              fontSize: { xs: '0.875rem', sm: '1.05rem', md: '1.2rem' }, // Smaller on mobile
               lineHeight: 1.3,
               wordBreak: 'break-word',
               whiteSpace: 'normal',
             }}
           >
-            {viLabel}
+            {topBarLabel}
           </Typography>
         </Box>
 
@@ -233,10 +433,11 @@ const TrainStart = () => {
         <Box
           sx={{
             display: 'flex',
-            gap: 1.5,
+            gap: { xs: 1, sm: 1.5 },
             width: { xs: '100%', sm: 'auto' },
             justifyContent: { xs: 'space-between', sm: 'flex-start' },
             alignItems: 'center',
+            flexWrap: 'nowrap',
           }}
         >
           <Chip
@@ -244,7 +445,14 @@ const TrainStart = () => {
             label={`${score} / ${total}`}
             variant="outlined"
             size={isMobile ? 'small' : 'medium'}
-            sx={{ borderRadius: 1, borderColor: theme.palette.divider, bgcolor: 'background.default' }}
+            sx={{ 
+              borderRadius: 1, 
+              borderColor: theme.palette.divider, 
+              bgcolor: 'background.default',
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              '& .MuiChip-label': { px: { xs: 0.75, sm: 1.5 } },
+              flexShrink: 0,
+            }}
           />
           <Chip
             icon={<ErrorOutlineIcon fontSize="small" color="error" />}
@@ -256,6 +464,9 @@ const TrainStart = () => {
               borderColor: theme.palette.error.light,
               color: 'error.main',
               bgcolor: theme.palette.error.light + '20',
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              '& .MuiChip-label': { px: { xs: 0.75, sm: 1.5 } },
+              flexShrink: 0,
             }}
           />
           <Button
@@ -263,14 +474,32 @@ const TrainStart = () => {
             color="primary"
             size={isMobile ? 'small' : 'medium'}
             onClick={handleRestart}
-            sx={{ minWidth: { xs: 64, sm: 80 } }}
+            sx={{ 
+              minWidth: { xs: 'auto', sm: 80 },
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              px: { xs: 1, sm: 2 },
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+            }}
           >
             Restart
           </Button>
         </Box>
       </Box>
 
-      {isLoading ? (
+      {/* Main Content */}
+      <Box
+        sx={{
+          width: '100%',
+          maxWidth: { xs: '100%', sm: '1536px' },
+          mx: 'auto',
+          px: { xs: 2, sm: 3, md: 4 },
+          pb: { xs: 1.5, sm: 2, md: 3 },
+          flex: 1,
+          boxSizing: 'border-box',
+        }}
+      >
+        {isLoading ? (
         <Box
           sx={{
             display: 'grid',
@@ -282,6 +511,7 @@ const TrainStart = () => {
             },
             gap: { xs: 2, sm: 2.5, md: 3 },
             pb: { xs: 12, sm: 14 },
+            pt: GRID_PADDING_TOP, // Padding để tránh sticky bar che mất card đầu tiên
           }}
         >
           {[...Array(8)].map((_, idx) => (
@@ -292,7 +522,7 @@ const TrainStart = () => {
         <Box
           sx={{
             display: 'grid',
-            gap: { xs: 2, sm: 2.5, md: 3 },
+            gap: { xs: 1.5, sm: 2.5, md: 3 }, // Reduced gap on mobile
             gridTemplateColumns: {
               xs: 'repeat(1, minmax(0, 1fr))',
               sm: 'repeat(2, minmax(0, 1fr))',
@@ -301,14 +531,21 @@ const TrainStart = () => {
             },
             alignItems: 'stretch',
             pb: { xs: 12, sm: 14 },
+            pt: GRID_PADDING_TOP, // Padding để tránh sticky bar che mất card đầu tiên
           }}
         >
           {items.map((it, idx) => (
-            <Box key={`${it.en}-${idx}`}>
+            <Box 
+              key={`${it.en}-${idx}`}
+              sx={{
+                // Disable interaction when loading or items not ready
+                pointerEvents: isLoading || items.length === 0 ? 'none' : 'auto',
+                opacity: isLoading || items.length === 0 ? 0.6 : 1,
+              }}
+            >
               <WordCard
                 en={it.en}
                 vi={it.vi}
-                meaning={it.meaning}
                 showLang={language}
                 flipped={!!flipped[idx]}
                 onAttempt={() => handleAttempt(idx)}
@@ -318,8 +555,19 @@ const TrainStart = () => {
             </Box>
           ))}
         </Box>
-      )}
-    </Container>
+        )}
+      </Box>
+      
+      {/* Completion Modal */}
+      <CompletionModal
+        open={showCompletionModal}
+        totalMistakes={mistakes}
+        mistakes={sessionMistakes}
+        onExit={handleCompletionExit}
+        onRestart={handleCompletionRestart}
+        onNextMode={handleCompletionNext}
+      />
+    </Box>
   );
 };
 
