@@ -488,7 +488,7 @@ const Navbar: React.FC = () => {
             </Tooltip>
             {open && (
               <ListItemText
-                primary="Source Data"
+                primary="Vocabulary"
                 primaryTypographyProps={{ 
                   fontWeight: 500,
                   fontSize: { xs: '0.9375rem', sm: '0.875rem' },
@@ -660,20 +660,20 @@ const Navbar: React.FC = () => {
             )}
           </ListItemLink>
 
-          {/* Lib - moved outside Train menu */}
+          {/* Data - moved outside Train menu */}
           <ListItemLink
-            to="/train/lib"
-            selected={isActive('/train/lib')}
-            sx={listItemStyle(open, isActive('/train/lib'), theme)}
+            to="/data"
+            selected={isActive('/data')}
+            sx={listItemStyle(open, isActive('/data'), theme)}
           >
-            <Tooltip title="Lib" placement="right" disableHoverListener={open}>
+            <Tooltip title="Data" placement="right" disableHoverListener={open}>
               <ListItemIcon sx={iconStyle(open)}>
                 <LibraryBooksIcon />
               </ListItemIcon>
             </Tooltip>
             {open && (
               <ListItemText 
-                primary="Lib" 
+                primary="Data" 
                 primaryTypographyProps={{ 
                   fontWeight: 500,
                   fontSize: '0.875rem',

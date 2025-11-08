@@ -8,6 +8,7 @@ import FlashcardsListening from '@/pages/Train/FlashcardsListening';
 import ReadWritePage from '@/pages/Train/ReadWritePage';
 import ListenWritePage from '@/pages/Train/ListenWritePage';
 import ResultPage from '@/pages/Train/ResultPage';
+import DataManagementPage from '@/pages/DataManagementPage';
 import Login from '@/features/auth/pages/Login';
 
 export default function AppRoutes() {
@@ -24,6 +25,7 @@ export default function AppRoutes() {
         { path: 'train/read-write', element: <ReadWritePage /> },
         { path: 'train/listen-write', element: <ListenWritePage /> },
         { path: 'train/result', element: <ResultPage /> },
+        { path: 'data', element: <DataManagementPage /> },
       ],
     },
     {
