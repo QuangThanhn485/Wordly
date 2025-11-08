@@ -85,6 +85,9 @@ import {
   loadTreeFromStorage,
 } from '../utils/storageUtils';
 import { speak } from '@/utils/speechUtils';
+import { saveTrainingSession as saveReadingSession } from '@/features/train/train-start/sessionStorage';
+import { saveTrainingSession as saveListeningSession } from '@/features/train/train-listen/sessionStorage';
+import { saveTrainingSession as saveReadWriteSession } from '@/features/train/train-read-write/sessionStorage';
 
 // Import components
 import { FolderItem } from '../components/FolderTree';
@@ -1470,7 +1473,47 @@ const VocabularyPage: React.FC = () => {
                   startIcon={<RocketLaunchIcon />}
                   onClick={() => {
                     if (selectedFile) {
-                      navigate(`/train/flashcards-reading?file=${encodeURIComponent(selectedFile.name)}`);
+                      const fileName = selectedFile.name;
+                      // Update session storage for all training modes with the new file name
+                      // This ensures all training pages use the same file when navigating between them
+                      const baseSession = {
+                        fileName,
+                        timestamp: Date.now(),
+                      };
+                      
+                      // Update flashcards-reading session
+                      saveReadingSession({
+                        ...baseSession,
+                        score: 0,
+                        mistakes: 0,
+                        flipped: {},
+                        targetIdx: 0,
+                        language: 'vi',
+                      });
+                      
+                      // Update flashcards-listening session
+                      saveListeningSession({
+                        ...baseSession,
+                        score: 0,
+                        mistakes: 0,
+                        flipped: {},
+                        targetIdx: 0,
+                        language: 'en',
+                        hasStarted: false,
+                      });
+                      
+                      // Update read-write session
+                      saveReadWriteSession({
+                        ...baseSession,
+                        currentWordIndex: 0,
+                        completedWords: [],
+                        mode: 'vi-en' as const,
+                        score: 0,
+                        mistakes: 0,
+                      });
+                      
+                      // Navigate to flashcards-reading with file parameter
+                      navigate(`/train/flashcards-reading?file=${encodeURIComponent(fileName)}`);
                     }
                   }}
                   sx={{ 

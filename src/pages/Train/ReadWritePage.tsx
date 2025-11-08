@@ -80,6 +80,24 @@ const ReadWritePage = () => {
     // Priority 2: No file in URL - restore from saved session if available
     if (savedSession && savedSession.fileName) {
       setSearchParams({ file: savedSession.fileName }, { replace: true });
+      setSessionRestored(true);
+      return;
+    }
+    
+    // Priority 3: If no session for read-write, try to get file from flashcards-reading session
+    // This allows seamless transition between training modes
+    try {
+      const readingSessionStr = localStorage.getItem('wordly_train_session');
+      if (readingSessionStr) {
+        const readingSession = JSON.parse(readingSessionStr);
+        if (readingSession && readingSession.fileName) {
+          setSearchParams({ file: readingSession.fileName }, { replace: true });
+          setSessionRestored(true);
+          return;
+        }
+      }
+    } catch (err) {
+      // Ignore errors when reading reading session
     }
     
     setSessionRestored(true);
