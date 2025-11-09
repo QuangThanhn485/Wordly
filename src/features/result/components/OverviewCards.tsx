@@ -1,6 +1,6 @@
 // src/features/result/components/OverviewCards.tsx
 import React from 'react';
-import { Box, Card, CardContent, Typography, useTheme, useMediaQuery } from '@mui/material';
+import { Box, Card, CardContent, Typography, useTheme } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import StarIcon from '@mui/icons-material/Star';
@@ -13,8 +13,6 @@ interface OverviewCardsProps {
 
 export const OverviewCards: React.FC<OverviewCardsProps> = ({ stats }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
   const cards = [
     {

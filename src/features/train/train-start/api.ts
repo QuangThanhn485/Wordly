@@ -1,6 +1,5 @@
 // src/features/train/train-start/api.ts
 import { loadVocabFile } from '@/features/vocabulary/utils/storageUtils';
-import type { VocabItem } from '@/features/vocabulary/types';
 
 export type TrainWordItem = {
   en: string; // English word

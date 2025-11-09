@@ -72,15 +72,11 @@ import {
 } from '../utils/treeUtils';
 import { TreeIndex } from '../utils/treeIndex';
 import {
-  saveVocabToStorage,
-  loadVocabFromStorage,
   saveVocabFile,
   loadVocabFile,
   deleteVocabFile,
   loadVocabCounts,
-  updateVocabCount,
   renameVocabCount,
-  syncVocabCount,
   saveTreeToStorage,
   loadTreeFromStorage,
 } from '../utils/storageUtils';
@@ -92,7 +88,7 @@ import { saveTrainingSession as saveListenWriteSession } from '@/features/train/
 
 // Import components
 import { FolderItem } from '../components/FolderTree';
-import { FolderGridView, BreadcrumbNav, type BreadcrumbItem } from '../components/FolderGrid';
+import { type BreadcrumbItem } from '../components/FolderGrid';
 import { FolderGridModal } from '../components/FolderGridModal';
 import {
   RenameDialog,
@@ -427,9 +423,7 @@ const VocabularyPage: React.FC = () => {
 
   // Optimize: pass Set directly instead of function to avoid function calls on every render
   // Note: Keeping as function for backward compatibility, but can optimize later if needed
-  const isFolderOpen = useCallback((folderId: string) => {
-    return openFolders.has(folderId);
-  }, [openFolders]);
+  // Removed unused isFolderOpen function
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
@@ -746,7 +740,7 @@ const VocabularyPage: React.FC = () => {
     }
     setRenameOpen(false);
     showSnack('Đã đổi tên.');
-  }, [menu, renameValue, treeIndex, vocabMap, selectedPath, updateTree, updateVocabMap]);
+  }, [menu, renameValue, treeIndex, vocabMap, selectedPath, updateTree, updateVocabMap, tree]);
 
   const startNewSubfolder = useCallback(() => {
     if (!menu) return;
@@ -813,7 +807,7 @@ const VocabularyPage: React.FC = () => {
     setNewFileOpen(false);
     setNewFileName('');
     showSnack(`Đã tạo file "${finalFileName}".`);
-  }, [menu, newFileName, tree, updateTree, updateVocabMap]);
+  }, [menu, newFileName, tree, updateTree, updateVocabMap, treeIndex]);
 
   const startImport = useCallback(() => {
     if (!menu) return;
@@ -867,7 +861,7 @@ const VocabularyPage: React.FC = () => {
       };
       reader.readAsText(file);
     },
-    [menu, tree, updateTree, updateVocabMap],
+    [menu, tree, updateTree, updateVocabMap, treeIndex],
   );
 
   const handleExportFile = useCallback(() => {
@@ -908,7 +902,7 @@ const VocabularyPage: React.FC = () => {
     
     showSnack(`Đã export tệp "${fileName}".`);
     closeMenu();
-  }, [menu, tree, vocabMap, closeMenu]);
+  }, [menu, tree, vocabMap, closeMenu, treeIndex]);
 
   const handleExportFolder = useCallback(() => {
     if (!menu || menu.type !== 'folder') return;
@@ -954,7 +948,7 @@ const VocabularyPage: React.FC = () => {
     
     showSnack(`Đã export thư mục "${folderName}" (${allFileNames.length} files).`);
     closeMenu();
-  }, [menu, tree, vocabMap, closeMenu]);
+  }, [menu, tree, vocabMap, closeMenu, treeIndex]);
 
   const startImportFolder = useCallback(() => {
     if (!menu) return;

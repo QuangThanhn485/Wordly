@@ -1,11 +1,10 @@
 // MainLayout.tsx
-import { Box, useMediaQuery, useTheme } from '@mui/material';
+import { Box, useTheme } from '@mui/material';
 import Navbar from './Navbar';
 import { Outlet } from 'react-router-dom';
 
 const MainLayout = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   return (
     <>

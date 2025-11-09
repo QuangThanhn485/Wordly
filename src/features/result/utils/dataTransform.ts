@@ -1,5 +1,5 @@
 // src/features/result/utils/dataTransform.ts
-import { loadMistakesStats, type MistakeRecord, type MistakesStats } from '@/features/train/train-read-write/mistakesStorage';
+import { type MistakeRecord, type MistakesStats } from '@/features/train/train-read-write/mistakesStorage';
 
 export type ProcessedMistake = {
   word: string;

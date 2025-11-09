@@ -9,7 +9,6 @@ import {
   Card,
   CardContent,
   CardActions,
-  Divider,
   Alert,
   Dialog,
   DialogTitle,
@@ -17,14 +16,10 @@ import {
   DialogActions,
   TextField,
   useTheme,
-  useMediaQuery,
-  Stack,
-  Chip,
   LinearProgress,
-  IconButton,
-  Tooltip,
   Checkbox,
   FormControlLabel,
+  Stack,
 } from '@mui/material';
 import StorageIcon from '@mui/icons-material/Storage';
 import BackupIcon from '@mui/icons-material/Backup';
@@ -55,7 +50,6 @@ interface BackupData {
 
 const DataManagementPage: React.FC = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   

@@ -1,8 +1,8 @@
 // src/features/result/hooks/useMistakesStats.ts
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { loadMistakesStats } from '@/features/train/train-read-write/mistakesStorage';
 import { loadVocabCounts } from '@/features/vocabulary/utils/storageUtils';
-import { processMistakesData, calculateOverviewStats, groupMistakesByMode, groupMistakesByFile, type ProcessedMistake, type OverviewStats, type MistakesByMode, type MistakesByFile } from '../utils/dataTransform';
+import { processMistakesData, calculateOverviewStats, groupMistakesByMode, groupMistakesByFile } from '../utils/dataTransform';
 
 export type SortOption = 'mistakes-desc' | 'mistakes-asc' | 'time-desc' | 'time-asc' | 'word-asc' | 'word-desc';
 

@@ -22,7 +22,6 @@ import { MistakeGroupByFile } from '@/features/result/components/MistakeGroupByF
 const ResultPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const [viewMode, setViewMode] = React.useState<'all' | 'grouped' | 'byFile'>('grouped');
 
   const {

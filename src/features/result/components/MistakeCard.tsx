@@ -7,7 +7,6 @@ import {
   Box,
   Chip,
   useTheme,
-  useMediaQuery,
   Tooltip,
 } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
@@ -22,7 +21,6 @@ interface MistakeCardProps {
 
 export const MistakeCard: React.FC<MistakeCardProps> = ({ mistake }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const severity = getMistakeSeverity(mistake.totalMistakes);
 
   const severityColors = {

@@ -16,7 +16,6 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import TranslateIcon from '@mui/icons-material/Translate';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
@@ -209,7 +208,7 @@ const FlashcardsListening = () => {
     return audioCtxRef.current;
   };
 
-  const playErrorTone = () => {
+  const playErrorTone = useCallback(() => {
     const ctx = getAudioCtx();
     if (!ctx) return;
     if (ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -225,7 +224,7 @@ const FlashcardsListening = () => {
     gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.26);
-  };
+  }, []);
 
   // Use enhanced speech utility for better pronunciation
   // Direct use of speakEnglish utility - no wrapper needed
@@ -351,7 +350,7 @@ const FlashcardsListening = () => {
         }
       }
     },
-    [items, targetIdx, flipped, language, isLoading, hasStarted]
+    [items, targetIdx, flipped, language, isLoading, hasStarted, playErrorTone]
   );
 
   // Check if all cards are flipped (100% completion)
@@ -465,7 +464,7 @@ const FlashcardsListening = () => {
   const topBarLabel = allFlipped
     ? 'Completed!'  // Show completion message
     : !hasStarted
-      ? 'Click "Start" to begin'  // Show start prompt
+      ? ''  // Empty when not started
       : isLoading || !target
         ? 'Loading...'  // Show loading state
         : (language === 'vi' ? '🎧 Listen...' : '🎧 Listen...'); // Show listening prompt
@@ -509,7 +508,7 @@ const FlashcardsListening = () => {
             fontWeight="bold"
             color="primary"
             sx={{
-              fontSize: { xs: '0.875rem', sm: '1.05rem', md: '1.2rem' }, // Smaller on mobile
+              fontSize: { xs: '0.875rem', sm: '1.05rem', md: '1.2rem' }, // Responsive font size for mobile
               lineHeight: 1.3,
               wordBreak: 'break-word',
               whiteSpace: 'normal',
@@ -528,7 +527,12 @@ const FlashcardsListening = () => {
           sx={{
             width: { xs: '100%', sm: 'auto' },
             justifyContent: { xs: 'center', sm: 'flex-start' },
-            '& .MuiToggleButton-root': { px: { xs: 1, sm: 2 }, flex: { xs: 1, sm: 'initial' } },
+            '& .MuiToggleButton-root': { 
+              px: { xs: 0.75, sm: 2 }, 
+              flex: { xs: 1, sm: 'initial' },
+              fontSize: { xs: '0.7rem', sm: '0.875rem' },
+              py: { xs: 0.5, sm: 1 },
+            },
           }}
         >
           <ToggleButton value="vi">VI ➜ EN</ToggleButton>
@@ -538,11 +542,13 @@ const FlashcardsListening = () => {
         <Box
           sx={{
             display: 'flex',
-            gap: { xs: 1, sm: 1.5 },
+            gap: { xs: 0.5, sm: 1.5 },
             width: { xs: '100%', sm: 'auto' },
-            justifyContent: { xs: 'space-between', sm: 'flex-start' },
+            justifyContent: { xs: 'flex-start', sm: 'flex-start' },
             alignItems: 'center',
-            flexWrap: 'nowrap',
+            flexWrap: { xs: 'wrap', sm: 'nowrap' },
+            maxWidth: '100%',
+            boxSizing: 'border-box',
           }}
         >
           {!hasStarted ? (
@@ -551,13 +557,16 @@ const FlashcardsListening = () => {
               color="primary"
               size={isMobile ? 'small' : 'medium'}
               onClick={handleStart}
-              startIcon={<PlayArrowIcon />}
+              startIcon={<PlayArrowIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
               disabled={isLoading || items.length === 0}
               sx={{ 
                 minWidth: { xs: 'auto', sm: 100 },
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                px: { xs: 1.5, sm: 2 },
-                flexShrink: 0,
+                fontSize: { xs: '0.65rem', sm: '0.875rem' },
+                px: { xs: 1, sm: 2 },
+                py: { xs: 0.5, sm: 1 },
+                height: { xs: 24, sm: 'auto' },
+                flexShrink: 1,
+                flex: { xs: '0 1 auto', sm: '0 0 auto' },
                 whiteSpace: 'nowrap',
               }}
             >
@@ -573,6 +582,8 @@ const FlashcardsListening = () => {
                   size={isMobile ? 'small' : 'medium'}
                   sx={{ 
                     flexShrink: 0,
+                    padding: { xs: 0.5, sm: 1 },
+                    '& .MuiSvgIcon-root': { fontSize: { xs: '1rem', sm: '1.5rem' } },
                   }}
                 >
                   <ReplayIcon />
@@ -586,6 +597,8 @@ const FlashcardsListening = () => {
                   size={isMobile ? 'small' : 'medium'}
                   sx={{ 
                     flexShrink: 0,
+                    padding: { xs: 0.5, sm: 1 },
+                    '& .MuiSvgIcon-root': { fontSize: { xs: '1rem', sm: '1.5rem' } },
                   }}
                 >
                   <HelpOutlineIcon />
@@ -602,14 +615,17 @@ const FlashcardsListening = () => {
               borderRadius: 1, 
               borderColor: theme.palette.divider, 
               bgcolor: 'background.default',
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              '& .MuiChip-label': { px: { xs: 0.75, sm: 1.5 } },
-              flexShrink: 0,
+              fontSize: { xs: '0.65rem', sm: '0.875rem' },
+              height: { xs: 24, sm: 32 },
+              '& .MuiChip-label': { px: { xs: 0.5, sm: 1.5 }, fontSize: { xs: '0.65rem', sm: '0.875rem' } },
+              '& .MuiChip-icon': { fontSize: { xs: '0.875rem', sm: '1rem' }, ml: { xs: 0.5, sm: 1 } },
+              flexShrink: 1,
+              flex: { xs: '0 1 auto', sm: '0 0 auto' },
             }}
           />
           <Chip
             icon={<ErrorOutlineIcon fontSize="small" color="error" />}
-            label={`Mistakes: ${mistakes}`}
+            label={isMobile ? `M: ${mistakes}` : `Mistakes: ${mistakes}`}
             variant="outlined"
             size={isMobile ? 'small' : 'medium'}
             sx={{
@@ -617,9 +633,12 @@ const FlashcardsListening = () => {
               borderColor: theme.palette.error.light,
               color: 'error.main',
               bgcolor: theme.palette.error.light + '20',
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              '& .MuiChip-label': { px: { xs: 0.75, sm: 1.5 } },
-              flexShrink: 0,
+              fontSize: { xs: '0.65rem', sm: '0.875rem' },
+              height: { xs: 24, sm: 32 },
+              '& .MuiChip-label': { px: { xs: 0.5, sm: 1.5 }, fontSize: { xs: '0.65rem', sm: '0.875rem' } },
+              '& .MuiChip-icon': { fontSize: { xs: '0.875rem', sm: '1rem' }, ml: { xs: 0.5, sm: 1 } },
+              flexShrink: 1,
+              flex: { xs: '0 1 auto', sm: '0 0 auto' },
             }}
           />
           <Button
@@ -629,9 +648,12 @@ const FlashcardsListening = () => {
             onClick={handleRestart}
             sx={{ 
               minWidth: { xs: 'auto', sm: 80 },
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              px: { xs: 1, sm: 2 },
-              flexShrink: 0,
+              fontSize: { xs: '0.65rem', sm: '0.875rem' },
+              px: { xs: 0.75, sm: 2 },
+              py: { xs: 0.5, sm: 1 },
+              height: { xs: 24, sm: 'auto' },
+              flexShrink: 1,
+              flex: { xs: '0 1 auto', sm: '0 0 auto' },
               whiteSpace: 'nowrap',
             }}
           >
@@ -754,20 +776,49 @@ const FlashcardsListening = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, py: 2 }}>
               {/* English */}
               <Box>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ fontWeight: 600 }}>
+                <Typography 
+                  variant="subtitle2" 
+                  color="text.secondary" 
+                  gutterBottom 
+                  sx={{ 
+                    fontWeight: 600,
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  }}
+                >
                   English
                 </Typography>
-                <Typography variant="h5" fontWeight={700} sx={{ wordBreak: 'break-word' }}>
+                <Typography 
+                  variant="h5" 
+                  fontWeight={700} 
+                  sx={{ 
+                    wordBreak: 'break-word',
+                    fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' }, // Responsive font size
+                  }}
+                >
                   {target.en}
                 </Typography>
               </Box>
 
               {/* Vietnamese */}
               <Box>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ fontWeight: 600 }}>
+                <Typography 
+                  variant="subtitle2" 
+                  color="text.secondary" 
+                  gutterBottom 
+                  sx={{ 
+                    fontWeight: 600,
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  }}
+                >
                   Tiếng Việt
                 </Typography>
-                <Typography variant="h6" sx={{ wordBreak: 'break-word' }}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    wordBreak: 'break-word',
+                    fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' }, // Responsive font size
+                  }}
+                >
                   {target.vi}
                 </Typography>
               </Box>
