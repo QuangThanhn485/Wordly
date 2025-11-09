@@ -4,7 +4,6 @@ import { Box, Typography } from '@mui/material';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 
 export const EmptyState: React.FC = () => {
-
   return (
     <Box
       sx={{
