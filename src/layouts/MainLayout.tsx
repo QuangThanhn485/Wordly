@@ -1,11 +1,9 @@
 // MainLayout.tsx
-import { Box, useTheme } from '@mui/material';
+import { Box } from '@mui/material';
 import Navbar from './Navbar';
 import { Outlet } from 'react-router-dom';
 
 const MainLayout = () => {
-  const theme = useTheme();
-  
   return (
     <>
       <Navbar />
