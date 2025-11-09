@@ -2,7 +2,6 @@
 import {
   Box,
   Typography,
-  Container,
   ToggleButton,
   ToggleButtonGroup,
   Skeleton,
@@ -173,7 +172,7 @@ const TrainStart = () => {
     return audioCtxRef.current;
   };
 
-  const playErrorTone = () => {
+  const playErrorTone = useCallback(() => {
     const ctx = getAudioCtx();
     if (!ctx) return;
     if (ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -189,7 +188,7 @@ const TrainStart = () => {
     gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.26);
-  };
+  }, []);
 
   // Use enhanced speech utility for better pronunciation
   // Direct use of speakEnglish utility - no wrapper needed
@@ -270,7 +269,7 @@ const TrainStart = () => {
         }
       }
     },
-    [items, targetIdx, flipped, language, isLoading]
+    [items, targetIdx, flipped, language, isLoading, playErrorTone]
   );
 
   // Check if all cards are flipped (100% completion)

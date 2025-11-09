@@ -12,7 +12,6 @@ import {
   Tooltip,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import { keyframes } from '@mui/system';
 

@@ -6,7 +6,6 @@ import {
   Paper,
   Chip,
   useTheme,
-  useMediaQuery,
 } from '@mui/material';
 import { MistakeCard } from './MistakeCard';
 import { type MistakesByFile } from '../utils/dataTransform';
@@ -19,7 +18,6 @@ interface MistakeGroupByFileProps {
 
 export const MistakeGroupByFile: React.FC<MistakeGroupByFileProps> = ({ group }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   if (group.mistakes.length === 0) return null;
 

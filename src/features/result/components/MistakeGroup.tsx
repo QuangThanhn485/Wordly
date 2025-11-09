@@ -6,8 +6,6 @@ import {
   Paper,
   Chip,
   useTheme,
-  useMediaQuery,
-  Divider,
 } from '@mui/material';
 import { MistakeCard } from './MistakeCard';
 import { type MistakesByMode } from '../utils/dataTransform';
@@ -32,7 +30,6 @@ const getModeIcon = (mode: string) => {
 
 export const MistakeGroup: React.FC<MistakeGroupProps> = ({ group }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   if (group.mistakes.length === 0) return null;
 

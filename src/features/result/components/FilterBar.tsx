@@ -1,5 +1,5 @@
 // src/features/result/components/FilterBar.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   TextField,

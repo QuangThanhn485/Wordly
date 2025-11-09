@@ -1,10 +1,9 @@
 // src/features/result/components/EmptyState.tsx
 import React from 'react';
-import { Box, Typography, useTheme } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 
 export const EmptyState: React.FC = () => {
-  const theme = useTheme();
 
   return (
     <Box
