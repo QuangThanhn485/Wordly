@@ -1,7 +1,8 @@
 // src/features/result/hooks/useMistakesStats.ts
 import { useState, useMemo } from 'react';
 import { loadMistakesStats } from '@/features/train/train-read-write/mistakesStorage';
-import { loadVocabCounts } from '@/features/vocabulary/utils/storageUtils';
+import { loadVocabCounts, loadTreeFromStorage } from '@/features/vocabulary/utils/storageUtils';
+import { getAllFileNames } from '@/features/vocabulary/utils/treeUtils';
 import { processMistakesData, calculateOverviewStats, groupMistakesByMode, groupMistakesByFile } from '../utils/dataTransform';
 
 export type SortOption = 'mistakes-desc' | 'mistakes-asc' | 'time-desc' | 'time-asc' | 'word-asc' | 'word-desc';
@@ -18,18 +19,18 @@ export const useMistakesStats = () => {
     return processMistakesData(rawStats);
   }, [rawStats]);
 
-  // Get unique files - load from wordly_vocab_counts and merge with files from mistakes
+  // Get unique files - load from tree structure (all files) and merge with files from mistakes
   const uniqueFiles = useMemo(() => {
-    // Load all files from wordly_vocab_counts
-    const vocabCounts = loadVocabCounts();
-    const filesFromStorage = Object.keys(vocabCounts);
+    // Load all files from tree structure (including nested folders)
+    const tree = loadTreeFromStorage();
+    const filesFromTree = tree ? getAllFileNames(tree) : [];
     
     // Also get files from mistakes data
     const filesFromMistakes = new Set<string>();
     processedMistakes.forEach((m) => filesFromMistakes.add(m.fileName));
     
-    // Merge both sources and sort
-    const allFiles = new Set([...filesFromStorage, ...Array.from(filesFromMistakes)]);
+    // Merge both sources (tree + mistakes) and sort
+    const allFiles = new Set([...filesFromTree, ...Array.from(filesFromMistakes)]);
     return Array.from(allFiles).sort();
   }, [processedMistakes]);
 

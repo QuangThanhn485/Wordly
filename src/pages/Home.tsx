@@ -26,7 +26,8 @@ import {
   Volume2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { loadVocabCounts } from '@/features/vocabulary/utils/storageUtils';
+import { loadVocabCounts, loadTreeFromStorage } from '@/features/vocabulary/utils/storageUtils';
+import { getAllFileNames } from '@/features/vocabulary/utils/treeUtils';
 import { loadMistakesStats } from '@/features/train/train-read-write/mistakesStorage';
 
 interface StatCardProps {
@@ -155,15 +156,36 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     // Load statistics from localStorage
-    const vocabCounts = loadVocabCounts();
+    const tree = loadTreeFromStorage();
     const mistakesStats = loadMistakesStats();
+    const vocabCounts = loadVocabCounts(); // Load từ wordly_vocab_counts
 
-    const totalWords = Object.values(vocabCounts).reduce((sum, count) => sum + count, 0);
-    const totalFiles = Object.keys(vocabCounts).length;
-    const totalMistakes = Object.keys(mistakesStats).length;
+    if (!tree) {
+      setStats({ totalWords: 0, totalFiles: 0, totalMistakes: 0, uniqueWords: 0 });
+      return;
+    }
+
+    // Get ALL file names from tree structure (including nested folders)
+    const allFileNames = getAllFileNames(tree);
+    const totalFiles = allFileNames.length;
+
+    // Calculate total words from wordly_vocab_counts (FAST - không cần load từng file)
+    let totalWords = 0;
+    allFileNames.forEach((fileName) => {
+      totalWords += vocabCounts[fileName] || 0;
+    });
+
+    // Count total mistakes and unique words from mistakes
+    // mistakesStats format: { "file:word:mode": MistakeRecord }
+    let totalMistakes = 0;
+    const uniqueWordsSet = new Set<string>();
     
-    // Get unique words from mistakes
-    const uniqueWords = new Set(Object.keys(mistakesStats)).size;
+    Object.values(mistakesStats).forEach((record) => {
+      totalMistakes += record.mistakeCount; // Sum all mistake counts
+      uniqueWordsSet.add(record.word); // Track unique words (not file:word:mode)
+    });
+    
+    const uniqueWords = uniqueWordsSet.size;
 
     setStats({
       totalWords,

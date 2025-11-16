@@ -22,7 +22,8 @@ import {
   Stack,
 } from '@mui/material';
 import { Database, Upload, Trash2, RotateCcw, AlertTriangle, CheckCircle } from 'lucide-react';
-import { loadVocabCounts, loadVocabFromStorage } from '@/features/vocabulary/utils/storageUtils';
+import { loadVocabCounts, loadVocabFromStorage, loadTreeFromStorage } from '@/features/vocabulary/utils/storageUtils';
+import { getAllFileNames } from '@/features/vocabulary/utils/treeUtils';
 import { loadMistakesStats } from '@/features/train/train-read-write/mistakesStorage';
 import { getLastChangeTimestamp, trackedSetItem, trackedRemoveItem } from '@/utils/storageTracker';
 
@@ -353,11 +354,16 @@ const DataManagementPage: React.FC = () => {
   }, []);
 
   const backupTimestamp = getBackupTimestamp();
-  const allVocab = loadVocabFromStorage();
-  const vocabIndex = allVocab ? Object.keys(allVocab) : [];
+  const tree = loadTreeFromStorage();
   const vocabCounts = loadVocabCounts();
-  const totalVocabFiles = vocabIndex.length;
-  const totalVocabWords = Object.values(vocabCounts).reduce((sum, count) => sum + count, 0);
+  
+  // Get ALL file names from tree structure (including nested folders)
+  const allFileNames = tree ? getAllFileNames(tree) : [];
+  const totalVocabFiles = allFileNames.length;
+  
+  // Calculate total words from wordly_vocab_counts (FAST - không cần load từng file)
+  const totalVocabWords = allFileNames.reduce((sum, fileName) => sum + (vocabCounts[fileName] || 0), 0);
+  
   const hasChanges = hasChangesAfterBackup();
 
   return (

@@ -196,7 +196,7 @@ const TrainStart = () => {
 
   const handleLanguageToggle = () => {
     setLanguage((prev) => (prev === 'vi' ? 'en' : 'vi'));
-    // Note: Session will be auto-saved via useEffect
+      // Note: Session will be auto-saved via useEffect
   };
 
   // Handle show hint (Ctrl+X) - show meaning on correct answer card for 3 seconds
@@ -329,6 +329,14 @@ const TrainStart = () => {
         mistakesList.push({
           word: item.en,
           viMeaning: item.vi,
+          count,
+        });
+      } else {
+        // Fallback: if item not found (shouldn't happen), still show the word
+        console.warn(`Word "${word}" not found in items, showing anyway`);
+        mistakesList.push({
+          word: word,
+          viMeaning: 'N/A',
           count,
         });
       }

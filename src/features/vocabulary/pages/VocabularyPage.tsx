@@ -58,7 +58,7 @@ import type { VocabItem, FolderNode, FileLeaf, SnackState } from '../types';
 
 // Import constants
 import { TOTAL_LEFT_BAND } from '../constants/wordTypes';
-import { seedVocab, getDefaultTree } from '../constants/seedData';
+import { getDefaultTree } from '../constants/seedData';
 
 // Import utilities
 import {
@@ -79,6 +79,7 @@ import {
   renameVocabCount,
   saveTreeToStorage,
   loadTreeFromStorage,
+  syncAllVocabCounts,
 } from '../utils/storageUtils';
 import { speak } from '@/utils/speechUtils';
 import { saveTrainingSession as saveReadingSession } from '@/features/train/train-start/sessionStorage';
@@ -146,15 +147,26 @@ const VocabularyPage: React.FC = () => {
   const navigate = useNavigate();
   
   // Lazy load vocabMap - start empty, load files on-demand
-  const [vocabMap, setVocabMap] = useState<Record<string, VocabItem[]>>(() => {
-    // Only load seed data on init, actual files will be loaded lazily
-    return { ...seedVocab };
-  });
+  const [vocabMap, setVocabMap] = useState<Record<string, VocabItem[]>>({});
   
   const [tree, setTree] = useState<FolderNode>(() => {
     const stored = loadTreeFromStorage();
-    return stored || getDefaultTree();
+    if (stored) {
+      return stored;
+    }
+    
+    // First time init: save default tree (empty root folder)
+    const defaultTree = getDefaultTree();
+    saveTreeToStorage(defaultTree);
+    
+    return defaultTree;
   });
+  
+  // Sync vocab counts on mount to ensure accuracy
+  // This rebuilds wordly_vocab_counts from actual vocab files
+  React.useEffect(() => {
+    syncAllVocabCounts();
+  }, []); // Only run once on mount
 
   // Path index cache for O(1) node lookups - rebuilds when tree changes
   const treeIndex = useMemo(() => {
@@ -853,8 +865,10 @@ const VocabularyPage: React.FC = () => {
             located2.node.children.push(fileNode);
             return copy;
           });
-          updateVocabMap((m) => ({ ...m, [finalFileName]: items.length ? items : (m[finalFileName] || []) }));
-          showSnack(`Đã nhập tệp "${finalFileName}".`);
+          // Import vocabulary data - always save the items array (even if empty)
+          updateVocabMap((m) => ({ ...m, [finalFileName]: items }));
+          showSnack(`Đã nhập tệp "${finalFileName}" với ${items.length} từ vựng.`);
+          closeMenu();
         } catch (err) {
           console.error(err);
           showSnack('Không thể đọc file. Đảm bảo file đúng định dạng JSON.', 'error');
@@ -862,7 +876,7 @@ const VocabularyPage: React.FC = () => {
       };
       reader.readAsText(file);
     },
-    [menu, tree, updateTree, updateVocabMap, treeIndex],
+    [menu, tree, updateTree, updateVocabMap, treeIndex, closeMenu],
   );
 
   const handleExportFile = useCallback(() => {
@@ -1056,7 +1070,10 @@ const VocabularyPage: React.FC = () => {
             return newData;
           });
           
-          showSnack(`Đã import thư mục "${uniqueFolderName}" (${allFiles.length} files).`);
+          // Count total vocabulary words
+          const totalWords = Object.values(folderVocabData).reduce((sum, vocab) => sum + vocab.length, 0);
+          showSnack(`Đã import thư mục "${uniqueFolderName}" (${allFiles.length} files, ${totalWords} từ vựng).`);
+          closeMenu();
         } catch (err) {
           console.error(err);
           showSnack('Không thể đọc file. Đảm bảo file đúng định dạng JSON.', 'error');
@@ -1064,7 +1081,7 @@ const VocabularyPage: React.FC = () => {
       };
       reader.readAsText(file);
     },
-    [menu, treeIndex, vocabMap, updateTree, updateVocabMap],
+    [menu, treeIndex, vocabMap, updateTree, updateVocabMap, closeMenu],
   );
 
   const doCopy = useCallback(() => {

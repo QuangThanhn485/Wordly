@@ -205,6 +205,14 @@ const ReadWritePage = () => {
           viMeaning: item.vi,
           count,
         });
+      } else {
+        // Fallback: if item not found (shouldn't happen), still show the word
+        console.warn(`Word "${word}" not found in items, showing anyway`);
+        mistakesList.push({
+          word: word,
+          viMeaning: 'N/A',
+          count,
+        });
       }
     });
     return mistakesList.sort((a, b) => b.count - a.count);
