@@ -16,6 +16,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTrainWords } from '@/features/train/train-listen-write';
 import { hasNextTrainingMode } from 'features/train/utils/trainingModes';
 import { WordInputCard } from '@/features/train/train-listen-write';
+import { VocabularyQuickView } from 'features/train/components';
 import {
   saveTrainingSession,
   loadTrainingSession,
@@ -566,6 +567,12 @@ const ListenWritePage = () => {
         onExit={handleCompletionExit}
         onRestart={handleCompletionRestart}
         onNextMode={handleCompletionNext}
+      />
+
+      {/* Vocabulary Quick View */}
+      <VocabularyQuickView
+        vocabularyList={items}
+        currentFileName={currentFileName}
       />
     </Box>
   );

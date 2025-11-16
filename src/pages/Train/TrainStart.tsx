@@ -14,6 +14,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTrainWords } from 'features/train/train-start';
 import { getNextTrainingMode, getTrainingModeUrl } from 'features/train/utils/trainingModes';
 import { WordCard } from 'features/train/train-start';
+import { VocabularyQuickView } from 'features/train/components';
 import { 
   saveTrainingSession, 
   loadTrainingSession, 
@@ -606,6 +607,12 @@ const TrainStart = () => {
         onExit={handleCompletionExit}
         onRestart={handleCompletionRestart}
         onNextMode={handleCompletionNext}
+      />
+
+      {/* Vocabulary Quick View */}
+      <VocabularyQuickView
+        vocabularyList={items}
+        currentFileName={currentFileName}
       />
     </Box>
   );

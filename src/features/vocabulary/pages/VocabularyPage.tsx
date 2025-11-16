@@ -90,6 +90,7 @@ import { saveTrainingSession as saveListenWriteSession } from '@/features/train/
 import { FolderItem } from '../components/FolderTree';
 import { type BreadcrumbItem } from '../components/FolderGrid';
 import { FolderGridModal } from '../components/FolderGridModal';
+import { removeFileExtension } from '@/utils/fileUtils';
 import {
   RenameDialog,
   NewFolderDialog,
@@ -232,7 +233,7 @@ const VocabularyPage: React.FC = () => {
     const located = treeIndex.findByPath(selectedPath);
     return located?.node.kind === 'file' ? located.node : null;
   }, [selectedPath, treeIndex]);
-  const selectedTitle = useMemo(() => selectedFile?.name.replace(/\.txt$/i, '') ?? '', [selectedFile]);
+  const selectedTitle = useMemo(() => removeFileExtension(selectedFile?.name) || '', [selectedFile]);
   
   // Mobile view mode: 'folder' = show folder tree, 'vocab' = show vocab list
   const [mobileViewMode, setMobileViewMode] = useState<'folder' | 'vocab'>('folder');
