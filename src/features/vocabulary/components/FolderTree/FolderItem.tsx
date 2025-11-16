@@ -3,11 +3,11 @@ import { Box, Collapse, IconButton, List, ListItemButton, ListItemText, Typograp
 import {
   Folder as FolderIcon,
   FolderOpen as FolderOpenIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-  InsertDriveFile as FileIcon,
-  MoreVert as MoreIcon,
-} from '@mui/icons-material';
+  ChevronDown as ExpandMoreIcon,
+  ChevronUp as ExpandLessIcon,
+  FileText as FileIcon,
+  MoreVertical as MoreIcon,
+} from 'lucide-react';
 import type { FolderNode, FileLeaf } from '../../types';
 
 // ===== Sort Helper =====
@@ -101,7 +101,7 @@ export const FileItem = memo(function FileItem({
         onContextMenu={isMobile ? undefined : onContext} // Disable context menu on mobile, use button instead
         aria-label={`File ${node.name}`}
       >
-        <FileIcon sx={{ fontSize: '1rem', mr: 1, color: 'text.secondary' }} />
+        <FileIcon size={16} style={{ marginRight: 8, color: 'inherit' }} />
         <ListItemText 
           primary={
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
@@ -222,9 +222,9 @@ const FolderItemComponent = function FolderItem({
           aria-expanded={open}
           aria-label={`Toggle folder ${node.label}`}
         >
-          {open ? <FolderOpenIcon color="primary" sx={{ mr: 1 }} /> : <FolderIcon color="primary" sx={{ mr: 1 }} />}
+          {open ? <FolderOpenIcon size={20} style={{ marginRight: 8, color: 'inherit' }} /> : <FolderIcon size={20} style={{ marginRight: 8, color: 'inherit' }} />}
           <ListItemText primary={<Typography variant="body1" sx={{ fontWeight: 500 }}>{node.label}</Typography>} />
-          {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+          {open ? <ExpandLessIcon size={18} /> : <ExpandMoreIcon size={18} />}
         </ListItemButton>
         {showMenuButton && (
           <IconButton

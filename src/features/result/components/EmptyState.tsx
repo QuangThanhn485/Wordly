@@ -1,7 +1,7 @@
 // src/features/result/components/EmptyState.tsx
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import AssessmentIcon from '@mui/icons-material/Assessment';
+import { BarChart3 } from 'lucide-react';
 
 export const EmptyState: React.FC = () => {
   return (
@@ -16,11 +16,11 @@ export const EmptyState: React.FC = () => {
         textAlign: 'center',
       }}
     >
-      <AssessmentIcon
-        sx={{
-          fontSize: { xs: 64, sm: 80 },
-          color: 'text.secondary',
-          mb: 3,
+      <BarChart3
+        size={80}
+        style={{
+          color: 'inherit',
+          marginBottom: 24,
           opacity: 0.5,
         }}
       />

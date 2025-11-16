@@ -7,10 +7,7 @@ import {
   styled,
   alpha,
 } from '@mui/material';
-import {
-  Folder as FolderIcon,
-  InsertDriveFile as FileIcon,
-} from '@mui/icons-material';
+import { Folder as FolderIcon, FileText as FileIcon } from 'lucide-react';
 import type { FolderNode, FileLeaf } from '../../types';
 
 // ===== Types =====
@@ -127,9 +124,9 @@ export const FolderGridView: React.FC<FolderGridViewProps> = ({
                 >
                   <IconWrapper>
                     {item.kind === 'folder' ? (
-                      <FolderIcon color="primary" />
+                      <FolderIcon size={64} color="currentColor" style={{ color: 'inherit' }} />
                     ) : (
-                      <FileIcon color="action" />
+                      <FileIcon size={64} color="currentColor" style={{ color: 'inherit' }} />
                     )}
                   </IconWrapper>
                   <Box sx={{ px: 2, pb: 2 }}>

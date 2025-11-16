@@ -10,7 +10,7 @@ import {
 import { MistakeCard } from './MistakeCard';
 import { type MistakesByFile } from '../utils/dataTransform';
 import { getTrainingModeLabel } from '../utils/dataTransform';
-import FolderIcon from '@mui/icons-material/Folder';
+import { Folder } from 'lucide-react';
 
 interface MistakeGroupByFileProps {
   group: MistakesByFile;
@@ -47,7 +47,7 @@ export const MistakeGroupByFile: React.FC<MistakeGroupByFileProps> = ({ group })
                 justifyContent: 'center',
               }}
             >
-              <FolderIcon />
+              <Folder size={24} />
             </Box>
             <Box>
               <Typography

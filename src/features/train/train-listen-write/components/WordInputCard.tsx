@@ -11,11 +11,13 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import LightbulbIcon from '@mui/icons-material/Lightbulb';
-import VolumeUpIcon from '@mui/icons-material/VolumeUp';
-import ReplayIcon from '@mui/icons-material/Replay';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import { 
+  CheckCircle as CheckCircleIcon, 
+  Lightbulb as LightbulbIcon, 
+  Volume2 as VolumeUpIcon, 
+  RotateCcw as ReplayIcon, 
+  Play as PlayArrowIcon 
+} from 'lucide-react';
 import { keyframes } from '@mui/system';
 import { speakEnglish } from '@/utils/speechUtils';
 
@@ -167,9 +169,9 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
             <VolumeUpIcon 
-              sx={{ 
-                fontSize: { xs: '2rem', sm: '3rem', md: '4rem' },
-                color: 'primary.main',
+              size={64}
+              style={{
+                color: 'inherit',
                 opacity: hasStarted ? 0.8 : 0.4,
               }} 
             />
@@ -326,11 +328,9 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
             }}
           >
             <CheckCircleIcon
-              sx={{
-                fontSize: 60,
-                color: 'success.main',
-                mb: 2,
-              }}
+              size={60}
+              color="green"
+              style={{ marginBottom: 16 }}
             />
             <Typography variant="h6" color="success.main" fontWeight={600} gutterBottom>
               Đúng rồi!

@@ -14,8 +14,7 @@ import {
   Divider,
   Chip,
 } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import { CheckCircle as CheckCircleIcon, AlertCircle as ErrorOutlineIcon } from 'lucide-react';
 
 export type SessionMistake = {
   word: string; // English word
@@ -53,7 +52,7 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({
     >
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CheckCircleIcon color="success" sx={{ fontSize: '2rem' }} />
+          <CheckCircleIcon size={32} color="green" />
           <Typography variant="h5" fontWeight={600}>
             Congratulations!
           </Typography>
@@ -128,7 +127,7 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({
         <Button onClick={onRestart} variant="contained" color="primary">
           Restart
         </Button>
-        <Button onClick={onNextMode} variant="contained" color="primary" disabled>
+        <Button onClick={onNextMode} variant="contained" color="primary">
           Next Training Mode
         </Button>
       </DialogActions>

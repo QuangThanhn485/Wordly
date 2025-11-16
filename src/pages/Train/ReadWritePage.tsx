@@ -2,8 +2,6 @@
 import {
   Box,
   Typography,
-  ToggleButton,
-  ToggleButtonGroup,
   Skeleton,
   Chip,
   Button,
@@ -12,12 +10,11 @@ import {
   useMediaQuery,
   Alert,
 } from '@mui/material';
-import TranslateIcon from '@mui/icons-material/Translate';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import { Languages, AlertCircle, RotateCcw, ArrowLeftRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTrainWords } from '@/features/train/train-read-write';
+import { getNextTrainingMode, getTrainingModeUrl } from 'features/train/utils/trainingModes';
 import { WordInputCard } from '@/features/train/train-read-write';
 import {
   saveTrainingSession,
@@ -55,6 +52,7 @@ const ReadWritePage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const currentFileName = searchParams.get('file');
   const [sessionRestored, setSessionRestored] = useState(false); // Track if we've attempted to restore session
 
@@ -230,12 +228,10 @@ const ReadWritePage = () => {
     }
   }, [isCompleted, isLoading, items.length, showCompletionModal, sessionMistakes, currentFileName, mistakesSaved, completionModalShown]);
 
-  const handleModeToggle = (_: React.MouseEvent<HTMLElement>, newMode: 'vi-en' | 'en-vi' | null) => {
-    if (newMode) {
-      setMode(newMode);
-      setShowHint(false);
-      setCurrentWordCompleted(false);
-    }
+  const handleModeToggle = () => {
+    setMode((prev) => (prev === 'vi-en' ? 'en-vi' : 'vi-en'));
+    setShowHint(false);
+    setCurrentWordCompleted(false);
   };
 
   const handleAnswer = useCallback(
@@ -331,11 +327,17 @@ const ReadWritePage = () => {
         setShowCompletionModal(false);
         // Don't reset completionModalShown so modal won't reopen automatically
       } else if (action === 'next') {
+        // Navigate to next training mode
+        const nextMode = getNextTrainingMode('read-write');
+        if (nextMode) {
+          const nextUrl = getTrainingModeUrl(nextMode, currentFileName || undefined);
+          navigate(nextUrl);
+        }
         setShowCompletionModal(false);
         // Don't reset completionModalShown so modal won't reopen automatically
       }
     },
-    [currentFileName, sessionMistakes, handleRestart, mistakesSaved]
+    [currentFileName, sessionMistakes, handleRestart, mistakesSaved, navigate]
   );
 
   const handleCompletionExit = () => {
@@ -363,6 +365,23 @@ const ReadWritePage = () => {
   // Determine question and answer based on mode
   const question = currentWord ? (mode === 'vi-en' ? currentWord.vi : currentWord.en) : '';
   const answer = currentWord ? (mode === 'vi-en' ? currentWord.en : currentWord.vi) : '';
+
+  // Handle keyboard shortcut Ctrl+X for hint
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+        e.preventDefault();
+        if (!showHint && !currentWordCompleted && !isCompleted && currentWord) {
+          handleHint();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showHint, currentWordCompleted, isCompleted, currentWord, handleHint]);
 
   return (
     <Box
@@ -424,27 +443,26 @@ const ReadWritePage = () => {
             gap: { xs: 1, sm: 2 },
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-            <TranslateIcon fontSize="small" color="primary" />
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-              Chế độ:
-            </Typography>
-            <ToggleButtonGroup
-              value={mode}
-              exclusive
-              size={isMobile ? 'small' : 'medium'}
-              onChange={handleModeToggle}
-              color="primary"
-              sx={{ flex: { xs: 1, sm: 'initial' } }}
-            >
-              <ToggleButton value="vi-en">VI ➜ EN</ToggleButton>
-              <ToggleButton value="en-vi">EN ➜ VI</ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
+          <Button
+            variant="outlined"
+            color="primary"
+            size={isMobile ? 'small' : 'medium'}
+            onClick={handleModeToggle}
+            startIcon={<ArrowLeftRight size={isMobile ? 16 : 18} />}
+            sx={{
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              px: { xs: 1.5, sm: 2 },
+              py: { xs: 0.75, sm: 1 },
+              minWidth: { xs: 'auto', sm: 140 },
+              fontWeight: 600,
+            }}
+          >
+            {mode === 'vi-en' ? 'VI ➜ EN' : 'EN ➜ VI'}
+          </Button>
 
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
             <Chip
-              icon={<ErrorOutlineIcon fontSize="small" color="error" />}
+              icon={<AlertCircle size={16} color="error" />}
               label={`Mistakes: ${mistakes}`}
               variant="outlined"
               size={isMobile ? 'small' : 'medium'}
@@ -459,7 +477,7 @@ const ReadWritePage = () => {
               variant="outlined"
               color="primary"
               size={isMobile ? 'small' : 'medium'}
-              startIcon={<RestartAltIcon />}
+              startIcon={<RotateCcw size={20} />}
               onClick={handleRestart}
               sx={{
                 fontSize: { xs: '0.75rem', sm: '0.875rem' },

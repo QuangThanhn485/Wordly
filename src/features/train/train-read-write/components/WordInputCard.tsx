@@ -11,8 +11,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import { CheckCircle as CheckCircleIcon, Lightbulb as LightbulbIcon } from 'lucide-react';
 import { keyframes } from '@mui/system';
 
 const shakeKF = keyframes`
@@ -239,11 +238,9 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
             }}
           >
             <CheckCircleIcon
-              sx={{
-                fontSize: 60,
-                color: 'success.main',
-                mb: 2,
-              }}
+              size={60}
+              color="green"
+              style={{ marginBottom: 16 }}
             />
             <Typography variant="h6" color="success.main" fontWeight={600} gutterBottom>
               Đúng rồi!

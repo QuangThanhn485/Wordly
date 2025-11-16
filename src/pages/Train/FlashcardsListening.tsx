@@ -2,8 +2,6 @@
 import {
   Box,
   Typography,
-  ToggleButton,
-  ToggleButtonGroup,
   Skeleton,
   Chip,
   Button,
@@ -16,15 +14,11 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import VolumeUpIcon from '@mui/icons-material/VolumeUp';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import ReplayIcon from '@mui/icons-material/Replay';
+import { MapPin, AlertCircle, Volume2, HelpCircle, Play, ArrowLeftRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTrainWords } from 'features/train/train-listen';
+import { getNextTrainingMode, getTrainingModeUrl } from 'features/train/utils/trainingModes';
 import { WordCard } from 'features/train/train-listen';
 import { 
   saveTrainingSession, 
@@ -68,6 +62,7 @@ const FlashcardsListening = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const currentFileName = searchParams.get('file');
   const [sessionRestored, setSessionRestored] = useState(false); // Track if we've attempted to restore session
 
@@ -229,11 +224,9 @@ const FlashcardsListening = () => {
   // Use enhanced speech utility for better pronunciation
   // Direct use of speakEnglish utility - no wrapper needed
 
-  const handleLanguageToggle = (_: React.MouseEvent<HTMLElement>, newLang: 'vi' | 'en' | null) => {
-    if (newLang) {
-      setLanguage(newLang);
-      // Note: Session will be auto-saved via useEffect
-    }
+  const handleLanguageToggle = () => {
+    setLanguage((prev) => (prev === 'vi' ? 'en' : 'vi'));
+    // Note: Session will be auto-saved via useEffect
   };
 
   // Handle start button - play random word audio
@@ -419,10 +412,15 @@ const FlashcardsListening = () => {
     } else if (action === 'exit') {
       setShowCompletionModal(false);
     } else if (action === 'next') {
-      // TODO: Implement next training mode
+      // Navigate to next training mode
+      const nextMode = getNextTrainingMode('flashcards-listening');
+      if (nextMode) {
+        const nextUrl = getTrainingModeUrl(nextMode, currentFileName || undefined);
+        navigate(nextUrl);
+      }
       setShowCompletionModal(false);
     }
-  }, [currentFileName, sessionMistakes, handleRestart]);
+  }, [currentFileName, sessionMistakes, handleRestart, navigate]);
   
   const handleCompletionExit = () => {
     saveMistakesAndAction('exit');
@@ -467,7 +465,7 @@ const FlashcardsListening = () => {
       ? ''  // Empty when not started
       : isLoading || !target
         ? 'Loading...'  // Show loading state
-        : (language === 'vi' ? '🎧 Listen...' : '🎧 Listen...'); // Show listening prompt
+        : ''; // Empty during listening
 
   return (
     <Box
@@ -501,43 +499,37 @@ const FlashcardsListening = () => {
           flexShrink: 0,
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-          <VolumeUpIcon fontSize="small" color="primary" />
+        {topBarLabel && (
           <Typography
             variant="h6"
             fontWeight="bold"
             color="primary"
             sx={{
-              fontSize: { xs: '0.875rem', sm: '1.05rem', md: '1.2rem' }, // Responsive font size for mobile
+              fontSize: { xs: '0.875rem', sm: '1.05rem', md: '1.2rem' },
               lineHeight: 1.3,
-              wordBreak: 'break-word',
-              whiteSpace: 'normal',
             }}
           >
             {topBarLabel}
           </Typography>
-        </Box>
+        )}
 
-        <ToggleButtonGroup
-          value={language}
-          exclusive
-          size={isMobile ? 'small' : 'medium'}
-          onChange={handleLanguageToggle}
+        <Button
+          variant="outlined"
           color="primary"
+          size={isMobile ? 'small' : 'medium'}
+          onClick={handleLanguageToggle}
+          startIcon={<ArrowLeftRight size={isMobile ? 16 : 18} />}
           sx={{
             width: { xs: '100%', sm: 'auto' },
-            justifyContent: { xs: 'center', sm: 'flex-start' },
-            '& .MuiToggleButton-root': { 
-              px: { xs: 0.75, sm: 2 }, 
-              flex: { xs: 1, sm: 'initial' },
-              fontSize: { xs: '0.7rem', sm: '0.875rem' },
-              py: { xs: 0.5, sm: 1 },
-            },
+            fontSize: { xs: '0.7rem', sm: '0.875rem' },
+            px: { xs: 1.5, sm: 2.5 },
+            py: { xs: 0.75, sm: 1 },
+            minWidth: { xs: 'auto', sm: 140 },
+            fontWeight: 600,
           }}
         >
-          <ToggleButton value="vi">VI ➜ EN</ToggleButton>
-          <ToggleButton value="en">EN ➜ VI</ToggleButton>
-        </ToggleButtonGroup>
+          {language === 'vi' ? 'VI ➜ EN' : 'EN ➜ VI'}
+        </Button>
 
         <Box
           sx={{
@@ -557,7 +549,7 @@ const FlashcardsListening = () => {
               color="primary"
               size={isMobile ? 'small' : 'medium'}
               onClick={handleStart}
-              startIcon={<PlayArrowIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
+              startIcon={<Play size={isMobile ? 14 : 16} />}
               disabled={isLoading || items.length === 0}
               sx={{ 
                 minWidth: { xs: 'auto', sm: 100 },
@@ -583,10 +575,9 @@ const FlashcardsListening = () => {
                   sx={{ 
                     flexShrink: 0,
                     padding: { xs: 0.5, sm: 1 },
-                    '& .MuiSvgIcon-root': { fontSize: { xs: '1rem', sm: '1.5rem' } },
                   }}
                 >
-                  <ReplayIcon />
+                  <Volume2 size={isMobile ? 16 : 24} />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Show hint (Ctrl+X)">
@@ -598,16 +589,15 @@ const FlashcardsListening = () => {
                   sx={{ 
                     flexShrink: 0,
                     padding: { xs: 0.5, sm: 1 },
-                    '& .MuiSvgIcon-root': { fontSize: { xs: '1rem', sm: '1.5rem' } },
                   }}
                 >
-                  <HelpOutlineIcon />
+                  <HelpCircle size={isMobile ? 16 : 24} />
                 </IconButton>
               </Tooltip>
             </>
           )}
           <Chip
-            icon={<LocationOnIcon fontSize="small" />}
+            icon={<MapPin size={16} />}
             label={`${score} / ${total}`}
             variant="outlined"
             size={isMobile ? 'small' : 'medium'}
@@ -624,7 +614,7 @@ const FlashcardsListening = () => {
             }}
           />
           <Chip
-            icon={<ErrorOutlineIcon fontSize="small" color="error" />}
+            icon={<AlertCircle size={16} color="error" />}
             label={isMobile ? `M: ${mistakes}` : `Mistakes: ${mistakes}`}
             variant="outlined"
             size={isMobile ? 'small' : 'medium'}
@@ -765,7 +755,7 @@ const FlashcardsListening = () => {
       >
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <HelpOutlineIcon color="primary" />
+            <HelpCircle size={24} color="currentColor" style={{ color: 'inherit' }} />
             <Typography variant="h6" fontWeight={600}>
               Hint / Gợi ý
             </Typography>

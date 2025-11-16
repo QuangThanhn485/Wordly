@@ -17,23 +17,23 @@ import {
   useMediaQuery,
   Avatar,
 } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import HomeIcon from '@mui/icons-material/Home';
-import AutoStoriesIcon from '@mui/icons-material/AutoStories';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
-import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
-import LoginIcon from '@mui/icons-material/Login';
-import AppRegistrationIcon from '@mui/icons-material/AppRegistration';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import HeadphonesIcon from '@mui/icons-material/Headphones';
-import EditIcon from '@mui/icons-material/Edit';
-import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoice';
+import { 
+  Menu, 
+  Home, 
+  BookOpen, 
+  BarChart3, 
+  Library, 
+  Rocket, 
+  ChevronLeft, 
+  ChevronRight, 
+  Moon, 
+  Sun, 
+  ChevronUp, 
+  ChevronDown, 
+  Headphones, 
+  Edit, 
+  Mic 
+} from 'lucide-react';
 import { Link as RouterLink, useLocation, useSearchParams } from 'react-router-dom';
 import { useThemeMode } from 'contexts/ThemeContext';
 import { loadTrainingSession } from 'features/train/train-start/sessionStorage';
@@ -275,7 +275,7 @@ const Navbar: React.FC = () => {
                   },
                 }}
               >
-                <MenuIcon sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem' }, pointerEvents: 'none' }} />
+                <Menu size={isMobile ? 24 : 28} style={{ pointerEvents: 'none' }} />
               </IconButton>
               <Box 
                 component={RouterLink}
@@ -302,7 +302,7 @@ const Navbar: React.FC = () => {
                     flexShrink: 0,
                   }}
                 >
-                  <AutoStoriesIcon sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }} />
+                  <BookOpen size={isMobile ? 18 : 20} />
                 </Avatar>
                 <Typography 
                   variant="h6" 
@@ -375,7 +375,7 @@ const Navbar: React.FC = () => {
                     bgcolor: theme.palette.primary.main,
                   }}
                 >
-                  <AutoStoriesIcon sx={{ fontSize: '1rem' }} />
+                  <BookOpen size={16} />
                 </Avatar>
                 <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.125rem' }}>
                   Wordly
@@ -391,7 +391,7 @@ const Navbar: React.FC = () => {
                   bgcolor: theme.palette.primary.main,
                 }}
               >
-                <AutoStoriesIcon sx={{ fontSize: '1rem' }} />
+                <BookOpen size={16} />
               </Avatar>
             )}
             <IconButton
@@ -403,13 +403,10 @@ const Navbar: React.FC = () => {
                 '&:hover': {
                   backgroundColor: theme.palette.action.hover,
                 },
-                '& svg': {
-                  fontSize: '1.25rem',
-                },
               }}
               aria-label={open ? 'Collapse sidebar' : 'Expand sidebar'}
             >
-              {open ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+              {open ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
             </IconButton>
           </Box>
         )}
@@ -444,7 +441,7 @@ const Navbar: React.FC = () => {
                 flexShrink: 0,
               }}
             >
-              <AutoStoriesIcon sx={{ fontSize: '1rem' }} />
+              <BookOpen size={16} />
             </Avatar>
             <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.125rem' }}>
               Wordly
@@ -462,7 +459,7 @@ const Navbar: React.FC = () => {
           >
             <Tooltip title="Home" placement="right" disableHoverListener={open}>
               <ListItemIcon sx={iconStyle(open)}>
-                <HomeIcon />
+                <Home size={20} />
               </ListItemIcon>
             </Tooltip>
             {open && (
@@ -483,7 +480,7 @@ const Navbar: React.FC = () => {
           >
             <Tooltip title="Từ vựng" placement="right" disableHoverListener={open}>
               <ListItemIcon sx={iconStyle(open)}>
-                <BarChartIcon />
+                <Library size={20} />
               </ListItemIcon>
             </Tooltip>
             {open && (
@@ -504,7 +501,7 @@ const Navbar: React.FC = () => {
           >
             <Tooltip title="Train" placement="right" disableHoverListener={open}>
               <ListItemIcon sx={iconStyle(open)}>
-                <AutoStoriesIcon />
+                <BookOpen size={20} />
               </ListItemIcon>
             </Tooltip>
             {open && (
@@ -542,9 +539,9 @@ const Navbar: React.FC = () => {
                   } 
                 />
                 {trainOpen ? (
-                  <ExpandLessIcon sx={{ fontSize: '1.125rem', ml: 0.5 }} />
+                  <ChevronUp size={18} style={{ marginLeft: 4 }} />
                 ) : (
-                  <ExpandMoreIcon sx={{ fontSize: '1.125rem', ml: 0.5 }} />
+                  <ChevronDown size={18} style={{ marginLeft: 4 }} />
                 )}
               </>
             )}
@@ -563,7 +560,7 @@ const Navbar: React.FC = () => {
                 }}
               >
                 <ListItemIcon sx={subIconStyle(open)}>
-                  <RocketLaunchIcon />
+                  <Rocket size={18} />
                 </ListItemIcon>
                 {open && (
                   <ListItemText 
@@ -584,7 +581,7 @@ const Navbar: React.FC = () => {
                 }}
               >
                 <ListItemIcon sx={subIconStyle(open)}>
-                  <HeadphonesIcon />
+                  <Headphones size={18} />
                 </ListItemIcon>
                 {open && (
                   <ListItemText 
@@ -605,7 +602,7 @@ const Navbar: React.FC = () => {
                 }}
               >
                 <ListItemIcon sx={subIconStyle(open)}>
-                  <EditIcon />
+                  <Edit size={18} />
                 </ListItemIcon>
                 {open && (
                   <ListItemText 
@@ -626,7 +623,7 @@ const Navbar: React.FC = () => {
                 }}
               >
                 <ListItemIcon sx={subIconStyle(open)}>
-                  <KeyboardVoiceIcon />
+                  <Mic size={18} />
                 </ListItemIcon>
                 {open && (
                   <ListItemText 
@@ -646,7 +643,7 @@ const Navbar: React.FC = () => {
           >
             <Tooltip title="Result" placement="right" disableHoverListener={open}>
               <ListItemIcon sx={iconStyle(open)}>
-                <BarChartIcon />
+                <BarChart3 size={20} />
               </ListItemIcon>
             </Tooltip>
             {open && (
@@ -668,7 +665,7 @@ const Navbar: React.FC = () => {
           >
             <Tooltip title="Data" placement="right" disableHoverListener={open}>
               <ListItemIcon sx={iconStyle(open)}>
-                <LibraryBooksIcon />
+                <Library size={20} />
               </ListItemIcon>
             </Tooltip>
             {open && (
@@ -684,51 +681,6 @@ const Navbar: React.FC = () => {
         </List>
 
         <Box sx={{ mt: 'auto' }}>
-          <Divider />
-          <List sx={{ px: 0.75, py: 0.5 }}>
-            <ListItemLink
-              to="/login"
-              selected={isActive('/login')}
-              sx={listItemStyle(open, isActive('/login'), theme)}
-            >
-              <Tooltip title="Login" placement="right" disableHoverListener={open}>
-                <ListItemIcon sx={iconStyle(open)}>
-                  <LoginIcon />
-                </ListItemIcon>
-              </Tooltip>
-              {open && (
-                <ListItemText 
-                  primary="Login" 
-                  primaryTypographyProps={{ 
-                    fontWeight: 500,
-                    fontSize: '0.875rem',
-                  }} 
-                />
-              )}
-            </ListItemLink>
-
-            <ListItemLink
-              to="/register"
-              selected={isActive('/register')}
-              sx={listItemStyle(open, isActive('/register'), theme)}
-            >
-              <Tooltip title="Register" placement="right" disableHoverListener={open}>
-                <ListItemIcon sx={iconStyle(open)}>
-                  <AppRegistrationIcon />
-                </ListItemIcon>
-              </Tooltip>
-              {open && (
-                <ListItemText
-                  primary="Register"
-                  primaryTypographyProps={{ 
-                    fontWeight: 500,
-                    fontSize: '0.875rem',
-                  }}
-                />
-              )}
-            </ListItemLink>
-          </List>
-          <Divider />
 
           <Box sx={{ p: 1, display: 'flex', justifyContent: 'center' }}>
             <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
@@ -741,13 +693,10 @@ const Navbar: React.FC = () => {
                   '&:hover': {
                     backgroundColor: theme.palette.action.hover,
                   },
-                  '& svg': {
-                    fontSize: '1.125rem',
-                  },
                 }}
                 aria-label="Toggle theme"
               >
-                {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+                {mode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
               </IconButton>
             </Tooltip>
           </Box>

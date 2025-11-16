@@ -1,7 +1,7 @@
 // WordCard.tsx
 import React from 'react';
 import { Box, Card, CardContent, Typography, Chip } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { CheckCircle as CheckCircleIcon } from 'lucide-react';
 import { useTheme } from '@mui/material/styles';
 import {
   cardFront,
@@ -99,7 +99,7 @@ export const WordCard: React.FC<WordCardProps> = ({
         <Card sx={cardBackRotate(theme)}>
           <CardContent sx={{ width: '100%' }}>
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
-              <Chip icon={<CheckCircleIcon />} label="Correct" size="small" sx={solvedBadgeSx(theme)} />
+              <Chip icon={<CheckCircleIcon size={16} />} label="Correct" size="small" sx={solvedBadgeSx(theme)} />
             </Box>
 
             <Typography 

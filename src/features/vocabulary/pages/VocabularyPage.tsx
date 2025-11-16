@@ -29,29 +29,29 @@ import {
   Stack,
 } from '@mui/material';
 import {
-  InsertDriveFile as FileIcon,
-  VolumeUp as VolumeUpIcon,
-  MenuBook as MenuBookIcon,
-  Category as CategoryIcon,
-  DriveFileRenameOutline as RenameIcon,
-  ContentCopy as CopyIcon,
-  ContentCut as CutIcon,
-  ContentPaste as PasteIcon,
-  FileUpload as ImportIcon,
-  FileDownload as ExportIcon,
-  CreateNewFolder as NewFolderIcon,
-  DeleteOutline as DeleteIcon,
-  Add as AddIcon,
+  FileText as FileIcon,
+  Volume2 as VolumeUpIcon,
+  BookOpen as MenuBookIcon,
+  FolderTree as CategoryIcon,
+  Edit3 as RenameIcon,
+  Copy as CopyIcon,
+  Scissors as CutIcon,
+  Clipboard as PasteIcon,
+  Upload as ImportIcon,
+  Download as ExportIcon,
+  FolderPlus as NewFolderIcon,
+  Trash2 as DeleteIcon,
+  Plus as AddIcon,
   Edit as EditIcon,
-  MoreVert as MoreVertIcon,
-  UnfoldLess as UnfoldLessIcon,
+  MoreVertical as MoreVertIcon,
+  ChevronsUp as UnfoldLessIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
-  ViewList as ViewListIcon,
-  ViewModule as ViewModuleIcon,
-  RocketLaunch as RocketLaunchIcon,
-  ArrowBack as ArrowBackIcon,
-} from '@mui/icons-material';
+  List as ViewListIcon,
+  Grid3x3 as ViewModuleIcon,
+  Rocket as RocketLaunchIcon,
+  ArrowLeft as ArrowBackIcon,
+} from 'lucide-react';
 
 // Import types
 import type { VocabItem, FolderNode, FileLeaf, SnackState } from '../types';
@@ -1244,7 +1244,7 @@ const VocabularyPage: React.FC = () => {
             }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <MenuBookIcon color="primary" sx={{ mr: 1 }} />
+                  <MenuBookIcon size={24} style={{ marginRight: 8, color: 'inherit' }} />
                   <Typography variant={isSmDown ? 'subtitle1' : 'h6'} sx={{ fontWeight: 600 }}>
                     Kho từ vựng
                   </Typography>
@@ -1404,10 +1404,10 @@ const VocabularyPage: React.FC = () => {
                     }}
                     aria-label="Quay lại danh sách thư mục"
                   >
-                    <ArrowBackIcon sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />
+                    <ArrowBackIcon size={isSmDown ? 20 : 24} />
                   </IconButton>
                 )}
-                <CategoryIcon color="primary" sx={{ mr: { xs: 1, sm: 1.5, md: 1.5 }, flexShrink: 0, fontSize: { xs: '1.25rem', sm: '1.5rem', md: undefined } }} />
+                <CategoryIcon size={isSmDown ? 20 : 24} style={{ marginRight: isSmDown ? 8 : 12, flexShrink: 0, color: 'inherit' }} />
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography 
                     variant={isSmDown ? 'subtitle1' : 'h6'} 
@@ -1545,7 +1545,7 @@ const VocabularyPage: React.FC = () => {
             </Box>
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <CategoryIcon color="primary" sx={{ mr: 1 }} />
+              <CategoryIcon size={24} style={{ marginRight: 8, color: 'inherit' }} />
               <Typography variant={isSmDown ? 'h6' : 'h5'} sx={{ fontWeight: 600 }}>
                 Từ vựng
               </Typography>
@@ -1639,13 +1639,8 @@ const VocabularyPage: React.FC = () => {
                               aria-label={`Phát âm ${item.word}`}
                             >
                               <VolumeUpIcon 
-                                sx={{ 
-                                  fontSize: '1.1em', // Slightly larger than text to match visual weight
-                                  color: 'text.secondary',
-                                  '&:hover': {
-                                    color: 'primary.main',
-                                  },
-                                }} 
+                                size={18}
+                                style={{ color: 'inherit' }}
                               />
                             </IconButton>
                             <Box component="span">{item.word}</Box>
@@ -1744,7 +1739,7 @@ const VocabularyPage: React.FC = () => {
                 px: 2,
               }}
             >
-              <FileIcon sx={{ fontSize: 56, color: 'grey.400', mb: 1.5 }} />
+              <FileIcon size={56} style={{ color: 'gray', marginBottom: 12 }} />
               <Typography variant={isSmDown ? 'subtitle1' : 'h6'} color="text.secondary" sx={{ mb: 1 }}>
                 Chưa có tệp nào được chọn
               </Typography>
