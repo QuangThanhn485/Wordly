@@ -6,6 +6,7 @@ import {
   Typography,
   List,
   ListItem,
+  ListItemButton,
   ListItemText,
   Divider,
   useTheme,
@@ -134,41 +135,38 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
               <List sx={{ p: 0 }}>
                 {vocabularyList.map((item, index) => (
                   <React.Fragment key={`${item.en}-${index}`}>
-                    <ListItem
-                      button
-                      onClick={() => handleSpeak(item.en)}
-                      sx={{
-                        py: 2,
-                        px: 2,
-                        cursor: 'pointer',
-                        '&:hover': {
-                          bgcolor: 'action.hover',
-                        },
-                      }}
-                    >
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                            <Volume2 size={16} style={{ color: 'inherit', opacity: 0.6 }} />
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        onClick={() => handleSpeak(item.en)}
+                        sx={{
+                          py: 2,
+                          px: 2,
+                        }}
+                      >
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                              <Volume2 size={16} style={{ color: 'inherit', opacity: 0.6 }} />
+                              <Typography
+                                variant="body1"
+                                fontWeight={600}
+                                sx={{ color: 'primary.main' }}
+                              >
+                                {item.en}
+                              </Typography>
+                            </Box>
+                          }
+                          secondary={
                             <Typography
-                              variant="body1"
-                              fontWeight={600}
-                              sx={{ color: 'primary.main' }}
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ mt: 0.25, ml: 3 }}
                             >
-                              {item.en}
+                              {item.vi}
                             </Typography>
-                          </Box>
-                        }
-                        secondary={
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ mt: 0.25, ml: 3 }}
-                          >
-                            {item.vi}
-                          </Typography>
-                        }
-                      />
+                          }
+                        />
+                      </ListItemButton>
                     </ListItem>
                     {index < vocabularyList.length - 1 && <Divider />}
                   </React.Fragment>

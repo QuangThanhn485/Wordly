@@ -1371,7 +1371,7 @@ const VocabularyPage: React.FC = () => {
           flexDirection: 'column',
           minWidth: 0,
           height: { 
-            xs: mobileViewMode === 'vocab' ? 'calc(100vh - 56px)' : '60vh', // Full height minus AppBar on mobile when vocab view
+            xs: mobileViewMode === 'vocab' ? 'calc(100vh - 56px)' : '60vh',
             sm: mobileViewMode === 'vocab' ? 'calc(100vh - 64px)' : '55vh',
             md: '100%' 
           },
@@ -1557,7 +1557,7 @@ const VocabularyPage: React.FC = () => {
         {/* Content Area - Danh sách từ vựng */}
         <Box sx={{ 
           flex: 1, 
-          overflow: 'hidden', // Không cho scroll ở đây, để TableContainer handle scroll
+          overflow: 'hidden', // Không scroll ở đây, để TableContainer handle
           px: { xs: 2, md: 3 }, 
           pb: { xs: 2, md: 3 },
           display: 'flex',
