@@ -9,9 +9,7 @@ import {
   useTheme,
   Tooltip,
 } from '@mui/material';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import FolderIcon from '@mui/icons-material/Folder';
+import { AlertCircle, Clock, Folder } from 'lucide-react';
 import { type ProcessedMistake } from '../utils/dataTransform';
 import { getTrainingModeLabel, formatTimeAgo, getMistakeSeverity } from '../utils/dataTransform';
 
@@ -61,7 +59,7 @@ export const MistakeCard: React.FC<MistakeCardProps> = ({ mistake }) => {
         {/* Header with mistake count */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Chip
-            icon={<ErrorOutlineIcon />}
+            icon={<AlertCircle size={16} />}
             label={`${mistake.totalMistakes} ${mistake.totalMistakes === 1 ? 'lỗi' : 'lỗi'}`}
             size="small"
             sx={{
@@ -73,7 +71,7 @@ export const MistakeCard: React.FC<MistakeCardProps> = ({ mistake }) => {
           />
           <Tooltip title={formatTimeAgo(mistake.lastMistakeTime)}>
             <Chip
-              icon={<AccessTimeIcon />}
+              icon={<Clock size={16} />}
               label={formatTimeAgo(mistake.lastMistakeTime)}
               size="small"
               variant="outlined"
@@ -112,7 +110,7 @@ export const MistakeCard: React.FC<MistakeCardProps> = ({ mistake }) => {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {/* File name */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FolderIcon sx={{ fontSize: '1rem', color: 'text.secondary' }} />
+            <Folder size={16} style={{ color: 'inherit' }} />
             <Typography
               variant="body2"
               color="text.secondary"

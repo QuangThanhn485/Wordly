@@ -1,10 +1,7 @@
 // src/features/result/components/OverviewCards.tsx
 import React from 'react';
 import { Box, Card, CardContent, Typography, useTheme } from '@mui/material';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import StarIcon from '@mui/icons-material/Star';
-import AssessmentIcon from '@mui/icons-material/Assessment';
+import { TrendingUp, AlertCircle, Star, BarChart3 } from 'lucide-react';
 import { type OverviewStats } from '../utils/dataTransform';
 
 interface OverviewCardsProps {
@@ -18,14 +15,14 @@ export const OverviewCards: React.FC<OverviewCardsProps> = ({ stats }) => {
     {
       title: 'Tổng số từ đã sai',
       value: stats.totalWords,
-      icon: <ErrorOutlineIcon />,
+      icon: <AlertCircle size={24} />,
       color: theme.palette.error.main,
       bgColor: theme.palette.error.light + '20',
     },
     {
       title: 'Tổng số lần sai',
       value: stats.totalMistakes,
-      icon: <TrendingUpIcon />,
+      icon: <TrendingUp size={24} />,
       color: theme.palette.warning.main,
       bgColor: theme.palette.warning.light + '20',
     },
@@ -33,14 +30,14 @@ export const OverviewCards: React.FC<OverviewCardsProps> = ({ stats }) => {
       title: 'Từ sai nhiều nhất',
       value: stats.mostMistakenWord?.word || '—',
       subtitle: stats.mostMistakenWord ? `${stats.mostMistakenWord.count} lần` : '',
-      icon: <StarIcon />,
+      icon: <Star size={24} />,
       color: theme.palette.info.main,
       bgColor: theme.palette.info.light + '20',
     },
     {
       title: 'Số file có lỗi',
       value: Object.keys(stats.mistakesByFile).length,
-      icon: <AssessmentIcon />,
+      icon: <BarChart3 size={24} />,
       color: theme.palette.success.main,
       bgColor: theme.palette.success.light + '20',
     },

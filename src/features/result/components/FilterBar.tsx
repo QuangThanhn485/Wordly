@@ -10,8 +10,7 @@ import {
   useMediaQuery,
   Paper,
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import ClearIcon from '@mui/icons-material/Clear';
+import { Search, X } from 'lucide-react';
 import { type SortOption } from '../hooks/useMistakesStats';
 import { getTrainingModeLabel } from '../utils/dataTransform';
 
@@ -124,7 +123,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             onChange={(e) => setLocalSearchQuery(e.target.value)}
             size="small"
             InputProps={{
-              startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.25rem' }} />,
+              startAdornment: <Search size={20} style={{ marginRight: 8, color: 'inherit' }} />,
               endAdornment: localSearchQuery && (
                 <IconButton
                   size="small"
@@ -134,7 +133,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   }}
                   sx={{ mr: -1 }}
                 >
-                  <ClearIcon fontSize="small" />
+                  <X size={18} />
                 </IconButton>
               ),
             }}
@@ -400,7 +399,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               }}
               title="Xóa bộ lọc"
             >
-              <ClearIcon />
+              <X size={20} />
             </IconButton>
           </Box>
         )}

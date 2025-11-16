@@ -2,21 +2,19 @@
 import {
   Box,
   Typography,
-  ToggleButton,
-  ToggleButtonGroup,
   Skeleton,
   Chip,
   Button,
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import TranslateIcon from '@mui/icons-material/Translate';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import { Languages, MapPin, AlertCircle, ArrowLeftRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTrainWords } from 'features/train/train-start';
+import { getNextTrainingMode, getTrainingModeUrl } from 'features/train/utils/trainingModes';
 import { WordCard } from 'features/train/train-start';
+import { VocabularyQuickView } from 'features/train/components';
 import { 
   saveTrainingSession, 
   loadTrainingSession, 
@@ -59,6 +57,7 @@ const TrainStart = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const currentFileName = searchParams.get('file');
   const [sessionRestored, setSessionRestored] = useState(false); // Track if we've attempted to restore session
 
@@ -96,6 +95,8 @@ const TrainStart = () => {
   const [flipped, setFlipped] = useState<Record<number, boolean>>({});
   const [wrongIdx, setWrongIdx] = useState<number | null>(null);
   const [wrongTick, setWrongTick] = useState(0);
+  const [showMeaningIdx, setShowMeaningIdx] = useState(-1); // Track which card shows meaning
+  const [showHintIdx, setShowHintIdx] = useState(-1); // Track which card shows hint (Ctrl+X)
   const [targetIdx, setTargetIdx] = useState<number>(() => pickRandomIndex(total, new Set()));
   const [score, setScore] = useState(0);
   const [mistakes, setMistakes] = useState(0);
@@ -193,12 +194,22 @@ const TrainStart = () => {
   // Use enhanced speech utility for better pronunciation
   // Direct use of speakEnglish utility - no wrapper needed
 
-  const handleLanguageToggle = (_: React.MouseEvent<HTMLElement>, newLang: 'vi' | 'en' | null) => {
-    if (newLang) {
-      setLanguage(newLang);
+  const handleLanguageToggle = () => {
+    setLanguage((prev) => (prev === 'vi' ? 'en' : 'vi'));
       // Note: Session will be auto-saved via useEffect
-    }
   };
+
+  // Handle show hint (Ctrl+X) - show meaning on correct answer card for 3 seconds
+  const handleShowHint = useCallback(() => {
+    if (isLoading || items.length === 0) return;
+    if (targetIdx < 0 || targetIdx >= items.length) return;
+    if (flipped[targetIdx]) return; // Don't show hint on already flipped card
+    
+    setShowHintIdx(targetIdx);
+    setTimeout(() => {
+      setShowHintIdx(-1);
+    }, 3000);
+  }, [isLoading, items.length, targetIdx, flipped]);
 
   // Save session to localStorage whenever relevant state changes
   useEffect(() => {
@@ -253,6 +264,12 @@ const TrainStart = () => {
         setWrongTick((t) => t + 1);
         setMistakes((m) => m + 1);
         
+        // Show meaning for 2 seconds on the clicked wrong card
+        setShowMeaningIdx(idx);
+        setTimeout(() => {
+          setShowMeaningIdx(-1);
+        }, 2000);
+        
         // Track mistake for this word
         const wrongWord = items[targetIdx].en;
         setWordMistakes((prev) => {
@@ -285,6 +302,23 @@ const TrainStart = () => {
       setShowCompletionModal(true);
     }
   }, [allFlipped, isLoading, items.length]);
+
+  // Handle keyboard shortcut Ctrl+X for hint
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+        e.preventDefault();
+        if (!allFlipped && targetIdx >= 0 && !flipped[targetIdx]) {
+          handleShowHint();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [allFlipped, targetIdx, flipped, handleShowHint]);
   
   // Prepare mistakes data for modal
   const sessionMistakes: SessionMistake[] = useMemo(() => {
@@ -295,6 +329,14 @@ const TrainStart = () => {
         mistakesList.push({
           word: item.en,
           viMeaning: item.vi,
+          count,
+        });
+      } else {
+        // Fallback: if item not found (shouldn't happen), still show the word
+        console.warn(`Word "${word}" not found in items, showing anyway`);
+        mistakesList.push({
+          word: word,
+          viMeaning: 'N/A',
           count,
         });
       }
@@ -332,10 +374,15 @@ const TrainStart = () => {
     } else if (action === 'exit') {
       setShowCompletionModal(false);
     } else if (action === 'next') {
-      // TODO: Implement next training mode
+      // Navigate to next training mode
+      const nextMode = getNextTrainingMode('flashcards-reading');
+      if (nextMode) {
+        const nextUrl = getTrainingModeUrl(nextMode, currentFileName || undefined);
+        navigate(nextUrl);
+      }
       setShowCompletionModal(false);
     }
-  }, [currentFileName, sessionMistakes, handleRestart]);
+  }, [currentFileName, sessionMistakes, handleRestart, navigate]);
   
   const handleCompletionExit = () => {
     saveMistakesAndAction('exit');
@@ -397,7 +444,7 @@ const TrainStart = () => {
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <TranslateIcon fontSize="small" color="primary" />
+          <Languages size={20} color="currentColor" style={{ color: 'inherit' }} />
           <Typography
             variant="h6"
             fontWeight="bold"
@@ -413,21 +460,23 @@ const TrainStart = () => {
           </Typography>
         </Box>
 
-        <ToggleButtonGroup
-          value={language}
-          exclusive
-          size={isMobile ? 'small' : 'medium'}
-          onChange={handleLanguageToggle}
+        <Button
+          variant="outlined"
           color="primary"
+          size={isMobile ? 'small' : 'medium'}
+          onClick={handleLanguageToggle}
+          startIcon={<ArrowLeftRight size={isMobile ? 16 : 18} />}
           sx={{
             width: { xs: '100%', sm: 'auto' },
-            justifyContent: { xs: 'center', sm: 'flex-start' },
-            '& .MuiToggleButton-root': { px: { xs: 1, sm: 2 }, flex: { xs: 1, sm: 'initial' } },
+            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            px: { xs: 1.5, sm: 2.5 },
+            py: { xs: 0.75, sm: 1 },
+            minWidth: { xs: 'auto', sm: 140 },
+            fontWeight: 600,
           }}
         >
-          <ToggleButton value="vi">VI ➜ EN</ToggleButton>
-          <ToggleButton value="en">EN ➜ VI</ToggleButton>
-        </ToggleButtonGroup>
+          {language === 'vi' ? 'VI ➜ EN' : 'EN ➜ VI'}
+        </Button>
 
         <Box
           sx={{
@@ -440,7 +489,7 @@ const TrainStart = () => {
           }}
         >
           <Chip
-            icon={<LocationOnIcon fontSize="small" />}
+            icon={<MapPin size={16} />}
             label={`${score} / ${total}`}
             variant="outlined"
             size={isMobile ? 'small' : 'medium'}
@@ -454,7 +503,7 @@ const TrainStart = () => {
             }}
           />
           <Chip
-            icon={<ErrorOutlineIcon fontSize="small" color="error" />}
+            icon={<AlertCircle size={16} color="error" />}
             label={`Mistakes: ${mistakes}`}
             variant="outlined"
             size={isMobile ? 'small' : 'medium'}
@@ -550,6 +599,7 @@ const TrainStart = () => {
                 onAttempt={() => handleAttempt(idx)}
                 shouldShake={wrongIdx === idx}
                 shakeKey={wrongTick}
+                showMeaning={showMeaningIdx === idx || showHintIdx === idx}
               />
             </Box>
           ))}
@@ -565,6 +615,12 @@ const TrainStart = () => {
         onExit={handleCompletionExit}
         onRestart={handleCompletionRestart}
         onNextMode={handleCompletionNext}
+      />
+
+      {/* Vocabulary Quick View */}
+      <VocabularyQuickView
+        vocabularyList={items}
+        currentFileName={currentFileName}
       />
     </Box>
   );

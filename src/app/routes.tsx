@@ -9,7 +9,6 @@ import ReadWritePage from '@/pages/Train/ReadWritePage';
 import ListenWritePage from '@/pages/Train/ListenWritePage';
 import ResultPage from '@/pages/Train/ResultPage';
 import DataManagementPage from '@/pages/DataManagementPage';
-import Login from '@/features/auth/pages/Login';
 
 export default function AppRoutes() {
   return useRoutes([
@@ -27,10 +26,6 @@ export default function AppRoutes() {
         { path: 'train/result', element: <ResultPage /> },
         { path: 'data', element: <DataManagementPage /> },
       ],
-    },
-    {
-      path: '/login',
-      element: <Login />,
     },
     {
       path: '*',

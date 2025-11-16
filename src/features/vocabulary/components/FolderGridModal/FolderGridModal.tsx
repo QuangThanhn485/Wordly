@@ -9,10 +9,7 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import {
-  Close as CloseIcon,
-  FolderOpen as FolderOpenIcon,
-} from '@mui/icons-material';
+import { X as CloseIcon, FolderOpen as FolderOpenIcon } from 'lucide-react';
 import type { FolderNode, FileLeaf } from '../../types';
 import { FolderGridView } from '../FolderGrid/FolderGridView';
 import { BreadcrumbNav, type BreadcrumbItem } from '../FolderGrid/Breadcrumb';

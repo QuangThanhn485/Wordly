@@ -29,36 +29,36 @@ import {
   Stack,
 } from '@mui/material';
 import {
-  InsertDriveFile as FileIcon,
-  VolumeUp as VolumeUpIcon,
-  MenuBook as MenuBookIcon,
-  Category as CategoryIcon,
-  DriveFileRenameOutline as RenameIcon,
-  ContentCopy as CopyIcon,
-  ContentCut as CutIcon,
-  ContentPaste as PasteIcon,
-  FileUpload as ImportIcon,
-  FileDownload as ExportIcon,
-  CreateNewFolder as NewFolderIcon,
-  DeleteOutline as DeleteIcon,
-  Add as AddIcon,
+  FileText as FileIcon,
+  Volume2 as VolumeUpIcon,
+  BookOpen as MenuBookIcon,
+  FolderTree as CategoryIcon,
+  Edit3 as RenameIcon,
+  Copy as CopyIcon,
+  Scissors as CutIcon,
+  Clipboard as PasteIcon,
+  Upload as ImportIcon,
+  Download as ExportIcon,
+  FolderPlus as NewFolderIcon,
+  Trash2 as DeleteIcon,
+  Plus as AddIcon,
   Edit as EditIcon,
-  MoreVert as MoreVertIcon,
-  UnfoldLess as UnfoldLessIcon,
+  MoreVertical as MoreVertIcon,
+  ChevronsUp as UnfoldLessIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
-  ViewList as ViewListIcon,
-  ViewModule as ViewModuleIcon,
-  RocketLaunch as RocketLaunchIcon,
-  ArrowBack as ArrowBackIcon,
-} from '@mui/icons-material';
+  List as ViewListIcon,
+  Grid3x3 as ViewModuleIcon,
+  Rocket as RocketLaunchIcon,
+  ArrowLeft as ArrowBackIcon,
+} from 'lucide-react';
 
 // Import types
 import type { VocabItem, FolderNode, FileLeaf, SnackState } from '../types';
 
 // Import constants
 import { TOTAL_LEFT_BAND } from '../constants/wordTypes';
-import { seedVocab, getDefaultTree } from '../constants/seedData';
+import { getDefaultTree } from '../constants/seedData';
 
 // Import utilities
 import {
@@ -79,6 +79,7 @@ import {
   renameVocabCount,
   saveTreeToStorage,
   loadTreeFromStorage,
+  syncAllVocabCounts,
 } from '../utils/storageUtils';
 import { speak } from '@/utils/speechUtils';
 import { saveTrainingSession as saveReadingSession } from '@/features/train/train-start/sessionStorage';
@@ -90,6 +91,7 @@ import { saveTrainingSession as saveListenWriteSession } from '@/features/train/
 import { FolderItem } from '../components/FolderTree';
 import { type BreadcrumbItem } from '../components/FolderGrid';
 import { FolderGridModal } from '../components/FolderGridModal';
+import { removeFileExtension } from '@/utils/fileUtils';
 import {
   RenameDialog,
   NewFolderDialog,
@@ -145,15 +147,26 @@ const VocabularyPage: React.FC = () => {
   const navigate = useNavigate();
   
   // Lazy load vocabMap - start empty, load files on-demand
-  const [vocabMap, setVocabMap] = useState<Record<string, VocabItem[]>>(() => {
-    // Only load seed data on init, actual files will be loaded lazily
-    return { ...seedVocab };
-  });
+  const [vocabMap, setVocabMap] = useState<Record<string, VocabItem[]>>({});
   
   const [tree, setTree] = useState<FolderNode>(() => {
     const stored = loadTreeFromStorage();
-    return stored || getDefaultTree();
+    if (stored) {
+      return stored;
+    }
+    
+    // First time init: save default tree (empty root folder)
+    const defaultTree = getDefaultTree();
+    saveTreeToStorage(defaultTree);
+    
+    return defaultTree;
   });
+  
+  // Sync vocab counts on mount to ensure accuracy
+  // This rebuilds wordly_vocab_counts from actual vocab files
+  React.useEffect(() => {
+    syncAllVocabCounts();
+  }, []); // Only run once on mount
 
   // Path index cache for O(1) node lookups - rebuilds when tree changes
   const treeIndex = useMemo(() => {
@@ -232,7 +245,7 @@ const VocabularyPage: React.FC = () => {
     const located = treeIndex.findByPath(selectedPath);
     return located?.node.kind === 'file' ? located.node : null;
   }, [selectedPath, treeIndex]);
-  const selectedTitle = useMemo(() => selectedFile?.name.replace(/\.txt$/i, '') ?? '', [selectedFile]);
+  const selectedTitle = useMemo(() => removeFileExtension(selectedFile?.name) || '', [selectedFile]);
   
   // Mobile view mode: 'folder' = show folder tree, 'vocab' = show vocab list
   const [mobileViewMode, setMobileViewMode] = useState<'folder' | 'vocab'>('folder');
@@ -852,8 +865,10 @@ const VocabularyPage: React.FC = () => {
             located2.node.children.push(fileNode);
             return copy;
           });
-          updateVocabMap((m) => ({ ...m, [finalFileName]: items.length ? items : (m[finalFileName] || []) }));
-          showSnack(`Đã nhập tệp "${finalFileName}".`);
+          // Import vocabulary data - always save the items array (even if empty)
+          updateVocabMap((m) => ({ ...m, [finalFileName]: items }));
+          showSnack(`Đã nhập tệp "${finalFileName}" với ${items.length} từ vựng.`);
+          closeMenu();
         } catch (err) {
           console.error(err);
           showSnack('Không thể đọc file. Đảm bảo file đúng định dạng JSON.', 'error');
@@ -861,7 +876,7 @@ const VocabularyPage: React.FC = () => {
       };
       reader.readAsText(file);
     },
-    [menu, tree, updateTree, updateVocabMap, treeIndex],
+    [menu, tree, updateTree, updateVocabMap, treeIndex, closeMenu],
   );
 
   const handleExportFile = useCallback(() => {
@@ -1055,7 +1070,10 @@ const VocabularyPage: React.FC = () => {
             return newData;
           });
           
-          showSnack(`Đã import thư mục "${uniqueFolderName}" (${allFiles.length} files).`);
+          // Count total vocabulary words
+          const totalWords = Object.values(folderVocabData).reduce((sum, vocab) => sum + vocab.length, 0);
+          showSnack(`Đã import thư mục "${uniqueFolderName}" (${allFiles.length} files, ${totalWords} từ vựng).`);
+          closeMenu();
         } catch (err) {
           console.error(err);
           showSnack('Không thể đọc file. Đảm bảo file đúng định dạng JSON.', 'error');
@@ -1063,7 +1081,7 @@ const VocabularyPage: React.FC = () => {
       };
       reader.readAsText(file);
     },
-    [menu, treeIndex, vocabMap, updateTree, updateVocabMap],
+    [menu, treeIndex, vocabMap, updateTree, updateVocabMap, closeMenu],
   );
 
   const doCopy = useCallback(() => {
@@ -1244,7 +1262,7 @@ const VocabularyPage: React.FC = () => {
             }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <MenuBookIcon color="primary" sx={{ mr: 1 }} />
+                  <MenuBookIcon size={24} style={{ marginRight: 8, color: 'inherit' }} />
                   <Typography variant={isSmDown ? 'subtitle1' : 'h6'} sx={{ fontWeight: 600 }}>
                     Kho từ vựng
                   </Typography>
@@ -1370,7 +1388,7 @@ const VocabularyPage: React.FC = () => {
           flexDirection: 'column',
           minWidth: 0,
           height: { 
-            xs: mobileViewMode === 'vocab' ? 'calc(100vh - 56px)' : '60vh', // Full height minus AppBar on mobile when vocab view
+            xs: mobileViewMode === 'vocab' ? 'calc(100vh - 56px)' : '60vh',
             sm: mobileViewMode === 'vocab' ? 'calc(100vh - 64px)' : '55vh',
             md: '100%' 
           },
@@ -1404,10 +1422,10 @@ const VocabularyPage: React.FC = () => {
                     }}
                     aria-label="Quay lại danh sách thư mục"
                   >
-                    <ArrowBackIcon sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />
+                    <ArrowBackIcon size={isSmDown ? 20 : 24} />
                   </IconButton>
                 )}
-                <CategoryIcon color="primary" sx={{ mr: { xs: 1, sm: 1.5, md: 1.5 }, flexShrink: 0, fontSize: { xs: '1.25rem', sm: '1.5rem', md: undefined } }} />
+                <CategoryIcon size={isSmDown ? 20 : 24} style={{ marginRight: isSmDown ? 8 : 12, flexShrink: 0, color: 'inherit' }} />
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography 
                     variant={isSmDown ? 'subtitle1' : 'h6'} 
@@ -1545,7 +1563,7 @@ const VocabularyPage: React.FC = () => {
             </Box>
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <CategoryIcon color="primary" sx={{ mr: 1 }} />
+              <CategoryIcon size={24} style={{ marginRight: 8, color: 'inherit' }} />
               <Typography variant={isSmDown ? 'h6' : 'h5'} sx={{ fontWeight: 600 }}>
                 Từ vựng
               </Typography>
@@ -1556,7 +1574,7 @@ const VocabularyPage: React.FC = () => {
         {/* Content Area - Danh sách từ vựng */}
         <Box sx={{ 
           flex: 1, 
-          overflow: 'hidden', // Không cho scroll ở đây, để TableContainer handle scroll
+          overflow: 'hidden', // Không scroll ở đây, để TableContainer handle
           px: { xs: 2, md: 3 }, 
           pb: { xs: 2, md: 3 },
           display: 'flex',
@@ -1639,13 +1657,8 @@ const VocabularyPage: React.FC = () => {
                               aria-label={`Phát âm ${item.word}`}
                             >
                               <VolumeUpIcon 
-                                sx={{ 
-                                  fontSize: '1.1em', // Slightly larger than text to match visual weight
-                                  color: 'text.secondary',
-                                  '&:hover': {
-                                    color: 'primary.main',
-                                  },
-                                }} 
+                                size={18}
+                                style={{ color: 'inherit' }}
                               />
                             </IconButton>
                             <Box component="span">{item.word}</Box>
@@ -1744,7 +1757,7 @@ const VocabularyPage: React.FC = () => {
                 px: 2,
               }}
             >
-              <FileIcon sx={{ fontSize: 56, color: 'grey.400', mb: 1.5 }} />
+              <FileIcon size={56} style={{ color: 'gray', marginBottom: 12 }} />
               <Typography variant={isSmDown ? 'subtitle1' : 'h6'} color="text.secondary" sx={{ mb: 1 }}>
                 Chưa có tệp nào được chọn
               </Typography>

@@ -9,10 +9,7 @@ import {
 } from '@mui/material';
 import { MistakeCard } from './MistakeCard';
 import { type MistakesByMode } from '../utils/dataTransform';
-import AutoStoriesIcon from '@mui/icons-material/AutoStories';
-import HeadphonesIcon from '@mui/icons-material/Headphones';
-import EditIcon from '@mui/icons-material/Edit';
-import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoice';
+import { BookOpen, Headphones, Edit, Mic } from 'lucide-react';
 
 interface MistakeGroupProps {
   group: MistakesByMode;
@@ -20,12 +17,12 @@ interface MistakeGroupProps {
 
 const getModeIcon = (mode: string) => {
   const icons: Record<string, React.ReactNode> = {
-    'flashcards-reading': <AutoStoriesIcon />,
-    'flashcards-listening': <HeadphonesIcon />,
-    'read-write': <EditIcon />,
-    'listen-write': <KeyboardVoiceIcon />,
+    'flashcards-reading': <BookOpen size={24} />,
+    'flashcards-listening': <Headphones size={24} />,
+    'read-write': <Edit size={24} />,
+    'listen-write': <Mic size={24} />,
   };
-  return icons[mode] || <AutoStoriesIcon />;
+  return icons[mode] || <BookOpen size={24} />;
 };
 
 export const MistakeGroup: React.FC<MistakeGroupProps> = ({ group }) => {

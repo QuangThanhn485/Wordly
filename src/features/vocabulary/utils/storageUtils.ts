@@ -225,6 +225,11 @@ export const cleanupOldVocabFormat = (): void => {
 /**
  * Load vocab counts map from storage
  * Returns { "file1.txt": 10, "file2.txt": 5, ... }
+ * 
+ * MECHANISM:
+ * - Counts are automatically updated by saveVocabFile() and deleteVocabFile()
+ * - Use this for fast counting without loading full vocab data
+ * - syncAllVocabCounts() rebuilds entire map on app init for accuracy
  */
 export const loadVocabCounts = (): Record<string, number> => {
   try {

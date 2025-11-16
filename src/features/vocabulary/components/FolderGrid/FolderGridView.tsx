@@ -7,11 +7,9 @@ import {
   styled,
   alpha,
 } from '@mui/material';
-import {
-  Folder as FolderIcon,
-  InsertDriveFile as FileIcon,
-} from '@mui/icons-material';
+import { Folder as FolderIcon, FileText as FileIcon } from 'lucide-react';
 import type { FolderNode, FileLeaf } from '../../types';
+import { removeFileExtension } from '@/utils/fileUtils';
 
 // ===== Types =====
 interface FolderGridViewProps {
@@ -105,7 +103,7 @@ export const FolderGridView: React.FC<FolderGridViewProps> = ({
           {items.map((item) => {
             const isSelected = item.kind === 'file' && item.name === selectedFileName;
             // Remove .txt extension from file name for display
-            const label = item.kind === 'folder' ? item.label : item.name.replace(/\.txt$/i, '');
+            const label = item.kind === 'folder' ? item.label : removeFileExtension(item.name);
 
             return (
               <GridCard
@@ -127,9 +125,9 @@ export const FolderGridView: React.FC<FolderGridViewProps> = ({
                 >
                   <IconWrapper>
                     {item.kind === 'folder' ? (
-                      <FolderIcon color="primary" />
+                      <FolderIcon size={64} color="currentColor" style={{ color: 'inherit' }} />
                     ) : (
-                      <FileIcon color="action" />
+                      <FileIcon size={64} color="currentColor" style={{ color: 'inherit' }} />
                     )}
                   </IconWrapper>
                   <Box sx={{ px: 2, pb: 2 }}>

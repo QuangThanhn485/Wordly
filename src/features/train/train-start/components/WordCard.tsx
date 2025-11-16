@@ -1,7 +1,7 @@
 // WordCard.tsx
 import React from 'react';
 import { Box, Card, CardContent, Typography, Chip } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { CheckCircle as CheckCircleIcon } from 'lucide-react';
 import { useTheme } from '@mui/material/styles';
 import {
   cardFront,
@@ -21,6 +21,7 @@ interface WordCardProps {
   onAttempt: () => void;
   shouldShake?: boolean;
   shakeKey?: number;
+  showMeaning?: boolean;
 }
 
 export const WordCard: React.FC<WordCardProps> = ({
@@ -32,6 +33,7 @@ export const WordCard: React.FC<WordCardProps> = ({
   onAttempt,
   shouldShake = false,
   shakeKey = 0,
+  showMeaning = false,
 }) => {
   const theme = useTheme();
   return (
@@ -81,25 +83,54 @@ export const WordCard: React.FC<WordCardProps> = ({
               {/* EN-VI mode (showLang === 'en'): show Vietnamese on cards */}
               {showLang === 'vi' ? en : vi}
             </Typography>
-            <Typography
-              variant="body2"
-              align="center"
-              sx={{ 
-                mt: { xs: 0.75, sm: 1.25 },
-                userSelect: 'none',
-                opacity: 0.7,
-                fontSize: { xs: '0.75rem', sm: '0.875rem' }, // Smaller on mobile
-              }}
-            >
-              Tap a card to answer
-            </Typography>
+            
+            {/* Show meaning temporarily when user makes a mistake or requests hint */}
+            {showMeaning && !flipped && (
+              <Typography
+                variant="body1"
+                align="center"
+                sx={{ 
+                  mt: { xs: 1, sm: 1.5 },
+                  px: { xs: 1, sm: 2 },
+                  py: { xs: 0.75, sm: 1 },
+                  bgcolor: shouldShake ? 'error.light' : 'info.light',
+                  color: shouldShake ? 'error.contrastText' : 'info.contrastText',
+                  borderRadius: 1,
+                  fontWeight: 600,
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                  animation: 'fadeIn 0.2s ease-in',
+                  '@keyframes fadeIn': {
+                    from: { opacity: 0, transform: 'translateY(-5px)' },
+                    to: { opacity: 1, transform: 'translateY(0)' },
+                  },
+                }}
+              >
+                {/* Show opposite language as hint */}
+                {showLang === 'vi' ? vi : en}
+              </Typography>
+            )}
+            
+            {!showMeaning && (
+              <Typography
+                variant="body2"
+                align="center"
+                sx={{ 
+                  mt: { xs: 0.75, sm: 1.25 },
+                  userSelect: 'none',
+                  opacity: 0.7,
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }, // Smaller on mobile
+                }}
+              >
+                Tap a card to answer
+              </Typography>
+            )}
           </CardContent>
         </Card>
 
         <Card sx={cardBackRotate(theme)}>
           <CardContent sx={{ width: '100%' }}>
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
-              <Chip icon={<CheckCircleIcon />} label="Correct" size="small" sx={solvedBadgeSx(theme)} />
+              <Chip icon={<CheckCircleIcon size={16} />} label="Correct" size="small" sx={solvedBadgeSx(theme)} />
             </Box>
 
             <Typography 

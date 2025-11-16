@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Breadcrumbs, Link, Typography } from '@mui/material';
-import { NavigateNext as NavigateNextIcon, Home as HomeIcon } from '@mui/icons-material';
+import { ChevronRight, Home } from 'lucide-react';
 
 // ===== Types =====
 export interface BreadcrumbItem {
@@ -18,7 +18,7 @@ export const BreadcrumbNav: React.FC<BreadcrumbNavProps> = ({ path, onNavigate }
   return (
     <Box sx={{ px: 2, py: 1.5, backgroundColor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
       <Breadcrumbs
-        separator={<NavigateNextIcon fontSize="small" />}
+        separator={<ChevronRight size={16} />}
         aria-label="breadcrumb"
         maxItems={4}
         itemsBeforeCollapse={1}
@@ -35,7 +35,7 @@ export const BreadcrumbNav: React.FC<BreadcrumbNavProps> = ({ path, onNavigate }
                 color="text.primary"
                 sx={{ display: 'flex', alignItems: 'center', fontWeight: 600 }}
               >
-                {isFirst && <HomeIcon sx={{ mr: 0.5, fontSize: 20 }} />}
+                {isFirst && <Home size={20} style={{ marginRight: 4 }} />}
                 {item.label}
               </Typography>
             );
@@ -53,7 +53,7 @@ export const BreadcrumbNav: React.FC<BreadcrumbNavProps> = ({ path, onNavigate }
               }}
               sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
             >
-              {isFirst && <HomeIcon sx={{ mr: 0.5, fontSize: 20 }} />}
+              {isFirst && <Home size={20} style={{ marginRight: 4 }} />}
               {item.label}
             </Link>
           );

@@ -10,7 +10,7 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import AssessmentIcon from '@mui/icons-material/Assessment';
+import { BarChart3 } from 'lucide-react';
 import { useMistakesStats } from '@/features/result/hooks/useMistakesStats';
 import { OverviewCards } from '@/features/result/components/OverviewCards';
 import { MistakeCard } from '@/features/result/components/MistakeCard';
@@ -64,11 +64,9 @@ const ResultPage = () => {
         {/* Header */}
         <Box sx={{ mb: { xs: 3, sm: 4 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-            <AssessmentIcon
-              sx={{
-                fontSize: { xs: '2rem', sm: '2.5rem' },
-                color: 'primary.main',
-              }}
+            <BarChart3
+              size={isMobile ? 32 : 40}
+              style={{ color: 'inherit' }}
             />
             <Typography
               variant="h4"

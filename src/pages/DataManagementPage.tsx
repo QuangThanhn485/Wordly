@@ -21,13 +21,9 @@ import {
   FormControlLabel,
   Stack,
 } from '@mui/material';
-import StorageIcon from '@mui/icons-material/Storage';
-import BackupIcon from '@mui/icons-material/Backup';
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import RestoreIcon from '@mui/icons-material/Restore';
-import WarningIcon from '@mui/icons-material/Warning';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { loadVocabCounts, loadVocabFromStorage } from '@/features/vocabulary/utils/storageUtils';
+import { Database, Upload, Trash2, RotateCcw, AlertTriangle, CheckCircle } from 'lucide-react';
+import { loadVocabCounts, loadVocabFromStorage, loadTreeFromStorage } from '@/features/vocabulary/utils/storageUtils';
+import { getAllFileNames } from '@/features/vocabulary/utils/treeUtils';
 import { loadMistakesStats } from '@/features/train/train-read-write/mistakesStorage';
 import { getLastChangeTimestamp, trackedSetItem, trackedRemoveItem } from '@/utils/storageTracker';
 
@@ -358,11 +354,16 @@ const DataManagementPage: React.FC = () => {
   }, []);
 
   const backupTimestamp = getBackupTimestamp();
-  const allVocab = loadVocabFromStorage();
-  const vocabIndex = allVocab ? Object.keys(allVocab) : [];
+  const tree = loadTreeFromStorage();
   const vocabCounts = loadVocabCounts();
-  const totalVocabFiles = vocabIndex.length;
-  const totalVocabWords = Object.values(vocabCounts).reduce((sum, count) => sum + count, 0);
+  
+  // Get ALL file names from tree structure (including nested folders)
+  const allFileNames = tree ? getAllFileNames(tree) : [];
+  const totalVocabFiles = allFileNames.length;
+  
+  // Calculate total words from wordly_vocab_counts (FAST - không cần load từng file)
+  const totalVocabWords = allFileNames.reduce((sum, fileName) => sum + (vocabCounts[fileName] || 0), 0);
+  
   const hasChanges = hasChangesAfterBackup();
 
   return (
@@ -378,11 +379,9 @@ const DataManagementPage: React.FC = () => {
           {/* Header */}
           <Box sx={{ mb: { xs: 3, sm: 4 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-              <StorageIcon
-                sx={{
-                  fontSize: { xs: '2rem', sm: '2.5rem' },
-                  color: 'primary.main',
-                }}
+              <Database
+                size={40}
+                style={{ color: 'inherit' }}
               />
               <Typography
                 variant="h4"
@@ -453,14 +452,14 @@ const DataManagementPage: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
                   {hasBackup() ? (
                     <>
-                      <CheckCircleIcon color="success" />
+                      <CheckCircle size={20} color="green" />
                       <Typography variant="body2">
                         {backupTimestamp?.toLocaleDateString('vi-VN')}
                       </Typography>
                     </>
                   ) : (
                     <>
-                      <WarningIcon color="warning" />
+                      <AlertTriangle size={20} color="orange" />
                       <Typography variant="body2">Chưa có backup</Typography>
                     </>
                   )}
@@ -492,7 +491,7 @@ const DataManagementPage: React.FC = () => {
             <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <CardContent sx={{ flex: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <BackupIcon color="primary" sx={{ fontSize: '2rem' }} />
+                  <Upload size={32} color="currentColor" style={{ color: 'inherit' }} />
                   <Box>
                     <Typography variant="h6" fontWeight={600}>
                       Backup Dữ liệu
@@ -511,7 +510,7 @@ const DataManagementPage: React.FC = () => {
               <CardActions sx={{ px: 2, pb: 2, mt: 'auto' }}>
                 <Button
                   variant="contained"
-                  startIcon={<BackupIcon />}
+                  startIcon={<Upload size={20} />}
                   onClick={() => setBackupDialogOpen(true)}
                   fullWidth
                 >
@@ -524,7 +523,7 @@ const DataManagementPage: React.FC = () => {
             <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <CardContent sx={{ flex: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <RestoreIcon color="primary" sx={{ fontSize: '2rem' }} />
+                  <RotateCcw size={32} color="currentColor" style={{ color: 'inherit' }} />
                   <Box>
                     <Typography variant="h6" fontWeight={600}>
                       Khôi phục Dữ liệu
@@ -541,7 +540,7 @@ const DataManagementPage: React.FC = () => {
               <CardActions sx={{ px: 2, pb: 2, mt: 'auto' }}>
                 <Button
                   variant="outlined"
-                  startIcon={<RestoreIcon />}
+                  startIcon={<RotateCcw size={20} />}
                   onClick={() => {
                     setImportDialogOpen(true);
                     setTimeout(() => fileInputRef.current?.click(), 100);
@@ -564,7 +563,7 @@ const DataManagementPage: React.FC = () => {
             <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <CardContent sx={{ flex: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <DeleteForeverIcon color="error" sx={{ fontSize: '2rem' }} />
+                  <Trash2 size={32} color="currentColor" style={{ color: 'inherit' }} />
                   <Box>
                     <Typography variant="h6" fontWeight={600}>
                       Xóa Báo cáo Lỗi
@@ -582,7 +581,7 @@ const DataManagementPage: React.FC = () => {
                 <Button
                   variant="outlined"
                   color="error"
-                  startIcon={<DeleteForeverIcon />}
+                  startIcon={<Trash2 size={20} />}
                   onClick={() => setDeleteResultDialogOpen(true)}
                   fullWidth
                 >
@@ -595,7 +594,7 @@ const DataManagementPage: React.FC = () => {
             <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <CardContent sx={{ flex: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <DeleteForeverIcon color="error" sx={{ fontSize: '2rem' }} />
+                  <Trash2 size={32} color="currentColor" style={{ color: 'inherit' }} />
                   <Box>
                     <Typography variant="h6" fontWeight={600}>
                       Xóa Từ vựng
@@ -609,7 +608,7 @@ const DataManagementPage: React.FC = () => {
                   {!hasBackup() && (
                     <Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <WarningIcon />
+                        <AlertTriangle size={20} />
                         <Typography variant="body1" fontWeight={600}>
                           Cảnh báo: Chưa có backup!
                         </Typography>
@@ -622,7 +621,7 @@ const DataManagementPage: React.FC = () => {
                   {hasBackup() && hasChanges && (
                     <Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <WarningIcon />
+                        <AlertTriangle size={20} />
                         <Typography variant="body1" fontWeight={600}>
                           Cảnh báo: Có thay đổi sau backup!
                         </Typography>
@@ -665,7 +664,7 @@ const DataManagementPage: React.FC = () => {
                 <Button
                   variant="outlined"
                   color="error"
-                  startIcon={<DeleteForeverIcon />}
+                  startIcon={<Trash2 size={20} />}
                   onClick={() => {
                     if (!hasBackup()) {
                       setAlert({ type: 'error', message: 'Vui lòng tạo backup trước khi xóa dữ liệu!' });
@@ -690,7 +689,7 @@ const DataManagementPage: React.FC = () => {
           <Card sx={{ border: `2px solid ${theme.palette.error.main}40`, display: 'flex', flexDirection: 'column' }}>
             <CardContent sx={{ flex: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                <DeleteForeverIcon color="error" sx={{ fontSize: '2.5rem' }} />
+                <Trash2 size={40} color="currentColor" style={{ color: 'inherit' }} />
                 <Box>
                   <Typography variant="h6" fontWeight={700} color="error">
                     Xóa Toàn bộ Dữ liệu
@@ -704,7 +703,7 @@ const DataManagementPage: React.FC = () => {
                 {!hasBackup() && (
                   <Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <WarningIcon />
+                      <AlertTriangle size={20} />
                       <Typography variant="body1" fontWeight={600}>
                         Cảnh báo: Chưa có backup!
                       </Typography>
@@ -717,7 +716,7 @@ const DataManagementPage: React.FC = () => {
                 {hasBackup() && hasChanges && (
                   <Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <WarningIcon />
+                      <AlertTriangle size={20} />
                       <Typography variant="body1" fontWeight={600}>
                         Cảnh báo: Có thay đổi sau backup!
                       </Typography>
@@ -761,7 +760,7 @@ const DataManagementPage: React.FC = () => {
               <Button
                 variant="contained"
                 color="error"
-                startIcon={<DeleteForeverIcon />}
+                startIcon={<Trash2 size={20} />}
                 onClick={() => {
                   if (!hasBackup()) {
                     setAlert({ type: 'error', message: 'Vui lòng tạo backup trước khi xóa toàn bộ dữ liệu!' });
@@ -915,7 +914,7 @@ const DataManagementPage: React.FC = () => {
               {!hasBackup() ? (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <WarningIcon />
+                    <AlertTriangle size={20} />
                     <Typography variant="body1" fontWeight={600}>
                       Chưa có backup!
                     </Typography>
@@ -927,7 +926,7 @@ const DataManagementPage: React.FC = () => {
               ) : hasChanges ? (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <WarningIcon />
+                    <AlertTriangle size={20} />
                     <Typography variant="body1" fontWeight={600}>
                       Có thay đổi sau backup!
                     </Typography>
@@ -997,7 +996,7 @@ const DataManagementPage: React.FC = () => {
                 variant="outlined"
                 component="label"
                 fullWidth
-                startIcon={<RestoreIcon />}
+                startIcon={<RotateCcw size={20} />}
               >
                 Chọn File Backup
                 <input
@@ -1021,7 +1020,7 @@ const DataManagementPage: React.FC = () => {
               {!hasBackup() ? (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <WarningIcon />
+                    <AlertTriangle size={20} />
                     <Typography variant="body1" fontWeight={600}>
                       Chưa có backup!
                     </Typography>
@@ -1033,7 +1032,7 @@ const DataManagementPage: React.FC = () => {
               ) : hasChanges ? (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <WarningIcon />
+                    <AlertTriangle size={20} />
                     <Typography variant="body1" fontWeight={600}>
                       Có thay đổi sau backup!
                     </Typography>
