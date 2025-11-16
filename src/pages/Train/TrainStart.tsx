@@ -45,6 +45,16 @@ function pickRandomIndex(arrLength: number, exclude: Set<number>): number {
   return candidates[r];
 }
 
+// Shuffle array using Fisher-Yates algorithm
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 // Padding-top cho cards grid - điều chỉnh tại đây để thay đổi khoảng cách giữa sticky bar và cards
 const GRID_PADDING_TOP = {
   xs: '10px', // Mobile: chỉ cần gap nhỏ, sticky bar sẽ tự stick không che mất card
@@ -88,7 +98,19 @@ const TrainStart = () => {
   }, [currentFileName, sessionRestored, setSearchParams]);
 
   const { words: rawWords, isLoading } = useTrainWords();
-  const items = useMemo(() => adaptWords(rawWords ?? []), [rawWords]);
+  const baseItems = useMemo(() => adaptWords(rawWords ?? []), [rawWords]);
+  
+  // Shuffle items on mount and after restart
+  const [items, setItems] = useState<WordItem[]>([]);
+  const [shuffleKey, setShuffleKey] = useState(0); // Trigger to reshuffle
+  
+  // Shuffle items when baseItems change or shuffle is triggered
+  useEffect(() => {
+    if (baseItems.length > 0) {
+      setItems(shuffleArray(baseItems));
+    }
+  }, [baseItems, shuffleKey]);
+  
   const total = items.length;
 
   // Initialize state with defaults first
@@ -354,6 +376,8 @@ const TrainStart = () => {
     setWordMistakes(new Map());
     setShowCompletionModal(false);
     setTargetIdx(pickRandomIndex(items.length, new Set()));
+    // Shuffle cards for next session
+    setShuffleKey(prev => prev + 1);
     // Clear saved session on restart
     if (currentFileName) {
       clearTrainingSession();
