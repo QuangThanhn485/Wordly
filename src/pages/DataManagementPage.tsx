@@ -25,7 +25,7 @@ import { Database, Upload, Trash2, RotateCcw, AlertTriangle, CheckCircle } from 
 import { loadVocabCounts, loadVocabFromStorage, loadTreeFromStorage } from '@/features/vocabulary/utils/storageUtils';
 import { getAllFileNames } from '@/features/vocabulary/utils/treeUtils';
 import { loadMistakesStats } from '@/features/train/train-read-write/mistakesStorage';
-import { getLastChangeTimestamp, trackedSetItem, trackedRemoveItem } from '@/utils/storageTracker';
+import { getLastChangeTimestamp, trackedSetItem, trackedRemoveItem, updateLastChangeTimestamp } from '@/utils/storageTracker';
 
 const BACKUP_TIMESTAMP_KEY = 'wordly_backup_timestamp';
 
@@ -48,6 +48,11 @@ const DataManagementPage: React.FC = () => {
   const theme = useTheme();
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [successDialog, setSuccessDialog] = useState<{ title: string; description?: string } | null>(null);
+
+  const showSuccessDialog = useCallback((title: string, description?: string) => {
+    setSuccessDialog({ title, description });
+  }, []);
   
   // Dialog states
   const [backupDialogOpen, setBackupDialogOpen] = useState(false);
@@ -146,7 +151,7 @@ const DataManagementPage: React.FC = () => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      setAlert({ type: 'success', message: 'Backup thành công! File đã được tải xuống.' });
+      showSuccessDialog('Backup thành công', 'File backup đã được tải xuống và lưu an toàn.');
       setBackupDialogOpen(false);
     } catch (error) {
       console.error('Backup error:', error);
@@ -154,7 +159,7 @@ const DataManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showSuccessDialog]);
 
   // Delete result data by date range or all
   const handleDeleteResults = useCallback(() => {
@@ -171,7 +176,7 @@ const DataManagementPage: React.FC = () => {
         // Delete all mistakes stats
         trackedRemoveItem('wordly_mistakes_stats');
         const totalCount = Object.keys(mistakesStats).length;
-        setAlert({ type: 'success', message: `Đã xóa toàn bộ ${totalCount} bản ghi lỗi.` });
+        showSuccessDialog('Đã xóa báo cáo lỗi', `Đã xóa toàn bộ ${totalCount} bản ghi lỗi.`);
       } else {
         // Delete by date range
         const startTimestamp = startDate!.getTime();
@@ -189,7 +194,7 @@ const DataManagementPage: React.FC = () => {
         });
 
         trackedSetItem('wordly_mistakes_stats', JSON.stringify(updatedStats));
-        setAlert({ type: 'success', message: `Đã xóa ${deletedCount} bản ghi lỗi trong khoảng thời gian đã chọn.` });
+        showSuccessDialog('Đã xóa báo cáo lỗi', `Đã xóa ${deletedCount} bản ghi lỗi trong khoảng thời gian đã chọn.`);
       }
       
       setDeleteResultDialogOpen(false);
@@ -202,7 +207,7 @@ const DataManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate, deleteAllResults]);
+  }, [startDate, endDate, deleteAllResults, showSuccessDialog]);
 
   // Delete all vocab files and folders
   const handleDeleteVocab = useCallback(() => {
@@ -223,7 +228,7 @@ const DataManagementPage: React.FC = () => {
       trackedRemoveItem('wordly_vocab_counts');
       trackedRemoveItem('wordly_tree');
       
-      setAlert({ type: 'success', message: `Đã xóa ${vocabIndex.length} file từ vựng và cấu trúc thư mục.` });
+      showSuccessDialog('Đã xóa từ vựng', `Đã xóa ${vocabIndex.length} file từ vựng và toàn bộ cấu trúc thư mục.`);
       setDeleteVocabDialogOpen(false);
     } catch (error) {
       console.error('Delete vocab error:', error);
@@ -231,7 +236,7 @@ const DataManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showSuccessDialog]);
 
   // Delete all data except backup timestamp
   const handleDeleteAllData = useCallback(() => {
@@ -264,7 +269,7 @@ const DataManagementPage: React.FC = () => {
         localStorage.setItem(BACKUP_TIMESTAMP_KEY, backupTimestamp);
       }
       
-      setAlert({ type: 'success', message: `Đã xóa ${deletedCount} mục dữ liệu. Backup timestamp đã được giữ lại.` });
+      showSuccessDialog('Đã xóa dữ liệu', `Đã xóa ${deletedCount} mục dữ liệu. Backup timestamp vẫn được giữ lại.`);
       setDeleteAllDialogOpen(false);
       
       // Reload page to reflect changes
@@ -277,7 +282,7 @@ const DataManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showSuccessDialog]);
 
   // Import from backup file
   const handleImport = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -331,9 +336,12 @@ const DataManagementPage: React.FC = () => {
         // Update backup timestamp to match imported data
         if (backupData.timestamp) {
           localStorage.setItem(BACKUP_TIMESTAMP_KEY, backupData.timestamp.toString());
+          updateLastChangeTimestamp(backupData.timestamp);
+        } else {
+          updateLastChangeTimestamp();
         }
 
-        setAlert({ type: 'success', message: 'Import thành công! Dữ liệu đã được khôi phục.' });
+        showSuccessDialog('Khôi phục thành công', 'Dữ liệu đã được khôi phục từ file backup.');
         setImportDialogOpen(false);
         
         // Reload page to reflect changes
@@ -351,7 +359,7 @@ const DataManagementPage: React.FC = () => {
       }
     };
     reader.readAsText(file);
-  }, []);
+  }, [showSuccessDialog]);
 
   const backupTimestamp = getBackupTimestamp();
   const tree = loadTreeFromStorage();
@@ -413,6 +421,62 @@ const DataManagementPage: React.FC = () => {
             >
               {alert.message}
             </Alert>
+          )}
+
+          {/* Success Popup */}
+          {successDialog && (
+            <Dialog
+              open
+              onClose={() => setSuccessDialog(null)}
+              maxWidth="xs"
+              fullWidth
+              PaperProps={{
+                sx: {
+                  textAlign: 'center',
+                  p: 3,
+                  borderRadius: 3,
+                },
+              }}
+            >
+              <DialogContent>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 2,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: '50%',
+                      bgcolor: 'success.light',
+                      color: 'success.dark',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <CheckCircle size={36} />
+                  </Box>
+                  <Typography variant="h6" fontWeight={700}>
+                    {successDialog.title}
+                  </Typography>
+                  {successDialog.description && (
+                    <Typography variant="body1" color="text.secondary">
+                      {successDialog.description}
+                    </Typography>
+                  )}
+                </Box>
+              </DialogContent>
+              <DialogActions sx={{ px: 3, pb: 2 }}>
+                <Button variant="contained" fullWidth onClick={() => setSuccessDialog(null)}>
+                  Đóng
+                </Button>
+              </DialogActions>
+            </Dialog>
           )}
 
           {/* Statistics Cards */}

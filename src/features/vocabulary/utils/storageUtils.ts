@@ -79,7 +79,7 @@ const addToVocabIndex = (fileName: string): void => {
 const removeFromVocabIndex = (fileName: string): void => {
   const index = getVocabIndex();
   const filtered = index.filter((name) => name !== fileName);
-  localStorage.setItem(STORAGE_KEY_VOCAB_INDEX, JSON.stringify(filtered));
+  trackedSetItem(STORAGE_KEY_VOCAB_INDEX, JSON.stringify(filtered));
 };
 
 /**
@@ -215,7 +215,7 @@ export const loadTreeFromStorage = (): FolderNode | null => {
  */
 export const cleanupOldVocabFormat = (): void => {
   try {
-    localStorage.removeItem(STORAGE_KEY_VOCAB_OLD);
+    trackedRemoveItem(STORAGE_KEY_VOCAB_OLD);
   } catch (err) {
     console.error('Failed to cleanup old vocab format:', err);
   }
@@ -246,7 +246,12 @@ export const loadVocabCounts = (): Record<string, number> => {
  */
 export const saveVocabCounts = (counts: Record<string, number>): void => {
   try {
-    trackedSetItem(STORAGE_KEY_VOCAB_COUNTS, JSON.stringify(counts));
+    const serialized = JSON.stringify(counts);
+    const existing = localStorage.getItem(STORAGE_KEY_VOCAB_COUNTS);
+    if (existing === serialized) {
+      return; // Skip redundant writes to avoid unnecessary change tracking
+    }
+    trackedSetItem(STORAGE_KEY_VOCAB_COUNTS, serialized);
   } catch (err) {
     console.error('Failed to save vocab counts:', err);
   }
