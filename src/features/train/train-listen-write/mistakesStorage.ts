@@ -2,6 +2,8 @@
 // Storage utilities for tracking mistakes statistics (cumulative)
 // Uses the same storage key as other training modes
 
+import { trackedSetItem } from '@/utils/storageTracker';
+
 const STORAGE_KEY_MISTAKES_STATS = 'wordly_mistakes_stats';
 
 export type MistakeRecord = {
@@ -33,7 +35,7 @@ export const loadMistakesStats = (): MistakesStats => {
  */
 export const saveMistakesStats = (stats: MistakesStats): void => {
   try {
-    localStorage.setItem(STORAGE_KEY_MISTAKES_STATS, JSON.stringify(stats));
+    trackedSetItem(STORAGE_KEY_MISTAKES_STATS, JSON.stringify(stats));
   } catch (err) {
     console.error('Failed to save mistakes stats:', err);
   }

@@ -1,5 +1,5 @@
 // WordInputCard.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -11,8 +11,9 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
-import { CheckCircle as CheckCircleIcon, Lightbulb as LightbulbIcon } from 'lucide-react';
+import { CheckCircle as CheckCircleIcon, Lightbulb as LightbulbIcon, Volume2 } from 'lucide-react';
 import { keyframes } from '@mui/system';
+import { speakEnglish } from '@/utils/speechUtils';
 
 const shakeKF = keyframes`
   10%, 90% { transform: translate3d(-1px, 0, 0); }
@@ -49,6 +50,60 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   const theme = useTheme();
   const [userInput, setUserInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const isViToEnMode = mode === 'vi-en';
+  const canPlayAudio = isViToEnMode && !isCompleted;
+
+  const letterHints = useMemo(() => {
+    if (!isViToEnMode) return [];
+    const words = answer
+      .split(/\s+/)
+      .map((word) => word.trim())
+      .filter(Boolean);
+
+    return words.map((word) => {
+      const letters = word.split('').filter((char) => /[A-Za-z]/.test(char));
+      if (letters.length === 0) {
+        return [];
+      }
+      const shuffled = [...letters];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    });
+  }, [answer, isViToEnMode]);
+
+  const letterHighlights = useMemo<boolean[][]>(() => {
+    if (!isViToEnMode || letterHints.length === 0) return [];
+
+    const inputWords = userInput
+      .split(/\s+/)
+      .map((word) => word.replace(/[^A-Za-z]/g, '').toLowerCase());
+
+    return letterHints.map((letters, wordIndex) => {
+      const typedWord = inputWords[wordIndex] ?? '';
+      const typedCounts: Record<string, number> = {};
+      typedWord.split('').forEach((letter) => {
+        typedCounts[letter] = (typedCounts[letter] || 0) + 1;
+      });
+
+      return letters.map((letter) => {
+        const normalized = letter.toLowerCase();
+        if (typedCounts[normalized]) {
+          typedCounts[normalized] -= 1;
+          return true;
+        }
+        return false;
+      });
+    });
+  }, [isViToEnMode, letterHints, userInput]);
+
+  const hasLetterHints = isViToEnMode && letterHints.some((letters) => letters.length > 0);
+  const handleSpeakAnswer = () => {
+    if (!canPlayAudio) return;
+    speakEnglish(answer, { lang: 'en-US' });
+  };
 
   // Focus input when question changes
   useEffect(() => {
@@ -135,12 +190,105 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
               lineHeight: 1.3,
               wordBreak: 'break-word',
               color: 'primary.main',
-              mb: 2,
+              mb: 1.5,
             }}
           >
             {question}
           </Typography>
+          {canPlayAudio && (
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Tooltip title="Nghe phát âm">
+                <IconButton
+                  size="small"
+                  onClick={handleSpeakAnswer}
+                  sx={{
+                    bgcolor: 'primary.light',
+                    color: 'primary.dark',
+                    '&:hover': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                    },
+                  }}
+                >
+                  <Volume2 size={18} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          )}
         </Box>
+
+        {hasLetterHints && (
+          <Box
+            sx={{
+              mb: 3,
+              p: 2,
+              borderRadius: 2,
+              bgcolor: theme.palette.primary.light + '20',
+              border: `1px dashed ${theme.palette.primary.main}66`,
+            }}
+          >
+            <Typography
+              variant="body2"
+              fontWeight={600}
+              sx={{
+                textTransform: 'uppercase',
+                fontSize: { xs: '0.75rem', sm: '0.85rem' },
+                mb: 1.5,
+                color: 'primary.main',
+                letterSpacing: 0.5,
+              }}
+            >
+              Gợi ý chữ cái (VI ➜ EN)
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              {letterHints.map((letters, wordIndex) => {
+                if (letters.length === 0) return null;
+                return (
+                  <Box
+                    key={`hint-${wordIndex}`}
+                    sx={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 0.75,
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {letters.map((letter, letterIndex) => {
+                      const highlighted = letterHighlights[wordIndex]?.[letterIndex];
+                      return (
+                        <Box
+                          key={`letter-${wordIndex}-${letterIndex}`}
+                          sx={{
+                            width: 38,
+                            height: 46,
+                            borderRadius: 1.5,
+                            border: `2px solid ${
+                              highlighted ? theme.palette.success.main : theme.palette.divider
+                            }`,
+                            bgcolor: highlighted
+                              ? theme.palette.success.light + '40'
+                              : theme.palette.background.paper,
+                            color: highlighted ? 'success.main' : 'text.primary',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 700,
+                            fontSize: '1.125rem',
+                            textTransform: 'uppercase',
+                            transition: 'all 0.2s ease',
+                            minWidth: 38,
+                          }}
+                        >
+                          {letter.toUpperCase()}
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                );
+              })}
+            </Box>
+          </Box>
+        )}
 
         {/* Input Section */}
         {!isCompleted ? (
@@ -254,4 +402,3 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
     </Card>
   );
 };
-
