@@ -21,7 +21,7 @@ import {
   FormControlLabel,
   Stack,
 } from '@mui/material';
-import { Database, Upload, Trash2, RotateCcw, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Database, Upload, Trash2, RotateCcw, CheckCircle } from 'lucide-react';
 import { loadVocabCounts, loadVocabFromStorage, loadTreeFromStorage } from '@/features/vocabulary/utils/storageUtils';
 import { getAllFileNames } from '@/features/vocabulary/utils/treeUtils';
 import { loadMistakesStats } from '@/features/train/train-read-write/mistakesStorage';
@@ -523,7 +523,7 @@ const DataManagementPage: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      <AlertTriangle size={20} color="orange" />
+                      
                       <Typography variant="body2">Chưa có backup</Typography>
                     </>
                   )}
@@ -672,7 +672,7 @@ const DataManagementPage: React.FC = () => {
                   {!hasBackup() && (
                     <Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <AlertTriangle size={20} />
+                        
                         <Typography variant="body1" fontWeight={600}>
                           Cảnh báo: Chưa có backup!
                         </Typography>
@@ -685,7 +685,7 @@ const DataManagementPage: React.FC = () => {
                   {hasBackup() && hasChanges && (
                     <Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <AlertTriangle size={20} />
+                        
                         <Typography variant="body1" fontWeight={600}>
                           Cảnh báo: Có thay đổi sau backup!
                         </Typography>
@@ -767,7 +767,7 @@ const DataManagementPage: React.FC = () => {
                 {!hasBackup() && (
                   <Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <AlertTriangle size={20} />
+                      
                       <Typography variant="body1" fontWeight={600}>
                         Cảnh báo: Chưa có backup!
                       </Typography>
@@ -780,7 +780,7 @@ const DataManagementPage: React.FC = () => {
                 {hasBackup() && hasChanges && (
                   <Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <AlertTriangle size={20} />
+                      
                       <Typography variant="body1" fontWeight={600}>
                         Cảnh báo: Có thay đổi sau backup!
                       </Typography>
@@ -978,7 +978,7 @@ const DataManagementPage: React.FC = () => {
               {!hasBackup() ? (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <AlertTriangle size={20} />
+                    
                     <Typography variant="body1" fontWeight={600}>
                       Chưa có backup!
                     </Typography>
@@ -990,7 +990,7 @@ const DataManagementPage: React.FC = () => {
               ) : hasChanges ? (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <AlertTriangle size={20} />
+                    
                     <Typography variant="body1" fontWeight={600}>
                       Có thay đổi sau backup!
                     </Typography>
@@ -1084,7 +1084,7 @@ const DataManagementPage: React.FC = () => {
               {!hasBackup() ? (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <AlertTriangle size={20} />
+                    
                     <Typography variant="body1" fontWeight={600}>
                       Chưa có backup!
                     </Typography>
@@ -1096,7 +1096,7 @@ const DataManagementPage: React.FC = () => {
               ) : hasChanges ? (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <AlertTriangle size={20} />
+                    
                     <Typography variant="body1" fontWeight={600}>
                       Có thay đổi sau backup!
                     </Typography>
@@ -1161,4 +1161,5 @@ const DataManagementPage: React.FC = () => {
 };
 
 export default DataManagementPage;
+
 

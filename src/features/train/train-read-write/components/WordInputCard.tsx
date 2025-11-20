@@ -11,8 +11,9 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
-import { CheckCircle as CheckCircleIcon, Lightbulb as LightbulbIcon } from 'lucide-react';
+import { CheckCircle as CheckCircleIcon, Lightbulb as LightbulbIcon, Volume2 } from 'lucide-react';
 import { keyframes } from '@mui/system';
+import { speakEnglish } from '@/utils/speechUtils';
 
 const shakeKF = keyframes`
   10%, 90% { transform: translate3d(-1px, 0, 0); }
@@ -50,6 +51,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   const [userInput, setUserInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const isViToEnMode = mode === 'vi-en';
+  const canPlayAudio = isViToEnMode && !isCompleted;
 
   const letterHints = useMemo(() => {
     if (!isViToEnMode) return [];
@@ -98,6 +100,10 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   }, [isViToEnMode, letterHints, userInput]);
 
   const hasLetterHints = isViToEnMode && letterHints.some((letters) => letters.length > 0);
+  const handleSpeakAnswer = () => {
+    if (!canPlayAudio) return;
+    speakEnglish(answer, { lang: 'en-US' });
+  };
 
   // Focus input when question changes
   useEffect(() => {
@@ -184,11 +190,31 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
               lineHeight: 1.3,
               wordBreak: 'break-word',
               color: 'primary.main',
-              mb: 2,
+              mb: 1.5,
             }}
           >
             {question}
           </Typography>
+          {canPlayAudio && (
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Tooltip title="Nghe phát âm">
+                <IconButton
+                  size="small"
+                  onClick={handleSpeakAnswer}
+                  sx={{
+                    bgcolor: 'primary.light',
+                    color: 'primary.dark',
+                    '&:hover': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                    },
+                  }}
+                >
+                  <Volume2 size={18} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          )}
         </Box>
 
         {hasLetterHints && (
@@ -376,4 +402,3 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
     </Card>
   );
 };
-
