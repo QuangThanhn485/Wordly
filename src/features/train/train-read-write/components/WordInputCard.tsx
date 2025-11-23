@@ -11,6 +11,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { CheckCircle as CheckCircleIcon, Lightbulb as LightbulbIcon, Volume2 } from 'lucide-react';
 import { keyframes } from '@mui/system';
 import { speakEnglish } from '@/utils/speechUtils';
@@ -52,6 +53,12 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const isViToEnMode = mode === 'vi-en';
   const canPlayAudio = isViToEnMode && !isCompleted;
+  const hintBackground =
+    theme.palette.mode === 'dark'
+      ? alpha(theme.palette.info.main, 0.15)
+      : theme.palette.info.light;
+  const hintBorder = alpha(theme.palette.info.main, theme.palette.mode === 'dark' ? 0.6 : 1);
+  const hintText = theme.palette.mode === 'dark' ? theme.palette.info.light : theme.palette.info.dark;
 
   const letterHints = useMemo(() => {
     if (!isViToEnMode) return [];
@@ -340,9 +347,10 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 sx={{
                   p: 2,
                   mb: 2,
-                  bgcolor: 'info.light',
+                  bgcolor: hintBackground,
                   borderRadius: 1,
-                  border: `1px solid ${theme.palette.info.main}`,
+                  border: `1px solid ${hintBorder}`,
+                  color: hintText,
                 }}
               >
                 <Typography
@@ -352,6 +360,8 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                     alignItems: 'center',
                     gap: 1,
                     fontWeight: 500,
+                    color: hintText,
+                    '& svg': { color: hintText, stroke: hintText },
                   }}
                 >
                   <LightbulbIcon fontSize="small" />

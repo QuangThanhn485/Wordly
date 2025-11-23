@@ -30,7 +30,7 @@ import {
 } from 'features/train/train-listen/sessionStorage';
 import { recordMistakes } from 'features/train/train-listen/mistakesStorage';
 import { CompletionModal, type SessionMistake } from 'features/train/train-listen/components/CompletionModal';
-import { speakEnglish } from '@/utils/speechUtils';
+import { speakEnglish, getBestEnglishVoice, type SpeechOptions } from '@/utils/speechUtils';
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
@@ -246,6 +246,68 @@ const FlashcardsListening = () => {
 
   // Use enhanced speech utility for better pronunciation
   // Direct use of speakEnglish utility - no wrapper needed
+  const speakEnglishAwaitable = useCallback(
+    (text: string, options: SpeechOptions = {}) =>
+      new Promise<void>((resolve) => {
+        if (!text || typeof window === 'undefined') return resolve();
+        const synth = window.speechSynthesis;
+        if (!synth) return resolve();
+
+        let hasSpoken = false;
+        const speakNow = () => {
+          if (hasSpoken) return;
+          hasSpoken = true;
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = options.lang || 'en-US';
+          utterance.rate = options.rate ?? 1.0;
+          utterance.pitch = options.pitch ?? 1.0;
+          utterance.volume = options.volume ?? 1.0;
+
+          if (options.voiceName) {
+            const voice = synth.getVoices().find((v) => v.name === options.voiceName);
+            if (voice) utterance.voice = voice;
+          }
+          if (!utterance.voice) {
+            const bestVoice = getBestEnglishVoice();
+            if (bestVoice) utterance.voice = bestVoice;
+          }
+
+          utterance.onend = () => resolve();
+          utterance.onerror = () => resolve();
+          synth.speak(utterance);
+        };
+
+        if (synth.getVoices().length === 0) {
+          synth.addEventListener('voiceschanged', speakNow, { once: true });
+          // Fallback in case voiceschanged never fires
+          setTimeout(speakNow, 150);
+        } else {
+          speakNow();
+        }
+      }),
+    []
+  );
+
+  const wait = useCallback((ms: number) => new Promise<void>((res) => setTimeout(res, ms)), []);
+
+  const speakResultThenNext = useCallback(
+    async (current: string, next?: string) => {
+      if (!current) return;
+      try {
+        if (typeof window !== 'undefined') {
+          window.speechSynthesis?.cancel();
+        }
+      } catch {
+        // ignore cancel errors
+      }
+      await speakEnglishAwaitable(current, { lang: 'en-US' });
+      if (next) {
+        await wait(200);
+        await speakEnglishAwaitable(next, { lang: 'en-US' });
+      }
+    },
+    [speakEnglishAwaitable, wait]
+  );
 
   const handleLanguageToggle = () => {
     setLanguage((prev) => (prev === 'vi' ? 'en' : 'vi'));
@@ -328,8 +390,7 @@ const FlashcardsListening = () => {
       if (isCorrect) {
         setFlipped((f) => ({ ...f, [idx]: true }));
         setScore((v) => v + 1);
-        // Always speak the English word of the target
-        speakEnglish(items[targetIdx].en, { lang: 'en-US' });
+        const currentEnglish = items[targetIdx].en;
         setShowHintModal(false); // Hide hint modal when correct
         const exclude = new Set<number>();
         Object.keys(flipped).forEach((k) => {
@@ -338,13 +399,12 @@ const FlashcardsListening = () => {
         exclude.add(idx);
         const newTargetIdx = pickRandomIndex(items.length, exclude);
         setTargetIdx(newTargetIdx);
-        // If new target is valid, play it automatically
-        if (newTargetIdx >= 0 && newTargetIdx < items.length && items[newTargetIdx]) {
-          // Small delay before playing next word
-          setTimeout(() => {
-            speakEnglish(items[newTargetIdx].en, { lang: 'en-US' });
-          }, 300);
-        }
+
+        const nextEnglish =
+          newTargetIdx >= 0 && newTargetIdx < items.length && items[newTargetIdx]
+            ? items[newTargetIdx].en
+            : undefined;
+        void speakResultThenNext(currentEnglish, nextEnglish);
       } else {
         setWrongIdx(idx);
         setWrongTick((t) => t + 1);
@@ -366,7 +426,7 @@ const FlashcardsListening = () => {
         }
       }
     },
-    [items, targetIdx, flipped, language, isLoading, hasStarted, playErrorTone]
+    [items, targetIdx, flipped, language, isLoading, hasStarted, playErrorTone, speakResultThenNext]
   );
 
   // Check if all cards are flipped (100% completion)

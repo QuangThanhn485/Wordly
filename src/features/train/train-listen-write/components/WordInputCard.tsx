@@ -11,6 +11,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { 
   CheckCircle as CheckCircleIcon, 
   Lightbulb as LightbulbIcon, 
@@ -63,6 +64,12 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   const [userInput, setUserInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const [hasPlayed, setHasPlayed] = useState(false);
+  const hintBackground =
+    theme.palette.mode === 'dark'
+      ? alpha(theme.palette.info.main, 0.15)
+      : theme.palette.info.light;
+  const hintBorder = alpha(theme.palette.info.main, theme.palette.mode === 'dark' ? 0.6 : 1);
+  const hintText = theme.palette.mode === 'dark' ? theme.palette.info.light : theme.palette.info.dark;
 
   // Reset hasPlayed when question changes or when hasStarted becomes false
   useEffect(() => {
@@ -282,9 +289,10 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 sx={{
                   p: 2,
                   mb: 2,
-                  bgcolor: 'info.light',
+                  bgcolor: hintBackground,
                   borderRadius: 1,
-                  border: `1px solid ${theme.palette.info.main}`,
+                  border: `1px solid ${hintBorder}`,
+                  color: hintText,
                 }}
               >
                 <Typography
@@ -294,6 +302,8 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                     alignItems: 'center',
                     gap: 1,
                     fontWeight: 500,
+                    color: hintText,
+                    '& svg': { color: hintText, stroke: hintText },
                   }}
                 >
                   <LightbulbIcon fontSize="small" />

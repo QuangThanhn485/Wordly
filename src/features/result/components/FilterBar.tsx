@@ -13,6 +13,7 @@ import {
 import { Search, X } from 'lucide-react';
 import { type SortOption } from '../hooks/useMistakesStats';
 import { getTrainingModeLabel } from '../utils/dataTransform';
+import { getDisplayFileName } from '@/utils/fileUtils';
 
 interface FilterBarProps {
   searchQuery: string;
@@ -165,6 +166,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             size="small"
             filterSelectedOptions
             fullWidth={isMobile}
+            getOptionLabel={(option) => getDisplayFileName(option)}
+            renderOption={(props, option) => (
+              <li {...props}>{getDisplayFileName(option)}</li>
+            )}
             renderInput={(params) => (
               <TextField 
                 {...params} 
@@ -198,7 +203,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                       <Chip
                         {...getTagProps({ index })}
                         key={option}
-                        label={option}
+                        label={getDisplayFileName(option)}
                         size="small"
                         sx={{ maxWidth: { xs: '120px', sm: 'none' } }}
                       />
@@ -209,7 +214,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                         <Chip
                           {...getTagProps({ index })}
                           key={option}
-                          label={option}
+                          label={getDisplayFileName(option)}
                           size="small"
                           sx={{ maxWidth: { xs: '120px', sm: 'none' } }}
                         />

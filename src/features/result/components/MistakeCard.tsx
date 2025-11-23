@@ -12,6 +12,7 @@ import {
 import { AlertCircle, Clock, Folder } from 'lucide-react';
 import { type ProcessedMistake } from '../utils/dataTransform';
 import { getTrainingModeLabel, formatTimeAgo, getMistakeSeverity } from '../utils/dataTransform';
+import { getDisplayFileName } from '@/utils/fileUtils';
 
 interface MistakeCardProps {
   mistake: ProcessedMistake;
@@ -20,6 +21,7 @@ interface MistakeCardProps {
 export const MistakeCard: React.FC<MistakeCardProps> = ({ mistake }) => {
   const theme = useTheme();
   const severity = getMistakeSeverity(mistake.totalMistakes);
+  const displayFileName = getDisplayFileName(mistake.fileName);
 
   const severityColors = {
     high: {
@@ -114,16 +116,16 @@ export const MistakeCard: React.FC<MistakeCardProps> = ({ mistake }) => {
             <Typography
               variant="body2"
               color="text.secondary"
-              sx={{
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {mistake.fileName}
-            </Typography>
-          </Box>
+            sx={{
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {displayFileName}
+          </Typography>
+        </Box>
 
           {/* Training modes */}
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
