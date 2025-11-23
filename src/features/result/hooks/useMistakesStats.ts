@@ -4,6 +4,7 @@ import { loadMistakesStats } from '@/features/train/train-read-write/mistakesSto
 import { loadVocabCounts, loadTreeFromStorage } from '@/features/vocabulary/utils/storageUtils';
 import { getAllFileNames } from '@/features/vocabulary/utils/treeUtils';
 import { processMistakesData, calculateOverviewStats, groupMistakesByMode, groupMistakesByFile } from '../utils/dataTransform';
+import { getDisplayFileName } from '@/utils/fileUtils';
 
 export type SortOption = 'mistakes-desc' | 'mistakes-asc' | 'time-desc' | 'time-asc' | 'word-asc' | 'word-desc';
 
@@ -31,7 +32,9 @@ export const useMistakesStats = () => {
     
     // Merge both sources (tree + mistakes) and sort
     const allFiles = new Set([...filesFromTree, ...Array.from(filesFromMistakes)]);
-    return Array.from(allFiles).sort();
+    return Array.from(allFiles).sort((a, b) =>
+      getDisplayFileName(a).localeCompare(getDisplayFileName(b))
+    );
   }, [processedMistakes]);
 
   const uniqueModes = useMemo(() => {

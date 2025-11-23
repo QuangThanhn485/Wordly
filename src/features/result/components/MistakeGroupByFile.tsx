@@ -11,6 +11,7 @@ import { MistakeCard } from './MistakeCard';
 import { type MistakesByFile } from '../utils/dataTransform';
 import { getTrainingModeLabel } from '../utils/dataTransform';
 import { Folder } from 'lucide-react';
+import { getDisplayFileName } from '@/utils/fileUtils';
 
 interface MistakeGroupByFileProps {
   group: MistakesByFile;
@@ -18,6 +19,7 @@ interface MistakeGroupByFileProps {
 
 export const MistakeGroupByFile: React.FC<MistakeGroupByFileProps> = ({ group }) => {
   const theme = useTheme();
+  const displayFileName = getDisplayFileName(group.fileName);
 
   if (group.mistakes.length === 0) return null;
 
@@ -59,7 +61,7 @@ export const MistakeGroupByFile: React.FC<MistakeGroupByFileProps> = ({ group })
                   wordBreak: 'break-word',
                 }}
               >
-                {group.fileName}
+                {displayFileName}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {group.totalWords} từ vựng • {group.totalMistakes} lỗi
