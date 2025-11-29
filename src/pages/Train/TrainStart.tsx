@@ -12,7 +12,7 @@ import { Languages, MapPin, AlertCircle, ArrowLeftRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTrainWords } from 'features/train/train-start';
-import { getNextTrainingMode, getTrainingModeUrl } from 'features/train/utils/trainingModes';
+import { getNextTrainingMode } from 'features/train/utils/trainingModes';
 import { WordCard } from 'features/train/train-start';
 import { VocabularyQuickView } from 'features/train/components';
 import { 
@@ -69,6 +69,10 @@ const TrainStart = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const currentFileName = searchParams.get('file');
+  const sourceFileName = searchParams.get('sourceFile');
+  const trainingSource = searchParams.get('trainingSource');
+  const recordFileName = sourceFileName || currentFileName;
+  const skipMistakeLogging = trainingSource === 'top-mistakes';
   const [sessionRestored, setSessionRestored] = useState(false); // Track if we've attempted to restore session
 
   // Check for saved session on mount - if no file in URL but session exists, restore it
@@ -81,7 +85,11 @@ const TrainStart = () => {
     // Priority 1: If URL has a file parameter, use it (user selected a file)
     if (currentFileName) {
       // Check if this is a different file than the saved session
-      if (savedSession && savedSession.fileName !== currentFileName) {
+      if (
+        savedSession &&
+        (savedSession.fileName !== currentFileName ||
+          (trainingSource && savedSession.trainingSource !== trainingSource))
+      ) {
         // Different file - clear old session immediately
         clearTrainingSession();
       }
@@ -91,11 +99,14 @@ const TrainStart = () => {
     
     // Priority 2: No file in URL - restore from saved session if available
     if (savedSession && savedSession.fileName) {
-      setSearchParams({ file: savedSession.fileName }, { replace: true });
+      const params: Record<string, string> = { file: savedSession.fileName };
+      if (savedSession.sourceFileName) params.sourceFile = savedSession.sourceFileName;
+      if (savedSession.trainingSource) params.trainingSource = savedSession.trainingSource;
+      setSearchParams(params, { replace: true });
     }
     
     setSessionRestored(true);
-  }, [currentFileName, sessionRestored, setSearchParams]);
+  }, [currentFileName, sessionRestored, setSearchParams, trainingSource]);
 
   const { words: rawWords, isLoading } = useTrainWords();
   const baseItems = useMemo(() => adaptWords(rawWords ?? []), [rawWords]);
@@ -132,17 +143,21 @@ const TrainStart = () => {
 
   // Track previous file name to detect file changes
   const prevFileNameRef = useRef<string | null>(null);
+  const prevTrainingSourceRef = useRef<string | null>(null);
 
   // Load saved session when items are ready
   useEffect(() => {
     if (isLoading || items.length === 0 || !currentFileName || !sessionRestored) return;
     
-    // Check if file has changed
+    // Check if file or training source has changed
     const fileChanged = prevFileNameRef.current !== null && prevFileNameRef.current !== currentFileName;
+    const trainingSourceChanged =
+      prevTrainingSourceRef.current !== null && prevTrainingSourceRef.current !== trainingSource;
     prevFileNameRef.current = currentFileName;
+    prevTrainingSourceRef.current = trainingSource;
     
-    // If file changed, clear session immediately
-    if (fileChanged) {
+    // If file or training source changed, clear session immediately
+    if (fileChanged || trainingSourceChanged) {
       clearTrainingSession();
       // Reset state for new file
       setFlipped({});
@@ -159,7 +174,7 @@ const TrainStart = () => {
     
     // File hasn't changed - try to restore session
     const session = loadTrainingSession();
-    if (isSessionForFile(session, currentFileName)) {
+    if (isSessionForFile(session, currentFileName, trainingSource)) {
       // Validate session data matches current items
       if (session && session.targetIdx >= 0 && session.targetIdx < items.length) {
         // Restore session state
@@ -180,7 +195,7 @@ const TrainStart = () => {
     setMistakes(0);
     setTargetIdx(pickRandomIndex(items.length, new Set()));
     setLanguage('vi');
-  }, [currentFileName, isLoading, items.length, sessionRestored]);
+  }, [currentFileName, isLoading, items.length, sessionRestored, trainingSource]);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const getAudioCtx = () => {
@@ -239,6 +254,8 @@ const TrainStart = () => {
     
     const session: TrainingSession = {
       fileName: currentFileName,
+      sourceFileName: sourceFileName || undefined,
+      trainingSource: trainingSource || undefined,
       score,
       mistakes,
       flipped,
@@ -247,7 +264,18 @@ const TrainStart = () => {
       timestamp: Date.now(),
     };
     saveTrainingSession(session);
-  }, [currentFileName, score, mistakes, flipped, targetIdx, language, isLoading, items.length]);
+  }, [
+    currentFileName,
+    sourceFileName,
+    trainingSource,
+    score,
+    mistakes,
+    flipped,
+    targetIdx,
+    language,
+    isLoading,
+    items.length,
+  ]);
 
   const handleAttempt = useCallback(
     (idx: number) => {
@@ -387,9 +415,9 @@ const TrainStart = () => {
   // Save mistakes to localStorage and handle actions
   const saveMistakesAndAction = useCallback((action: 'exit' | 'restart' | 'next') => {
     // Always save mistakes if there are any (even if no fileName, we still track them)
-    if (sessionMistakes.length > 0 && currentFileName) {
+    if (!skipMistakeLogging && sessionMistakes.length > 0 && recordFileName) {
       // Save mistakes to localStorage
-      recordMistakes(sessionMistakes, currentFileName, 'flashcards-reading');
+      recordMistakes(sessionMistakes, recordFileName, 'flashcards-reading');
     }
     
     // Execute action
@@ -401,12 +429,14 @@ const TrainStart = () => {
       // Navigate to next training mode
       const nextMode = getNextTrainingMode('flashcards-reading');
       if (nextMode) {
-        const nextUrl = getTrainingModeUrl(nextMode, currentFileName || undefined);
+        const nextParams = new URLSearchParams(searchParams);
+        const query = nextParams.toString();
+        const nextUrl = query ? `/train/${nextMode}?${query}` : `/train/${nextMode}`;
         navigate(nextUrl);
       }
       setShowCompletionModal(false);
     }
-  }, [currentFileName, sessionMistakes, handleRestart, navigate]);
+  }, [recordFileName, sessionMistakes, handleRestart, navigate, searchParams, skipMistakeLogging]);
   
   const handleCompletionExit = () => {
     saveMistakesAndAction('exit');
@@ -644,7 +674,7 @@ const TrainStart = () => {
       {/* Vocabulary Quick View */}
       <VocabularyQuickView
         vocabularyList={items}
-        currentFileName={currentFileName}
+        currentFileName={sourceFileName || currentFileName}
       />
     </Box>
   );

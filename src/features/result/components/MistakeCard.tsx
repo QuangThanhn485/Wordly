@@ -62,7 +62,7 @@ export const MistakeCard: React.FC<MistakeCardProps> = ({ mistake }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Chip
             icon={<AlertCircle size={16} />}
-            label={`${mistake.totalMistakes} ${mistake.totalMistakes === 1 ? 'lỗi' : 'lỗi'}`}
+            label={`${mistake.totalMistakes} ${mistake.totalMistakes === 1 ? 'loi' : 'loi'}`}
             size="small"
             sx={{
               bgcolor: colors.bg,
@@ -147,4 +147,11 @@ export const MistakeCard: React.FC<MistakeCardProps> = ({ mistake }) => {
     </Card>
   );
 };
+
+
+
+
+
+
+
 
