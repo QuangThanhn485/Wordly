@@ -5,6 +5,8 @@ const STORAGE_KEY_TRAIN_SESSION = 'wordly_train_session';
 
 export type TrainingSession = {
   fileName: string; // File name being trained
+  sourceFileName?: string; // Original vocab file (for derived training sets)
+  trainingSource?: string; // e.g. 'top-mistakes'
   score: number;
   mistakes: number;
   flipped: Record<number, boolean>; // Index -> true if flipped
@@ -52,8 +54,14 @@ export const clearTrainingSession = (): void => {
 /**
  * Check if saved session matches current file
  */
-export const isSessionForFile = (session: TrainingSession | null, fileName: string | null): boolean => {
+export const isSessionForFile = (
+  session: TrainingSession | null,
+  fileName: string | null,
+  trainingSource?: string | null
+): boolean => {
   if (!session || !fileName) return false;
-  return session.fileName === fileName;
+  if (session.fileName !== fileName) return false;
+  if (trainingSource && session.trainingSource && session.trainingSource !== trainingSource) return false;
+  return true;
 };
 

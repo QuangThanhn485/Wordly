@@ -14,7 +14,7 @@ import { Languages, AlertCircle, RotateCcw, ArrowLeftRight } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTrainWords } from '@/features/train/train-read-write';
-import { getNextTrainingMode, getTrainingModeUrl } from 'features/train/utils/trainingModes';
+import { getNextTrainingMode } from 'features/train/utils/trainingModes';
 import { WordInputCard } from '@/features/train/train-read-write';
 import { VocabularyQuickView } from 'features/train/components';
 import {
@@ -55,6 +55,10 @@ const ReadWritePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const currentFileName = searchParams.get('file');
+  const sourceFileName = searchParams.get('sourceFile');
+  const trainingSource = searchParams.get('trainingSource');
+  const recordFileName = sourceFileName || currentFileName;
+  const skipMistakeLogging = trainingSource === 'top-mistakes';
   const [sessionRestored, setSessionRestored] = useState(false); // Track if we've attempted to restore session
 
   // Check for saved session on mount - if no file in URL but session exists, restore it
@@ -67,7 +71,11 @@ const ReadWritePage = () => {
     // Priority 1: If URL has a file parameter, use it (user selected a file)
     if (currentFileName) {
       // Check if this is a different file than the saved session
-      if (savedSession && savedSession.fileName !== currentFileName) {
+      if (
+        savedSession &&
+        (savedSession.fileName !== currentFileName ||
+          (trainingSource && savedSession.trainingSource !== trainingSource))
+      ) {
         // Different file - clear old session immediately
         clearTrainingSession();
       }
@@ -77,7 +85,10 @@ const ReadWritePage = () => {
     
     // Priority 2: No file in URL - restore from saved session if available
     if (savedSession && savedSession.fileName) {
-      setSearchParams({ file: savedSession.fileName }, { replace: true });
+      const params: Record<string, string> = { file: savedSession.fileName };
+      if (savedSession.sourceFileName) params.sourceFile = savedSession.sourceFileName;
+      if (savedSession.trainingSource) params.trainingSource = savedSession.trainingSource;
+      setSearchParams(params, { replace: true });
       setSessionRestored(true);
       return;
     }
@@ -89,7 +100,10 @@ const ReadWritePage = () => {
       if (readingSessionStr) {
         const readingSession = JSON.parse(readingSessionStr);
         if (readingSession && readingSession.fileName) {
-          setSearchParams({ file: readingSession.fileName }, { replace: true });
+          const params: Record<string, string> = { file: readingSession.fileName };
+          if (readingSession.sourceFileName) params.sourceFile = readingSession.sourceFileName;
+          if (readingSession.trainingSource) params.trainingSource = readingSession.trainingSource;
+          setSearchParams(params, { replace: true });
           setSessionRestored(true);
           return;
         }
@@ -99,7 +113,7 @@ const ReadWritePage = () => {
     }
     
     setSessionRestored(true);
-  }, [currentFileName, sessionRestored, setSearchParams]);
+  }, [currentFileName, sessionRestored, setSearchParams, trainingSource]);
 
   const { words: rawWords, isLoading } = useTrainWords();
   const items = useMemo(() => adaptWords(rawWords ?? []), [rawWords]);
@@ -124,17 +138,21 @@ const ReadWritePage = () => {
   const [wordMistakes, setWordMistakes] = useState<Map<string, number>>(new Map());
 
   const prevFileNameRef = useRef<string | null>(null);
+  const prevTrainingSourceRef = useRef<string | null>(null);
 
   // Load saved session when items are ready
   useEffect(() => {
     if (isLoading || items.length === 0 || !currentFileName || !sessionRestored) return;
     
-    // Check if file has changed
+    // Check if file or training source has changed
     const fileChanged = prevFileNameRef.current !== null && prevFileNameRef.current !== currentFileName;
+    const trainingSourceChanged =
+      prevTrainingSourceRef.current !== null && prevTrainingSourceRef.current !== trainingSource;
     prevFileNameRef.current = currentFileName;
+    prevTrainingSourceRef.current = trainingSource;
     
-    // If file changed, clear session immediately
-    if (fileChanged) {
+    // If file or training source changed, clear session immediately
+    if (fileChanged || trainingSourceChanged) {
       clearTrainingSession();
       // Reset state for new file
       setCurrentWordIndex(pickRandomIndex(items.length, new Set()));
@@ -154,7 +172,7 @@ const ReadWritePage = () => {
     
     // File hasn't changed - try to restore session
     const session = loadTrainingSession();
-    if (isSessionForFile(session, currentFileName)) {
+    if (isSessionForFile(session, currentFileName, trainingSource)) {
       // Validate session data matches current items
       if (session && session.currentWordIndex >= 0 && session.currentWordIndex < items.length) {
         // Restore session state
@@ -176,7 +194,7 @@ const ReadWritePage = () => {
     setCurrentWordCompleted(false);
     setHasError(false);
     setMode('vi-en');
-  }, [currentFileName, isLoading, items.length, sessionRestored]);
+  }, [currentFileName, isLoading, items.length, sessionRestored, trainingSource]);
 
   // Save session to localStorage
   useEffect(() => {
@@ -184,6 +202,8 @@ const ReadWritePage = () => {
 
     const session: TrainingSession = {
       fileName: currentFileName,
+      sourceFileName: sourceFileName || undefined,
+      trainingSource: trainingSource || undefined,
       currentWordIndex,
       completedWords,
       mode,
@@ -192,7 +212,18 @@ const ReadWritePage = () => {
       timestamp: Date.now(),
     };
     saveTrainingSession(session);
-  }, [currentFileName, currentWordIndex, completedWords, mode, score, mistakes, isLoading, items.length]);
+  }, [
+    currentFileName,
+    sourceFileName,
+    trainingSource,
+    currentWordIndex,
+    completedWords,
+    mode,
+    score,
+    mistakes,
+    isLoading,
+    items.length,
+  ]);
 
   // Prepare mistakes data for modal
   const sessionMistakes: SessionMistake[] = useMemo(() => {
@@ -228,8 +259,8 @@ const ReadWritePage = () => {
   useEffect(() => {
     if (isCompleted && !isLoading && items.length > 0 && !showCompletionModal && !completionModalShown) {
       // Save mistakes to localStorage when completing (only once)
-      if (sessionMistakes.length > 0 && currentFileName && !mistakesSaved) {
-        recordMistakes(sessionMistakes, currentFileName, 'read-write');
+      if (!skipMistakeLogging && sessionMistakes.length > 0 && recordFileName && !mistakesSaved) {
+        recordMistakes(sessionMistakes, recordFileName, 'read-write');
         setMistakesSaved(true);
       }
       setShowCompletionModal(true);
@@ -325,8 +356,8 @@ const ReadWritePage = () => {
   const saveMistakesAndAction = useCallback(
     (action: 'exit' | 'restart' | 'next') => {
       // Save mistakes if not already saved (backup in case completion effect didn't run)
-      if (sessionMistakes.length > 0 && currentFileName && !mistakesSaved) {
-        recordMistakes(sessionMistakes, currentFileName, 'read-write');
+      if (!skipMistakeLogging && sessionMistakes.length > 0 && recordFileName && !mistakesSaved) {
+        recordMistakes(sessionMistakes, recordFileName, 'read-write');
         setMistakesSaved(true);
       }
 
@@ -339,14 +370,16 @@ const ReadWritePage = () => {
         // Navigate to next training mode
         const nextMode = getNextTrainingMode('read-write');
         if (nextMode) {
-          const nextUrl = getTrainingModeUrl(nextMode, currentFileName || undefined);
+          const nextParams = new URLSearchParams(searchParams);
+          const query = nextParams.toString();
+          const nextUrl = query ? `/train/${nextMode}?${query}` : `/train/${nextMode}`;
           navigate(nextUrl);
         }
         setShowCompletionModal(false);
         // Don't reset completionModalShown so modal won't reopen automatically
       }
     },
-    [currentFileName, sessionMistakes, handleRestart, mistakesSaved, navigate]
+    [recordFileName, sessionMistakes, handleRestart, mistakesSaved, navigate, searchParams, skipMistakeLogging]
   );
 
   const handleCompletionExit = () => {
@@ -548,7 +581,7 @@ const ReadWritePage = () => {
       {/* Vocabulary Quick View */}
       <VocabularyQuickView
         vocabularyList={items}
-        currentFileName={currentFileName}
+        currentFileName={sourceFileName || currentFileName}
       />
     </Box>
   );

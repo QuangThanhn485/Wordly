@@ -70,19 +70,19 @@ export const MistakeGroup: React.FC<MistakeGroupProps> = ({ group }) => {
                 {group.label}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {group.totalWords} từ vựng • {group.totalMistakes} lỗi
+                {group.totalWords} tu vung voi {group.totalMistakes} loi
               </Typography>
             </Box>
           </Box>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Chip
-              label={`${group.totalWords} từ`}
+              label={`${group.totalWords} tu`}
               size="small"
               color="primary"
               variant="outlined"
             />
             <Chip
-              label={`${group.totalMistakes} lỗi`}
+              label={`${group.totalMistakes} loi`}
               size="small"
               color="error"
               variant="outlined"
@@ -124,4 +124,8 @@ export const MistakeGroup: React.FC<MistakeGroupProps> = ({ group }) => {
     </Box>
   );
 };
+
+
+
+
 
