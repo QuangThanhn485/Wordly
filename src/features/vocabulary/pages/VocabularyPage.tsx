@@ -99,6 +99,7 @@ import {
   ConfirmDeleteDialog,
   VocabFormDialog,
 } from '../components/dialogs';
+import { VocabDetailPanel } from '../components/VocabDetailPanel';
 
 // ===== Styled Components =====
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
@@ -351,6 +352,8 @@ const VocabularyPage: React.FC = () => {
     vnMeaning: '',
     pronunciation: '',
   });
+  // ===== Detail panel =====
+  const [detailVocab, setDetailVocab] = useState<VocabItem | null>(null);
 
   // ===== Checkbox selection =====
   const [selectedVocabs, setSelectedVocabs] = useState<Set<string>>(new Set());
@@ -459,6 +462,12 @@ const VocabularyPage: React.FC = () => {
     setVocabFormData({ ...item });
     setVocabFormOpen(true);
   }, []);
+  const openVocabDetail = useCallback((item: VocabItem) => {
+    setDetailVocab(item);
+  }, []);
+  const closeVocabDetail = useCallback(() => {
+    setDetailVocab(null);
+  }, []);
 
   const handleSaveVocab = useCallback((data: VocabItem) => {
     if (!selectedFile || !data.word.trim()) {
@@ -530,6 +539,10 @@ const VocabularyPage: React.FC = () => {
       setSelectedVocabs(new Set(vocabList.map((item) => item.word)));
     }
   }, [selectedFile, vocabMap, selectedVocabs]);
+
+  React.useEffect(() => {
+    setDetailVocab(null);
+  }, [selectedFile?.name]);
 
   // Load vocab data when file is selected (LAZY LOADING)
   React.useEffect(() => {
@@ -1636,7 +1649,7 @@ const VocabularyPage: React.FC = () => {
                         </StyledTableCell>
                         <StyledTableCell 
                           sx={{ fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}
-                          onClick={() => openEditVocabForm(item, itemIndex)}
+                          onClick={() => openVocabDetail(item)}
                         >
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <IconButton
@@ -1666,13 +1679,13 @@ const VocabularyPage: React.FC = () => {
                         </StyledTableCell>
                         <StyledTableCell 
                           sx={{ wordBreak: 'break-word', cursor: 'pointer' }}
-                          onClick={() => openEditVocabForm(item, itemIndex)}
+                          onClick={() => openVocabDetail(item)}
                         >
                           {item.vnMeaning}
                         </StyledTableCell>
                         <StyledTableCell 
                           sx={{ cursor: 'pointer' }}
-                          onClick={() => openEditVocabForm(item, itemIndex)}
+                          onClick={() => openVocabDetail(item)}
                         >
                           <Box
                             component="span"
@@ -1691,7 +1704,7 @@ const VocabularyPage: React.FC = () => {
                         </StyledTableCell>
                         <StyledTableCell 
                           sx={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
-                          onClick={() => openEditVocabForm(item, itemIndex)}
+                          onClick={() => openVocabDetail(item)}
                         >
                           / {item.pronunciation} /
                         </StyledTableCell>
@@ -1932,6 +1945,12 @@ const VocabularyPage: React.FC = () => {
         onChange={setVocabFormData}
         onClose={() => setVocabFormOpen(false)}
         onSave={handleSaveVocab}
+      />
+
+      <VocabDetailPanel
+        open={!!detailVocab}
+        vocab={detailVocab}
+        onClose={closeVocabDetail}
       />
 
       {/* Grid View Modal */}

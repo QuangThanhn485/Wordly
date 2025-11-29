@@ -13,10 +13,14 @@ import {
   useMediaQuery,
   Fab,
   Tooltip,
+  Menu,
+  MenuItem,
+  ListItemIcon,
 } from '@mui/material';
-import { List as ListIcon, X, Volume2 } from 'lucide-react';
+import { List as ListIcon, X, Volume2, MoreVertical, Eye } from 'lucide-react';
 import { speakEnglish } from '@/utils/speechUtils';
 import { removeFileExtension } from '@/utils/fileUtils';
+import { VocabDetailPanel } from '@/features/vocabulary/components/VocabDetailPanel';
 
 interface VocabularyItem {
   en: string;
@@ -33,6 +37,8 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
   currentFileName,
 }) => {
   const [open, setOpen] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<{ anchorEl: HTMLElement; item: VocabularyItem } | null>(null);
+  const [detailVocab, setDetailVocab] = useState<VocabularyItem | null>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -46,6 +52,21 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
 
   const handleSpeak = (word: string) => {
     speakEnglish(word, { lang: 'en-US' });
+  };
+
+  const openMenu = (event: React.MouseEvent<HTMLElement>, item: VocabularyItem) => {
+    event.stopPropagation();
+    setMenuAnchor({ anchorEl: event.currentTarget, item });
+  };
+
+  const closeMenu = () => setMenuAnchor(null);
+
+  const handleViewDetail = () => {
+    if (menuAnchor?.item) {
+      setOpen(false);
+      setDetailVocab(menuAnchor.item);
+    }
+    closeMenu();
   };
 
   return (
@@ -77,8 +98,8 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
         PaperProps={{
           sx: {
             width: isMobile ? '100%' : { sm: 400, md: 450 },
-            height: isMobile ? '100%' : 'auto',
-            maxHeight: isMobile ? '100%' : '100vh',
+            height: isMobile ? '100%' : '100vh',
+            maxHeight: '100vh',
           },
         }}
       >
@@ -139,13 +160,15 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
                       <ListItemButton
                         onClick={() => handleSpeak(item.en)}
                         sx={{
-                          py: 2,
+                          py: 1.75,
                           px: 2,
+                          display: 'flex',
+                          gap: 1,
                         }}
                       >
                         <ListItemText
                           primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.25 }}>
                               <Volume2 size={16} style={{ color: 'inherit', opacity: 0.6 }} />
                               <Typography
                                 variant="body1"
@@ -166,6 +189,15 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
                             </Typography>
                           }
                         />
+                        <IconButton
+                          edge="end"
+                          size="small"
+                          onClick={(e) => openMenu(e, item)}
+                          sx={{ ml: 1 }}
+                          aria-label="More actions"
+                        >
+                          <MoreVertical size={18} />
+                        </IconButton>
                       </ListItemButton>
                     </ListItem>
                     {index < vocabularyList.length - 1 && <Divider />}
@@ -189,6 +221,27 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
           </Box>
         </Box>
       </Drawer>
+
+      <Menu
+        anchorEl={menuAnchor?.anchorEl || null}
+        open={!!menuAnchor}
+        onClose={closeMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MenuItem onClick={handleViewDetail}>
+          <ListItemIcon>
+            <Eye size={16} />
+          </ListItemIcon>
+          Xem chi tiết
+        </MenuItem>
+      </Menu>
+
+      <VocabDetailPanel
+        open={!!detailVocab}
+        vocab={detailVocab}
+        onClose={() => setDetailVocab(null)}
+      />
     </>
   );
 };
