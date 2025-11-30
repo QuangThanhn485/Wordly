@@ -23,17 +23,16 @@ export type TracauResponse = {
 
 const TRACAU_BASE_URL = 'https://api.tracau.vn/WBBcwnwQpV89';
 
-// Proxy fallbacks to bypass CORS in production environments
-const PROXIES: Array<(url: string) => string> = [
-  (url) => url, // direct
-  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  (url) => `https://thingproxy.freeboard.io/fetch/${url}`,
-  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  (url) => `https://yacdn.org/proxy/${url}`,
-  (url) => `https://proxy.cors.sh/${url}`,
-  (url) => `https://cors.isomorphic-git.org/${url}`,
-  (url) => `https://jsonp.afeld.me/?url=${encodeURIComponent(url)}`,
-];
+const buildProxyList = (url: string): string[] => {
+  const proxies: string[] = [];
+  // In development, try direct first
+  if (process.env.NODE_ENV !== 'production') {
+    proxies.push(url);
+  }
+  // Always proxy via allorigins (production relies on this)
+  proxies.push(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+  return proxies;
+};
 
 const buildTracauUrl = (word: string) => {
   const encoded = encodeURIComponent(word.trim());
@@ -44,8 +43,7 @@ export const fetchTracauDetail = async (word: string): Promise<TracauResponse> =
   const url = buildTracauUrl(word);
 
   let lastError: unknown = null;
-  for (const proxify of PROXIES) {
-    const targetUrl = proxify(url);
+  for (const targetUrl of buildProxyList(url)) {
     try {
       const res = await fetch(targetUrl, {
         method: 'GET',
