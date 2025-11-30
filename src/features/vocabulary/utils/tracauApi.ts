@@ -22,16 +22,30 @@ export type TracauResponse = {
 };
 
 const TRACAU_BASE_URL = 'https://api.tracau.vn/WBBcwnwQpV89';
+const CORS_PROXY = 'https://cors.isomorphic-git.org/';
+
+const buildTracauUrl = (word: string) => {
+  const encoded = encodeURIComponent(word.trim());
+  return `${TRACAU_BASE_URL}/s/${encoded}/vi`;
+};
 
 export const fetchTracauDetail = async (word: string): Promise<TracauResponse> => {
-  const encoded = encodeURIComponent(word.trim());
-  const res = await fetch(`${TRACAU_BASE_URL}/s/${encoded}/vi`, { method: 'GET' });
+  const url = buildTracauUrl(word);
 
-  if (!res.ok) {
-    throw new Error(`Failed to fetch Tracau detail for "${word}"`);
+  const tryFetch = async (targetUrl: string) => {
+    const res = await fetch(targetUrl, { method: 'GET', mode: 'cors' });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch Tracau detail for "${word}"`);
+    }
+    return res.json();
+  };
+
+  try {
+    return await tryFetch(url);
+  } catch (err) {
+    // Fallback via public CORS proxy for environments blocking direct calls
+    return await tryFetch(`${CORS_PROXY}${url}`);
   }
-
-  return res.json();
 };
 
 /**
