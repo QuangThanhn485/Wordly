@@ -22,7 +22,18 @@ export type TracauResponse = {
 };
 
 const TRACAU_BASE_URL = 'https://api.tracau.vn/WBBcwnwQpV89';
-const CORS_PROXY = 'https://cors.isomorphic-git.org/';
+
+// Proxy fallbacks to bypass CORS in production environments
+const PROXIES: Array<(url: string) => string> = [
+  (url) => url, // direct
+  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url) => `https://thingproxy.freeboard.io/fetch/${url}`,
+  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  (url) => `https://yacdn.org/proxy/${url}`,
+  (url) => `https://proxy.cors.sh/${url}`,
+  (url) => `https://cors.isomorphic-git.org/${url}`,
+  (url) => `https://jsonp.afeld.me/?url=${encodeURIComponent(url)}`,
+];
 
 const buildTracauUrl = (word: string) => {
   const encoded = encodeURIComponent(word.trim());
@@ -32,20 +43,30 @@ const buildTracauUrl = (word: string) => {
 export const fetchTracauDetail = async (word: string): Promise<TracauResponse> => {
   const url = buildTracauUrl(word);
 
-  const tryFetch = async (targetUrl: string) => {
-    const res = await fetch(targetUrl, { method: 'GET', mode: 'cors' });
-    if (!res.ok) {
-      throw new Error(`Failed to fetch Tracau detail for "${word}"`);
+  let lastError: unknown = null;
+  for (const proxify of PROXIES) {
+    const targetUrl = proxify(url);
+    try {
+      const res = await fetch(targetUrl, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json,text/plain,*/*',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        cache: 'no-store',
+        mode: 'cors',
+      });
+      if (!res.ok) {
+        throw new Error(`Failed with status ${res.status}`);
+      }
+      return await res.json();
+    } catch (err) {
+      lastError = err;
+      // try next proxy
     }
-    return res.json();
-  };
-
-  try {
-    return await tryFetch(url);
-  } catch (err) {
-    // Fallback via public CORS proxy for environments blocking direct calls
-    return await tryFetch(`${CORS_PROXY}${url}`);
   }
+
+  throw lastError ?? new Error(`Failed to fetch Tracau detail for "${word}"`);
 };
 
 /**
