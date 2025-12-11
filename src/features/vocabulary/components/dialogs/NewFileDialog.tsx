@@ -1,51 +1,57 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from '@mui/material';
 
 interface NewFileDialogProps {
   open: boolean;
-  value: string;
-  onChange: (value: string) => void;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (fileName: string) => void;
 }
 
-export const NewFileDialog: React.FC<NewFileDialogProps> = React.memo(({ open, value, onChange, onClose, onConfirm }) => {
-  // Use local state for instant input response
-  const [localValue, setLocalValue] = React.useState(value);
-  
-  // Sync with prop when dialog opens or value changes externally
+export const NewFileDialog: React.FC<NewFileDialogProps> = React.memo(({ open, onClose, onConfirm }) => {
+  const [fileName, setFileName] = React.useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Reset và focus khi mở dialog
   React.useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
+    if (open) {
+      setFileName('');
+      // Focus sau khi dialog animation hoàn thành
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setLocalValue(newValue); // Update local state instantly - NO parent sync
+    setFileName(e.target.value);
   }, []);
 
   const handleConfirm = useCallback(() => {
-    onChange(localValue); // Sync to parent only on confirm
-    onConfirm();
-  }, [localValue, onChange, onConfirm]);
+    const trimmed = fileName.trim();
+    if (trimmed) {
+      onConfirm(trimmed); // Truyền giá trị trực tiếp - không race condition!
+    }
+  }, [fileName, onConfirm]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && localValue.trim()) {
+    if (e.key === 'Enter' && fileName.trim()) {
       handleConfirm();
     }
-  }, [localValue, handleConfirm]);
+  }, [fileName, handleConfirm]);
 
-  const isDisabled = useMemo(() => !localValue.trim(), [localValue]);
+  const isDisabled = useMemo(() => !fileName.trim(), [fileName]);
   
   return (
     <Dialog open={open} onClose={onClose}>
       <DialogTitle>Tạo file từ vựng mới</DialogTitle>
       <DialogContent>
         <TextField
-          autoFocus
+          inputRef={inputRef}
           fullWidth
           margin="dense"
           label="Tên file"
-          value={localValue}
+          value={fileName}
           onChange={handleChange}
           placeholder="từ_vựng_mới.txt"
           helperText="File sẽ có phần mở rộng .txt tự động nếu chưa có"

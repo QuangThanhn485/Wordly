@@ -333,9 +333,7 @@ const VocabularyPage: React.FC = () => {
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const [newFolderOpen, setNewFolderOpen] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
   const [newFileOpen, setNewFileOpen] = useState(false);
-  const [newFileName, setNewFileName] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<null | { path: string[]; type: 'folder' | 'file'; label: string; fileNames: string[] }>(null);
   // Vocab delete confirmation
@@ -774,24 +772,23 @@ const VocabularyPage: React.FC = () => {
     // Use index for faster lookup
     const located = treeIndex.findByPath(targetPath);
     if (!located || located.node.kind !== 'folder') return;
-    setNewFolderName('Thư mục mới');
     setNewFolderOpen(true);
   }, [menu, treeIndex]);
 
-  const confirmNewSubfolder = useCallback(() => {
+  const confirmNewSubfolder = useCallback((folderName: string) => {
     if (!menu) return;
     const targetPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
     updateTree((prevTree) => {
       const copy = structuredClone(prevTree);
       const located = findNodeByPath(copy, targetPath);
       if (!located || located.node.kind !== 'folder') return prevTree;
-      const name = ensureUniqueName(located.node.children, newFolderName.trim() || 'Thư mục mới', true);
+      const name = ensureUniqueName(located.node.children, folderName || 'Thư mục mới', true);
       located.node.children.push({ kind: 'folder', label: name, id: genId(), children: [] });
       return copy;
     });
     setNewFolderOpen(false);
     showSnack('Đã tạo thư mục con.');
-  }, [menu, newFolderName, updateTree]);
+  }, [menu, updateTree]);
 
   const startNewFile = useCallback(() => {
     if (!menu) return;
@@ -799,14 +796,12 @@ const VocabularyPage: React.FC = () => {
     // Use index for faster lookup
     const located = treeIndex.findByPath(targetPath);
     if (!located || located.node.kind !== 'folder') return;
-    setNewFileName('từ_vựng_mới.txt');
     setNewFileOpen(true);
   }, [menu, treeIndex]);
 
-  const confirmNewFile = useCallback(() => {
+  const confirmNewFile = useCallback((fileName: string) => {
     if (!menu) return;
     const targetPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
-    const fileName = newFileName.trim() || 'từ_vựng_mới.txt';
     // Ensure .txt extension
     let baseFileName = fileName.endsWith('.txt') ? fileName : `${fileName}.txt`;
     
@@ -831,9 +826,8 @@ const VocabularyPage: React.FC = () => {
     updateVocabMap((m) => ({ ...m, [finalFileName]: [] }));
     
     setNewFileOpen(false);
-    setNewFileName('');
     showSnack(`Đã tạo file "${finalFileName}".`);
-  }, [menu, newFileName, tree, updateTree, updateVocabMap, treeIndex]);
+  }, [menu, treeIndex, updateTree, updateVocabMap]);
 
   const startImport = useCallback(() => {
     if (!menu) return;
@@ -1907,16 +1901,12 @@ const VocabularyPage: React.FC = () => {
 
       <NewFolderDialog
         open={newFolderOpen}
-        value={newFolderName}
-        onChange={setNewFolderName}
         onClose={() => setNewFolderOpen(false)}
         onConfirm={confirmNewSubfolder}
       />
 
       <NewFileDialog
         open={newFileOpen}
-        value={newFileName}
-        onChange={setNewFileName}
         onClose={() => setNewFileOpen(false)}
         onConfirm={confirmNewFile}
       />
