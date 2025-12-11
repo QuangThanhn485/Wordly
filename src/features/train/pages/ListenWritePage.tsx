@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTrainWords } from '@/features/train/train-listen-write';
 import { WordInputCard } from '@/features/train/train-listen-write';
-import { VocabularyQuickView } from 'features/train/components';
+import { VocabularyQuickView } from '@/features/train/components';
 import {
   saveTrainingSession,
   loadTrainingSession,
