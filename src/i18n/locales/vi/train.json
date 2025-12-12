@@ -1,0 +1,88 @@
+{
+  "common": {
+    "progress": "Tiến độ",
+    "score": "Điểm",
+    "correct": "Đúng",
+    "incorrect": "Sai",
+    "remaining": "Còn lại",
+    "completed": "Hoàn thành",
+    "timeSpent": "Thời gian",
+    "accuracy": "Độ chính xác",
+    "words": "từ",
+    "of": "của"
+  },
+  "flashcardsReading": {
+    "title": "Flashcards Reading",
+    "instruction": "Nhìn từ và cố nhớ nghĩa của nó",
+    "showMeaning": "Hiện nghĩa",
+    "hideMeaning": "Ẩn nghĩa",
+    "iKnow": "Tôi biết",
+    "iDontKnow": "Tôi không biết",
+    "flip": "Lật thẻ",
+    "next": "Tiếp",
+    "previous": "Trước"
+  },
+  "flashcardsListening": {
+    "title": "Flashcards Listening",
+    "instruction": "Nghe phát âm và nhận diện từ",
+    "playAudio": "Phát âm thanh",
+    "replay": "Phát lại",
+    "showWord": "Hiện từ",
+    "hideWord": "Ẩn từ",
+    "iKnow": "Tôi biết",
+    "iDontKnow": "Tôi không biết"
+  },
+  "readWrite": {
+    "title": "Read & Write",
+    "instruction": "Đọc nghĩa tiếng Việt và gõ từ tiếng Anh",
+    "placeholder": "Gõ từ tiếng Anh...",
+    "submit": "Gửi",
+    "showAnswer": "Xem đáp án",
+    "tryAgain": "Thử lại",
+    "correct": "Chính xác!",
+    "incorrect": "Sai rồi",
+    "theAnswerIs": "Đáp án là"
+  },
+  "listenWrite": {
+    "title": "Listen & Write",
+    "instruction": "Nghe phát âm và gõ từ",
+    "placeholder": "Gõ những gì bạn nghe...",
+    "playAudio": "Phát âm thanh",
+    "submit": "Gửi",
+    "showAnswer": "Xem đáp án",
+    "tryAgain": "Thử lại",
+    "correct": "Chính xác!",
+    "incorrect": "Sai rồi",
+    "theAnswerIs": "Đáp án là"
+  },
+  "completion": {
+    "title": "Hoàn thành luyện tập!",
+    "congratulations": "Chúc mừng!",
+    "youCompleted": "Bạn đã hoàn thành",
+    "wordsLearned": "từ đã học",
+    "accuracy": "Độ chính xác",
+    "mistakes": "Lỗi sai",
+    "viewMistakes": "Xem lỗi sai",
+    "practiceAgain": "Luyện lại",
+    "backToVocabulary": "Quay về từ vựng",
+    "nextMode": "Chế độ tiếp",
+    "noMistakes": "Không có lỗi sai! Tuyệt vời!"
+  },
+  "session": {
+    "resume": "Tiếp tục phiên",
+    "resumeMessage": "Bạn có phiên chưa hoàn thành. Bạn muốn tiếp tục?",
+    "continueSession": "Tiếp tục",
+    "startNew": "Bắt đầu mới"
+  },
+  "errors": {
+    "noWords": "Không có từ để luyện tập",
+    "loadFailed": "Không thể tải từ vựng",
+    "selectFile": "Vui lòng chọn file từ vựng trước"
+  },
+  "quickView": {
+    "title": "Xem nhanh từ vựng",
+    "totalWords": "Tổng số từ",
+    "close": "Đóng"
+  }
+}
+

@@ -2,8 +2,11 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { BarChart3 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const EmptyState: React.FC = () => {
+  const { t } = useTranslation('result');
+
   return (
     <Box
       sx={{
@@ -33,7 +36,7 @@ export const EmptyState: React.FC = () => {
           mb: 1,
         }}
       >
-        Chưa có dữ liệu lỗi
+        {t('empty.title')}
       </Typography>
       <Typography
         variant="body1"
@@ -43,9 +46,8 @@ export const EmptyState: React.FC = () => {
           fontSize: { xs: '0.875rem', sm: '1rem' },
         }}
       >
-        Bắt đầu training để tích lũy dữ liệu về các từ vựng bạn đã sai. Dữ liệu sẽ được hiển thị ở đây sau khi bạn hoàn thành các bài tập.
+        {t('empty.description')}
       </Typography>
     </Box>
   );
 };
-

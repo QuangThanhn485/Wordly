@@ -1,0 +1,19 @@
+{
+  "home": "Trang chủ",
+  "vocabulary": "Từ vựng",
+  "train": "Luyện tập",
+  "result": "Kết quả",
+  "data": "Dữ liệu",
+  "flashcardsReading": "Flashcards Reading",
+  "flashcardsListening": "Flashcards Listening",
+  "readWrite": "Read & Write",
+  "listenWrite": "Listen & Write",
+  "tooltips": {
+    "expandSidebar": "Mở rộng sidebar",
+    "collapseSidebar": "Thu gọn sidebar",
+    "switchToDark": "Chuyển sang chế độ tối",
+    "switchToLight": "Chuyển sang chế độ sáng",
+    "switchLanguage": "Đổi ngôn ngữ"
+  }
+}
+

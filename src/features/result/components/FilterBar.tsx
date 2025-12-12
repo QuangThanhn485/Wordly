@@ -11,6 +11,7 @@ import {
   Paper,
 } from '@mui/material';
 import { Search, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { type SortOption } from '../hooks/useMistakesStats';
 import { getTrainingModeLabel } from '../utils/dataTransform';
 import { getDisplayFileName } from '@/utils/fileUtils';
@@ -29,15 +30,6 @@ interface FilterBarProps {
   onClearFilters: () => void;
 }
 
-const sortOptions: { value: SortOption; label: string }[] = [
-  { value: 'mistakes-desc', label: 'Sai nhiều → ít' },
-  { value: 'mistakes-asc', label: 'Sai ít → nhiều' },
-  { value: 'time-desc', label: 'Mới nhất' },
-  { value: 'time-asc', label: 'Cũ nhất' },
-  { value: 'word-asc', label: 'A → Z' },
-  { value: 'word-desc', label: 'Z → A' },
-];
-
 export const FilterBar: React.FC<FilterBarProps> = ({
   searchQuery,
   onSearchChange,
@@ -52,7 +44,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onClearFilters,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation('result');
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const sortOptions: { value: SortOption; label: string }[] = [
+    { value: 'mistakes-desc', label: `${t('filters.sortByCount')} ↓` },
+    { value: 'mistakes-asc', label: `${t('filters.sortByCount')} ↑` },
+    { value: 'time-desc', label: `${t('filters.sortByDate')} ↓` },
+    { value: 'time-asc', label: `${t('filters.sortByDate')} ↑` },
+    { value: 'word-asc', label: 'A → Z' },
+    { value: 'word-desc', label: 'Z → A' },
+  ];
   
   // Local state for search input (for debouncing)
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
@@ -119,7 +121,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         >
           <TextField
             fullWidth
-            placeholder="Tìm kiếm từ vựng hoặc nghĩa..."
+            placeholder={t('filters.searchPlaceholder')}
             value={localSearchQuery}
             onChange={(e) => setLocalSearchQuery(e.target.value)}
             size="small"
@@ -173,8 +175,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             renderInput={(params) => (
               <TextField 
                 {...params} 
-                label="File" 
-                placeholder="Chọn file..."
+                label={t('filters.byFile')} 
+                placeholder={t('filters.byFile')}
                 fullWidth
                 sx={{ 
                   width: '100%',
@@ -265,8 +267,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             renderInput={(params) => (
               <TextField 
                 {...params} 
-                label="Chế độ" 
-                placeholder="Chọn chế độ..."
+                label={t('filters.byMode')} 
+                placeholder={t('filters.byMode')}
                 fullWidth
                 sx={{ 
                   width: '100%',
@@ -359,8 +361,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             renderInput={(params) => (
               <TextField 
                 {...params} 
-                label="Sắp xếp" 
-                placeholder="Chọn cách sắp xếp..."
+                label={t('filters.sortBy')} 
+                placeholder={t('filters.sortBy')}
                 fullWidth
                 sx={{ 
                   width: '100%',
@@ -402,7 +404,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               sx={{
                 flex: { xs: '0 0 auto', sm: '0 0 auto' },
               }}
-              title="Xóa bộ lọc"
             >
               <X size={20} />
             </IconButton>

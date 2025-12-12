@@ -1,0 +1,48 @@
+{
+  "title": "Training Results",
+  "overview": {
+    "totalMistakes": "Total Mistakes",
+    "uniqueWords": "Unique Words",
+    "mostMissed": "Most Missed",
+    "recentMistakes": "Recent Mistakes",
+    "times": "times"
+  },
+  "filters": {
+    "all": "All",
+    "byWord": "By Word",
+    "byFile": "By File",
+    "byMode": "By Mode",
+    "searchPlaceholder": "Search words...",
+    "sortBy": "Sort By",
+    "sortByCount": "Mistake Count",
+    "sortByDate": "Recent",
+    "sortByWord": "Alphabetical"
+  },
+  "card": {
+    "mistakeCount": "Mistake Count",
+    "lastMistake": "Last Mistake",
+    "file": "File",
+    "mode": "Training Mode",
+    "correctAnswer": "Correct Answer",
+    "yourAnswer": "Your Answer",
+    "viewHistory": "View History"
+  },
+  "modes": {
+    "flashcardsReading": "Flashcards Reading",
+    "flashcardsListening": "Flashcards Listening",
+    "readWrite": "Read & Write",
+    "listenWrite": "Listen & Write"
+  },
+  "empty": {
+    "title": "No Mistakes Yet",
+    "description": "Start practicing to see your results here",
+    "startPractice": "Start Practice"
+  },
+  "group": {
+    "showMore": "Show More",
+    "showLess": "Show Less",
+    "words": "words",
+    "mistakes": "mistakes"
+  }
+}
+

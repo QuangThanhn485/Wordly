@@ -1,0 +1,48 @@
+{
+  "title": "Kết quả luyện tập",
+  "overview": {
+    "totalMistakes": "Tổng lỗi sai",
+    "uniqueWords": "Từ duy nhất",
+    "mostMissed": "Sai nhiều nhất",
+    "recentMistakes": "Lỗi gần đây",
+    "times": "lần"
+  },
+  "filters": {
+    "all": "Tất cả",
+    "byWord": "Theo từ",
+    "byFile": "Theo file",
+    "byMode": "Theo chế độ",
+    "searchPlaceholder": "Tìm kiếm từ...",
+    "sortBy": "Sắp xếp theo",
+    "sortByCount": "Số lần sai",
+    "sortByDate": "Gần đây",
+    "sortByWord": "Theo bảng chữ cái"
+  },
+  "card": {
+    "mistakeCount": "Số lần sai",
+    "lastMistake": "Lần sai gần nhất",
+    "file": "File",
+    "mode": "Chế độ luyện tập",
+    "correctAnswer": "Đáp án đúng",
+    "yourAnswer": "Câu trả lời của bạn",
+    "viewHistory": "Xem lịch sử"
+  },
+  "modes": {
+    "flashcardsReading": "Flashcards Reading",
+    "flashcardsListening": "Flashcards Listening",
+    "readWrite": "Read & Write",
+    "listenWrite": "Listen & Write"
+  },
+  "empty": {
+    "title": "Chưa có lỗi sai",
+    "description": "Bắt đầu luyện tập để xem kết quả tại đây",
+    "startPractice": "Bắt đầu luyện tập"
+  },
+  "group": {
+    "showMore": "Xem thêm",
+    "showLess": "Thu gọn",
+    "words": "từ",
+    "mistakes": "lỗi"
+  }
+}
+

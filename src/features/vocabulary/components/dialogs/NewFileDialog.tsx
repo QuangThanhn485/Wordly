@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 interface NewFileDialogProps {
   open: boolean;
@@ -8,6 +9,7 @@ interface NewFileDialogProps {
 }
 
 export const NewFileDialog: React.FC<NewFileDialogProps> = React.memo(({ open, onClose, onConfirm }) => {
+  const { t } = useTranslation('vocabulary');
   const [fileName, setFileName] = React.useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -44,24 +46,24 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = React.memo(({ open, o
   
   return (
     <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Tạo file từ vựng mới</DialogTitle>
+      <DialogTitle>{t('dialogs.newFile.title')}</DialogTitle>
       <DialogContent>
         <TextField
           inputRef={inputRef}
           fullWidth
           margin="dense"
-          label="Tên file"
+          label={t('dialogs.newFile.label')}
           value={fileName}
           onChange={handleChange}
-          placeholder="từ_vựng_mới.txt"
-          helperText="File sẽ có phần mở rộng .txt tự động nếu chưa có"
+          placeholder={t('dialogs.newFile.placeholder')}
+          helperText={t('dialogs.newFile.helper')}
           onKeyDown={handleKeyDown}
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Hủy</Button>
+        <Button onClick={onClose}>{t('common:buttons.cancel')}</Button>
         <Button variant="contained" onClick={handleConfirm} disabled={isDisabled}>
-          Tạo
+          {t('common:buttons.create')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -69,4 +71,3 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = React.memo(({ open, o
 });
 
 NewFileDialog.displayName = 'NewFileDialog';
-

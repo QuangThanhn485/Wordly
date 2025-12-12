@@ -1,0 +1,88 @@
+{
+  "common": {
+    "progress": "Progress",
+    "score": "Score",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "remaining": "Remaining",
+    "completed": "Completed",
+    "timeSpent": "Time Spent",
+    "accuracy": "Accuracy",
+    "words": "words",
+    "of": "of"
+  },
+  "flashcardsReading": {
+    "title": "Flashcards Reading",
+    "instruction": "Look at the word and try to remember its meaning",
+    "showMeaning": "Show Meaning",
+    "hideMeaning": "Hide Meaning",
+    "iKnow": "I Know",
+    "iDontKnow": "I Don't Know",
+    "flip": "Flip Card",
+    "next": "Next",
+    "previous": "Previous"
+  },
+  "flashcardsListening": {
+    "title": "Flashcards Listening",
+    "instruction": "Listen to the pronunciation and identify the word",
+    "playAudio": "Play Audio",
+    "replay": "Replay",
+    "showWord": "Show Word",
+    "hideWord": "Hide Word",
+    "iKnow": "I Know",
+    "iDontKnow": "I Don't Know"
+  },
+  "readWrite": {
+    "title": "Read & Write",
+    "instruction": "Read the Vietnamese meaning and type the English word",
+    "placeholder": "Type the English word...",
+    "submit": "Submit",
+    "showAnswer": "Show Answer",
+    "tryAgain": "Try Again",
+    "correct": "Correct!",
+    "incorrect": "Incorrect",
+    "theAnswerIs": "The answer is"
+  },
+  "listenWrite": {
+    "title": "Listen & Write",
+    "instruction": "Listen to the pronunciation and type the word",
+    "placeholder": "Type what you hear...",
+    "playAudio": "Play Audio",
+    "submit": "Submit",
+    "showAnswer": "Show Answer",
+    "tryAgain": "Try Again",
+    "correct": "Correct!",
+    "incorrect": "Incorrect",
+    "theAnswerIs": "The answer is"
+  },
+  "completion": {
+    "title": "Training Complete!",
+    "congratulations": "Congratulations!",
+    "youCompleted": "You completed",
+    "wordsLearned": "words learned",
+    "accuracy": "Accuracy",
+    "mistakes": "Mistakes",
+    "viewMistakes": "View Mistakes",
+    "practiceAgain": "Practice Again",
+    "backToVocabulary": "Back to Vocabulary",
+    "nextMode": "Next Mode",
+    "noMistakes": "No mistakes! Great job!"
+  },
+  "session": {
+    "resume": "Resume Session",
+    "resumeMessage": "You have an unfinished session. Would you like to continue?",
+    "continueSession": "Continue",
+    "startNew": "Start New"
+  },
+  "errors": {
+    "noWords": "No words to practice",
+    "loadFailed": "Failed to load vocabulary",
+    "selectFile": "Please select a vocabulary file first"
+  },
+  "quickView": {
+    "title": "Vocabulary Quick View",
+    "totalWords": "Total Words",
+    "close": "Close"
+  }
+}
+
