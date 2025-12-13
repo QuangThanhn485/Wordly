@@ -18,6 +18,7 @@ import {
   ToggleButtonGroup,
   ToggleButton,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import type { VocabItem } from '../../types';
 import { WORD_TYPES } from '../../constants/wordTypes';
 
@@ -39,6 +40,7 @@ type SuggestOption = {
 
 export const VocabFormDialog: React.FC<VocabFormDialogProps> = React.memo(
   ({ open, mode, data, onChange, onClose, onSave }) => {
+    const { t } = useTranslation(['vocabulary', 'common']);
     const [localData, setLocalData] = React.useState<VocabItem>(data);
     const [suggestions, setSuggestions] = React.useState<SuggestOption[]>([]);
     const [loadingSuggest, setLoadingSuggest] = React.useState(false);
@@ -218,7 +220,9 @@ export const VocabFormDialog: React.FC<VocabFormDialogProps> = React.memo(
 
     return (
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>{mode === 'add' ? 'Thêm từ vựng' : 'Sửa từ vựng'}</DialogTitle>
+        <DialogTitle>
+          {mode === 'add' ? t('dialogs.vocabForm.titleAdd') : t('dialogs.vocabForm.titleEdit')}
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             {/* Ngôn ngữ gợi ý + autocomplete */}
@@ -231,7 +235,7 @@ export const VocabFormDialog: React.FC<VocabFormDialogProps> = React.memo(
                 }}
               >
                 <Typography variant="caption" color="text.secondary">
-                  Ngôn ngữ gợi ý
+                  {t('common:labels.type')}
                 </Typography>
                 <ToggleButtonGroup
                   value={inputLang}
@@ -303,7 +307,8 @@ export const VocabFormDialog: React.FC<VocabFormDialogProps> = React.memo(
                     {...params}
                     autoFocus
                     fullWidth
-                    label="Từ vựng *"
+                    label={`${t('dialogs.vocabForm.word')} *`}
+                    placeholder={t('dialogs.vocabForm.wordPlaceholder')}
                     onChange={handleWordChange}
                     onKeyDown={handleKeyDown}
                     InputProps={{
@@ -350,21 +355,22 @@ export const VocabFormDialog: React.FC<VocabFormDialogProps> = React.memo(
 
             <TextField
               fullWidth
-              label="Nghĩa tiếng Việt"
+              label={t('dialogs.vocabForm.meaning')}
+              placeholder={t('dialogs.vocabForm.meaningPlaceholder')}
               value={localData.vnMeaning}
               onChange={handleVnMeaningChange}
             />
 
             <Box sx={{ display: 'flex', gap: 2 }}>
               <FormControl fullWidth>
-                <InputLabel>Từ loại</InputLabel>
+                <InputLabel>{t('dialogs.vocabForm.type')}</InputLabel>
                 <Select
                   value={localData.type}
-                  label="Từ loại"
+                  label={t('dialogs.vocabForm.type')}
                   onChange={handleTypeChange}
                 >
                   <MenuItem value="">
-                    <em>Chọn loại từ</em>
+                    <em>{t('dialogs.vocabForm.typePlaceholder')}</em>
                   </MenuItem>
                   {WORD_TYPES.map((type) => (
                     <MenuItem key={type.value} value={type.value}>
@@ -372,22 +378,22 @@ export const VocabFormDialog: React.FC<VocabFormDialogProps> = React.memo(
                     </MenuItem>
                   ))}
                 </Select>
-                <FormHelperText>Chọn loại từ trong tiếng Anh</FormHelperText>
+                <FormHelperText>{t('dialogs.vocabForm.typePlaceholder')}</FormHelperText>
               </FormControl>
               <TextField
                 fullWidth
-                label="Phát âm"
+                label={t('dialogs.vocabForm.pronunciation')}
                 value={localData.pronunciation}
                 onChange={handlePronunciationChange}
-                placeholder="/həˈləʊ/"
+                placeholder={t('dialogs.vocabForm.pronunciationPlaceholder')}
               />
             </Box>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Hủy</Button>
+          <Button onClick={handleClose}>{t('common:buttons.cancel')}</Button>
           <Button variant="contained" onClick={handleSave} disabled={isSaveDisabled}>
-            {mode === 'add' ? 'Thêm' : 'Lưu'}
+            {mode === 'add' ? t('common:buttons.add') : t('common:buttons.save')}
           </Button>
         </DialogActions>
       </Dialog>

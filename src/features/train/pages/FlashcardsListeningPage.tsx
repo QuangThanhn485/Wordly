@@ -1,4 +1,6 @@
-// TrainStart.tsx
+// FlashcardsListeningPage.tsx - Re-exported from original location
+// This file wraps the original FlashcardsListening component
+
 import {
   Box,
   Typography,
@@ -7,24 +9,30 @@ import {
   Button,
   useTheme,
   useMediaQuery,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
-import { Languages, MapPin, AlertCircle, ArrowLeftRight } from 'lucide-react';
+import { MapPin, AlertCircle, Volume2, HelpCircle, Play, ArrowLeftRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useTrainWords } from 'features/train/train-start';
-import { getNextTrainingMode } from 'features/train/utils/trainingModes';
-import { WordCard } from 'features/train/train-start';
-import { VocabularyQuickView } from 'features/train/components';
+import { useTrainWords } from '@/features/train/train-listen';
+import { getNextTrainingMode } from '@/features/train/utils/trainingModes';
+import { WordCard } from '@/features/train/train-listen';
+import { VocabularyQuickView } from '@/features/train/components';
 import { 
   saveTrainingSession, 
   loadTrainingSession, 
   clearTrainingSession,
   isSessionForFile,
   type TrainingSession 
-} from 'features/train/train-start/sessionStorage';
-import { recordMistakes } from 'features/train/train-start/mistakesStorage';
-import { CompletionModal, type SessionMistake } from 'features/train/train-start/components/CompletionModal';
-import { speakEnglish } from '@/utils/speechUtils';
+} from '@/features/train/train-listen/sessionStorage';
+import { recordMistakes } from '@/features/train/train-listen/mistakesStorage';
+import { CompletionModal, type SessionMistake } from '@/features/train/train-listen/components/CompletionModal';
+import { speakEnglish, getBestEnglishVoice, type SpeechOptions } from '@/utils/speechUtils';
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
@@ -33,7 +41,6 @@ type WordItem = { en: string; vi: string };
 
 function adaptWords(input: any[]): WordItem[] {
   if (!Array.isArray(input)) return [];
-  // Input is already TrainWordItem[] from api, just return as-is
   return input.filter((w) => w && typeof w === 'object' && w.en && w.vi);
 }
 
@@ -45,7 +52,6 @@ function pickRandomIndex(arrLength: number, exclude: Set<number>): number {
   return candidates[r];
 }
 
-// Shuffle array using Fisher-Yates algorithm
 function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -55,14 +61,13 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
-// Padding-top cho cards grid - điều chỉnh tại đây để thay đổi khoảng cách giữa sticky bar và cards
 const GRID_PADDING_TOP = {
-  xs: '10px', // Mobile: chỉ cần gap nhỏ, sticky bar sẽ tự stick không che mất card
-  sm: '10px', // Tablet: chỉ cần gap nhỏ
-  md: '10px'  // Desktop: chỉ cần gap nhỏ
+  xs: '10px',
+  sm: '10px',
+  md: '10px'
 };
 
-const TrainStart = () => {
+const FlashcardsListeningPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
@@ -73,37 +78,48 @@ const TrainStart = () => {
   const trainingSource = searchParams.get('trainingSource');
   const recordFileName = sourceFileName || currentFileName;
   const skipMistakeLogging = trainingSource === 'top-mistakes';
-  const [sessionRestored, setSessionRestored] = useState(false); // Track if we've attempted to restore session
+  const [sessionRestored, setSessionRestored] = useState(false);
 
-  // Check for saved session on mount - if no file in URL but session exists, restore it
-  // BUT if URL has a different file, that takes priority (user selected a new file)
   useEffect(() => {
-    if (sessionRestored) return; // Only run once on mount
+    if (sessionRestored) return;
     
     const savedSession = loadTrainingSession();
     
-    // Priority 1: If URL has a file parameter, use it (user selected a file)
     if (currentFileName) {
-      // Check if this is a different file than the saved session
       if (
         savedSession &&
         (savedSession.fileName !== currentFileName ||
           (trainingSource && savedSession.trainingSource !== trainingSource))
       ) {
-        // Different file - clear old session immediately
         clearTrainingSession();
       }
       setSessionRestored(true);
       return;
     }
     
-    // Priority 2: No file in URL - restore from saved session if available
     if (savedSession && savedSession.fileName) {
       const params: Record<string, string> = { file: savedSession.fileName };
       if (savedSession.sourceFileName) params.sourceFile = savedSession.sourceFileName;
       if (savedSession.trainingSource) params.trainingSource = savedSession.trainingSource;
       setSearchParams(params, { replace: true });
+      setSessionRestored(true);
+      return;
     }
+    
+    try {
+      const readingSessionStr = localStorage.getItem('wordly_train_session');
+      if (readingSessionStr) {
+        const readingSession = JSON.parse(readingSessionStr);
+        if (readingSession && readingSession.fileName) {
+          const params: Record<string, string> = { file: readingSession.fileName };
+          if (readingSession.sourceFileName) params.sourceFile = readingSession.sourceFileName;
+          if (readingSession.trainingSource) params.trainingSource = readingSession.trainingSource;
+          setSearchParams(params, { replace: true });
+          setSessionRestored(true);
+          return;
+        }
+      }
+    } catch (err) {}
     
     setSessionRestored(true);
   }, [currentFileName, sessionRestored, setSearchParams, trainingSource]);
@@ -111,11 +127,9 @@ const TrainStart = () => {
   const { words: rawWords, isLoading } = useTrainWords();
   const baseItems = useMemo(() => adaptWords(rawWords ?? []), [rawWords]);
   
-  // Shuffle items on mount and after restart
   const [items, setItems] = useState<WordItem[]>([]);
-  const [shuffleKey, setShuffleKey] = useState(0); // Trigger to reshuffle
+  const [shuffleKey, setShuffleKey] = useState(0);
   
-  // Shuffle items when baseItems change or shuffle is triggered
   useEffect(() => {
     if (baseItems.length > 0) {
       setItems(shuffleArray(baseItems));
@@ -124,42 +138,33 @@ const TrainStart = () => {
   
   const total = items.length;
 
-  // Initialize state with defaults first
   const [flipped, setFlipped] = useState<Record<number, boolean>>({});
   const [wrongIdx, setWrongIdx] = useState<number | null>(null);
   const [wrongTick, setWrongTick] = useState(0);
-  const [showMeaningIdx, setShowMeaningIdx] = useState(-1); // Track which card shows meaning
-  const [showHintIdx, setShowHintIdx] = useState(-1); // Track which card shows hint (Ctrl+X)
   const [targetIdx, setTargetIdx] = useState<number>(() => pickRandomIndex(total, new Set()));
   const [score, setScore] = useState(0);
   const [mistakes, setMistakes] = useState(0);
-  const [language, setLanguage] = useState<'vi' | 'en'>('vi');
+  const [language, setLanguage] = useState<'vi' | 'en'>('en');
+  const [hasStarted, setHasStarted] = useState(false);
+  const [showHintModal, setShowHintModal] = useState(false);
   
-  // Track mistakes per word for current session: word -> count
   const [wordMistakes, setWordMistakes] = useState<Map<string, number>>(new Map());
-  
-  // Completion modal state
   const [showCompletionModal, setShowCompletionModal] = useState(false);
 
-  // Track previous file name to detect file changes
   const prevFileNameRef = useRef<string | null>(null);
   const prevTrainingSourceRef = useRef<string | null>(null);
 
-  // Load saved session when items are ready
   useEffect(() => {
     if (isLoading || items.length === 0 || !currentFileName || !sessionRestored) return;
     
-    // Check if file or training source has changed
     const fileChanged = prevFileNameRef.current !== null && prevFileNameRef.current !== currentFileName;
     const trainingSourceChanged =
       prevTrainingSourceRef.current !== null && prevTrainingSourceRef.current !== trainingSource;
     prevFileNameRef.current = currentFileName;
     prevTrainingSourceRef.current = trainingSource;
     
-    // If file or training source changed, clear session immediately
     if (fileChanged || trainingSourceChanged) {
       clearTrainingSession();
-      // Reset state for new file
       setFlipped({});
       setWrongIdx(null);
       setWrongTick(0);
@@ -167,34 +172,37 @@ const TrainStart = () => {
       setMistakes(0);
       setWordMistakes(new Map());
       setShowCompletionModal(false);
+      setHasStarted(false);
+      setShowHintModal(false);
       setTargetIdx(pickRandomIndex(items.length, new Set()));
-      setLanguage('vi');
+      setLanguage('en');
       return;
     }
     
-    // File hasn't changed - try to restore session
     const session = loadTrainingSession();
     if (isSessionForFile(session, currentFileName, trainingSource)) {
-      // Validate session data matches current items
       if (session && session.targetIdx >= 0 && session.targetIdx < items.length) {
-        // Restore session state
         setFlipped(session.flipped || {});
         setScore(session.score || 0);
         setMistakes(session.mistakes || 0);
         setTargetIdx(session.targetIdx >= 0 ? session.targetIdx : pickRandomIndex(items.length, new Set()));
-        setLanguage(session.language || 'vi');
-        return; // Session restored
+        setLanguage(session.language || 'en');
+        setHasStarted(session.hasStarted || false);
+        setShowHintModal(false);
+        return;
       }
     }
     
-    // No valid session - start fresh
     setFlipped({});
     setWrongIdx(null);
     setWrongTick(0);
     setScore(0);
     setMistakes(0);
+    setWordMistakes(new Map());
+    setHasStarted(false);
+    setShowHintModal(false);
     setTargetIdx(pickRandomIndex(items.length, new Set()));
-    setLanguage('vi');
+    setLanguage('en');
   }, [currentFileName, isLoading, items.length, sessionRestored, trainingSource]);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -228,27 +236,101 @@ const TrainStart = () => {
     osc.stop(ctx.currentTime + 0.26);
   }, []);
 
-  // Use enhanced speech utility for better pronunciation
-  // Direct use of speakEnglish utility - no wrapper needed
+  const speakEnglishAwaitable = useCallback(
+    (text: string, options: SpeechOptions = {}) =>
+      new Promise<void>((resolve) => {
+        if (!text || typeof window === 'undefined') return resolve();
+        const synth = window.speechSynthesis;
+        if (!synth) return resolve();
+
+        let hasSpoken = false;
+        const speakNow = () => {
+          if (hasSpoken) return;
+          hasSpoken = true;
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = options.lang || 'en-US';
+          utterance.rate = options.rate ?? 1.0;
+          utterance.pitch = options.pitch ?? 1.0;
+          utterance.volume = options.volume ?? 1.0;
+
+          if (options.voiceName) {
+            const voice = synth.getVoices().find((v) => v.name === options.voiceName);
+            if (voice) utterance.voice = voice;
+          }
+          if (!utterance.voice) {
+            const bestVoice = getBestEnglishVoice();
+            if (bestVoice) utterance.voice = bestVoice;
+          }
+
+          utterance.onend = () => resolve();
+          utterance.onerror = () => resolve();
+          synth.speak(utterance);
+        };
+
+        if (synth.getVoices().length === 0) {
+          synth.addEventListener('voiceschanged', speakNow, { once: true });
+          setTimeout(speakNow, 150);
+        } else {
+          speakNow();
+        }
+      }),
+    []
+  );
+
+  const wait = useCallback((ms: number) => new Promise<void>((res) => setTimeout(res, ms)), []);
+
+  const speakResultThenNext = useCallback(
+    async (current: string, next?: string) => {
+      if (!current) return;
+      try {
+        if (typeof window !== 'undefined') {
+          window.speechSynthesis?.cancel();
+        }
+      } catch {}
+      await speakEnglishAwaitable(current, { lang: 'en-US' });
+      if (next) {
+        await wait(200);
+        await speakEnglishAwaitable(next, { lang: 'en-US' });
+      }
+    },
+    [speakEnglishAwaitable, wait]
+  );
 
   const handleLanguageToggle = () => {
     setLanguage((prev) => (prev === 'vi' ? 'en' : 'vi'));
-      // Note: Session will be auto-saved via useEffect
   };
 
-  // Handle show hint (Ctrl+X) - show meaning on correct answer card for 3 seconds
-  const handleShowHint = useCallback(() => {
+  const handleStart = useCallback(() => {
     if (isLoading || items.length === 0) return;
     if (targetIdx < 0 || targetIdx >= items.length) return;
-    if (flipped[targetIdx]) return; // Don't show hint on already flipped card
     
-    setShowHintIdx(targetIdx);
-    setTimeout(() => {
-      setShowHintIdx(-1);
-    }, 3000);
-  }, [isLoading, items.length, targetIdx, flipped]);
+    const target = items[targetIdx];
+    if (!target) return;
+    
+    setHasStarted(true);
+    setShowHintModal(false);
+    speakEnglish(target.en, { lang: 'en-US' });
+  }, [items, targetIdx, isLoading]);
 
-  // Save session to localStorage whenever relevant state changes
+  const handleReplayAudio = useCallback(() => {
+    if (isLoading || items.length === 0) return;
+    if (targetIdx < 0 || targetIdx >= items.length) return;
+    if (!hasStarted) return;
+    
+    const target = items[targetIdx];
+    if (!target) return;
+    
+    speakEnglish(target.en, { lang: 'en-US' });
+  }, [hasStarted, items, targetIdx, isLoading]);
+
+  const handleShowAnswer = useCallback(() => {
+    if (isLoading || items.length === 0) return;
+    if (targetIdx < 0 || targetIdx >= items.length) return;
+    if (!hasStarted) return;
+    
+    setShowHintModal(true);
+  }, [hasStarted, items, targetIdx, isLoading]);
+
   useEffect(() => {
     if (!currentFileName || isLoading || items.length === 0) return;
     
@@ -262,6 +344,7 @@ const TrainStart = () => {
       targetIdx,
       language,
       timestamp: Date.now(),
+      hasStarted,
     };
     saveTrainingSession(session);
   }, [
@@ -273,54 +356,47 @@ const TrainStart = () => {
     flipped,
     targetIdx,
     language,
+    hasStarted,
     isLoading,
     items.length,
   ]);
 
   const handleAttempt = useCallback(
     (idx: number) => {
-      // Guard clauses: prevent click when loading or items not ready
-      if (isLoading || items.length === 0) return;
+      if (isLoading || items.length === 0 || !hasStarted) return;
       if (targetIdx < 0 || targetIdx >= items.length) return;
       if (idx < 0 || idx >= items.length) return;
       if (flipped[idx]) return;
       
-      // Ensure target item exists before accessing
       if (!items[targetIdx] || !items[idx]) return;
       
-      // Check answer based on language mode
-      // VI-EN mode: top bar shows Vietnamese (target.vi), cards show English
-      //   - User needs to click the card with English that matches the Vietnamese in top bar
-      //   - So we check if the clicked card's English matches target's English
-      // EN-VI mode: top bar shows English (target.en), cards show Vietnamese
-      //   - User needs to click the card with Vietnamese that matches the English in top bar
-      //   - So we check if the clicked card's Vietnamese matches target's Vietnamese
       const isCorrect = language === 'vi'
-        ? normalize(items[idx].en) === normalize(items[targetIdx].en) // VI-EN: match English
-        : normalize(items[idx].vi) === normalize(items[targetIdx].vi); // EN-VI: match Vietnamese
+        ? normalize(items[idx].en) === normalize(items[targetIdx].en)
+        : normalize(items[idx].vi) === normalize(items[targetIdx].vi);
       
       if (isCorrect) {
         setFlipped((f) => ({ ...f, [idx]: true }));
         setScore((v) => v + 1);
-        speakEnglish(items[targetIdx].en, { lang: 'en-US' }); // Always speak the English word of the target
+        const currentEnglish = items[targetIdx].en;
+        setShowHintModal(false);
         const exclude = new Set<number>();
         Object.keys(flipped).forEach((k) => {
           if (flipped[+k]) exclude.add(+k);
         });
         exclude.add(idx);
-        setTargetIdx(pickRandomIndex(items.length, exclude));
+        const newTargetIdx = pickRandomIndex(items.length, exclude);
+        setTargetIdx(newTargetIdx);
+
+        const nextEnglish =
+          newTargetIdx >= 0 && newTargetIdx < items.length && items[newTargetIdx]
+            ? items[newTargetIdx].en
+            : undefined;
+        void speakResultThenNext(currentEnglish, nextEnglish);
       } else {
         setWrongIdx(idx);
         setWrongTick((t) => t + 1);
         setMistakes((m) => m + 1);
         
-        // Show meaning for 2 seconds on the clicked wrong card
-        setShowMeaningIdx(idx);
-        setTimeout(() => {
-          setShowMeaningIdx(-1);
-        }, 2000);
-        
-        // Track mistake for this word
         const wrongWord = items[targetIdx].en;
         setWordMistakes((prev) => {
           const newMap = new Map(prev);
@@ -336,41 +412,15 @@ const TrainStart = () => {
         }
       }
     },
-    [items, targetIdx, flipped, language, isLoading, playErrorTone]
+    [items, targetIdx, flipped, language, isLoading, hasStarted, playErrorTone, speakResultThenNext]
   );
 
-  // Check if all cards are flipped (100% completion)
   const allFlipped = useMemo(() => {
     if (items.length === 0) return false;
     return Object.keys(flipped).length === items.length && 
            Object.values(flipped).every(v => v === true);
   }, [flipped, items.length]);
   
-  // Show completion modal when 100% completed
-  useEffect(() => {
-    if (allFlipped && !isLoading && items.length > 0) {
-      setShowCompletionModal(true);
-    }
-  }, [allFlipped, isLoading, items.length]);
-
-  // Handle keyboard shortcut Ctrl+X for hint
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
-        e.preventDefault();
-        if (!allFlipped && targetIdx >= 0 && !flipped[targetIdx]) {
-          handleShowHint();
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [allFlipped, targetIdx, flipped, handleShowHint]);
-  
-  // Prepare mistakes data for modal
   const sessionMistakes: SessionMistake[] = useMemo(() => {
     const mistakesList: SessionMistake[] = [];
     wordMistakes.forEach((count, word) => {
@@ -382,8 +432,6 @@ const TrainStart = () => {
           count,
         });
       } else {
-        // Fallback: if item not found (shouldn't happen), still show the word
-        console.warn(`Word "${word}" not found in items, showing anyway`);
         mistakesList.push({
           word: word,
           viMeaning: 'N/A',
@@ -391,9 +439,17 @@ const TrainStart = () => {
         });
       }
     });
-    // Sort by mistake count (descending)
     return mistakesList.sort((a, b) => b.count - a.count);
   }, [wordMistakes, items]);
+  
+  useEffect(() => {
+    if (allFlipped && !isLoading && items.length > 0 && hasStarted) {
+      if (!skipMistakeLogging && sessionMistakes.length > 0 && recordFileName) {
+        recordMistakes(sessionMistakes, recordFileName, 'flashcards-listening');
+      }
+      setShowCompletionModal(true);
+    }
+  }, [allFlipped, isLoading, items.length, hasStarted, sessionMistakes, currentFileName]);
   
   const handleRestart = useCallback(() => {
     setFlipped({});
@@ -403,31 +459,26 @@ const TrainStart = () => {
     setMistakes(0);
     setWordMistakes(new Map());
     setShowCompletionModal(false);
+    setHasStarted(false);
+    setShowHintModal(false);
     setTargetIdx(pickRandomIndex(items.length, new Set()));
-    // Shuffle cards for next session
     setShuffleKey(prev => prev + 1);
-    // Clear saved session on restart
     if (currentFileName) {
       clearTrainingSession();
     }
   }, [items.length, currentFileName]);
   
-  // Save mistakes to localStorage and handle actions
   const saveMistakesAndAction = useCallback((action: 'exit' | 'restart' | 'next') => {
-    // Always save mistakes if there are any (even if no fileName, we still track them)
     if (!skipMistakeLogging && sessionMistakes.length > 0 && recordFileName) {
-      // Save mistakes to localStorage
-      recordMistakes(sessionMistakes, recordFileName, 'flashcards-reading');
+      recordMistakes(sessionMistakes, recordFileName, 'flashcards-listening');
     }
     
-    // Execute action
     if (action === 'restart') {
       handleRestart();
     } else if (action === 'exit') {
       setShowCompletionModal(false);
     } else if (action === 'next') {
-      // Navigate to next training mode
-      const nextMode = getNextTrainingMode('flashcards-reading');
+      const nextMode = getNextTrainingMode('flashcards-listening');
       if (nextMode) {
         const nextParams = new URLSearchParams(searchParams);
         const query = nextParams.toString();
@@ -438,32 +489,37 @@ const TrainStart = () => {
     }
   }, [recordFileName, sessionMistakes, handleRestart, navigate, searchParams, skipMistakeLogging]);
   
-  const handleCompletionExit = () => {
-    saveMistakesAndAction('exit');
-  };
-  
-  const handleCompletionRestart = () => {
-    saveMistakesAndAction('restart');
-  };
-  
-  const handleCompletionNext = () => {
-    saveMistakesAndAction('next');
-  };
+  const handleCompletionExit = () => saveMistakesAndAction('exit');
+  const handleCompletionRestart = () => saveMistakesAndAction('restart');
+  const handleCompletionNext = () => saveMistakesAndAction('next');
 
-  // Ensure targetIdx is valid and items are loaded before accessing
   const target = (items.length > 0 && targetIdx >= 0 && targetIdx < items.length && !isLoading) 
     ? items[targetIdx] 
     : null;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+        e.preventDefault();
+        if (hasStarted && !showHintModal && target !== null && !allFlipped) {
+          handleShowAnswer();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [hasStarted, showHintModal, target, allFlipped, handleShowAnswer]);
   
-  // Determine what to show in top bar and cards based on language mode
-  // Hide top bar label when completed (100% flipped)
   const topBarLabel = allFlipped
-    ? 'Completed!'  // Show completion message
-    : isLoading || !target
-      ? 'Loading...'  // Show loading state
-      : language === 'vi'
-        ? (target.vi || '—')  // VI-EN mode: show Vietnamese in top bar
-        : (target.en || '—'); // EN-VI mode: show English in top bar
+    ? 'Completed!'
+    : !hasStarted
+      ? ''
+      : isLoading || !target
+        ? 'Loading...'
+        : '';
 
   return (
     <Box
@@ -473,16 +529,14 @@ const TrainStart = () => {
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        // Không set overflow - để window scroll tự nhiên cho sticky
         boxSizing: 'border-box',
       }}
     >
-      {/* Sticky Top Bar - Đơn giản, rõ ràng */}
       <Box
         sx={{
           position: 'sticky',
-          top: { xs: '56px', sm: '64px', md: 0 }, // Stick ngay dưới AppBar trên mobile, ở top trên desktop
-          zIndex: (t) => t.zIndex.appBar - 1, // Dưới AppBar, trên content
+          top: { xs: '56px', sm: '64px', md: 0 },
+          zIndex: (t) => t.zIndex.appBar - 1,
           bgcolor: 'background.paper',
           borderBottom: `1px solid ${theme.palette.divider}`,
           px: { xs: 1.5, sm: 3 },
@@ -497,22 +551,19 @@ const TrainStart = () => {
           flexShrink: 0,
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Languages size={20} color="currentColor" style={{ color: 'inherit' }} />
+        {topBarLabel && (
           <Typography
             variant="h6"
             fontWeight="bold"
             color="primary"
             sx={{
-              fontSize: { xs: '0.875rem', sm: '1.05rem', md: '1.2rem' }, // Smaller on mobile
+              fontSize: { xs: '0.875rem', sm: '1.05rem', md: '1.2rem' },
               lineHeight: 1.3,
-              wordBreak: 'break-word',
-              whiteSpace: 'normal',
             }}
           >
             {topBarLabel}
           </Typography>
-        </Box>
+        )}
 
         <Button
           variant="outlined"
@@ -522,7 +573,7 @@ const TrainStart = () => {
           startIcon={<ArrowLeftRight size={isMobile ? 16 : 18} />}
           sx={{
             width: { xs: '100%', sm: 'auto' },
-            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            fontSize: { xs: '0.7rem', sm: '0.875rem' },
             px: { xs: 1.5, sm: 2.5 },
             py: { xs: 0.75, sm: 1 },
             minWidth: { xs: 'auto', sm: 140 },
@@ -535,13 +586,68 @@ const TrainStart = () => {
         <Box
           sx={{
             display: 'flex',
-            gap: { xs: 1, sm: 1.5 },
+            gap: { xs: 0.5, sm: 1.5 },
             width: { xs: '100%', sm: 'auto' },
-            justifyContent: { xs: 'space-between', sm: 'flex-start' },
+            justifyContent: { xs: 'flex-start', sm: 'flex-start' },
             alignItems: 'center',
-            flexWrap: 'nowrap',
+            flexWrap: { xs: 'wrap', sm: 'nowrap' },
+            maxWidth: '100%',
+            boxSizing: 'border-box',
           }}
         >
+          {!hasStarted ? (
+            <Button
+              variant="contained"
+              color="primary"
+              size={isMobile ? 'small' : 'medium'}
+              onClick={handleStart}
+              startIcon={<Play size={isMobile ? 14 : 16} />}
+              disabled={isLoading || items.length === 0}
+              sx={{ 
+                minWidth: { xs: 'auto', sm: 100 },
+                fontSize: { xs: '0.65rem', sm: '0.875rem' },
+                px: { xs: 1, sm: 2 },
+                py: { xs: 0.5, sm: 1 },
+                height: { xs: 24, sm: 'auto' },
+                flexShrink: 1,
+                flex: { xs: '0 1 auto', sm: '0 0 auto' },
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Start
+            </Button>
+          ) : (
+            <>
+              <Tooltip title="Replay audio">
+                <IconButton
+                  onClick={handleReplayAudio}
+                  disabled={allFlipped}
+                  color="primary"
+                  size={isMobile ? 'small' : 'medium'}
+                  sx={{ 
+                    flexShrink: 0,
+                    padding: { xs: 0.5, sm: 1 },
+                  }}
+                >
+                  <Volume2 size={isMobile ? 16 : 24} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Show hint (Ctrl+X)">
+                <IconButton
+                  onClick={handleShowAnswer}
+                  disabled={allFlipped}
+                  color="primary"
+                  size={isMobile ? 'small' : 'medium'}
+                  sx={{ 
+                    flexShrink: 0,
+                    padding: { xs: 0.5, sm: 1 },
+                  }}
+                >
+                  <HelpCircle size={isMobile ? 16 : 24} />
+                </IconButton>
+              </Tooltip>
+            </>
+          )}
           <Chip
             icon={<MapPin size={16} />}
             label={`${score} / ${total}`}
@@ -551,14 +657,17 @@ const TrainStart = () => {
               borderRadius: 1, 
               borderColor: theme.palette.divider, 
               bgcolor: 'background.default',
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              '& .MuiChip-label': { px: { xs: 0.75, sm: 1.5 } },
-              flexShrink: 0,
+              fontSize: { xs: '0.65rem', sm: '0.875rem' },
+              height: { xs: 24, sm: 32 },
+              '& .MuiChip-label': { px: { xs: 0.5, sm: 1.5 }, fontSize: { xs: '0.65rem', sm: '0.875rem' } },
+              '& .MuiChip-icon': { fontSize: { xs: '0.875rem', sm: '1rem' }, ml: { xs: 0.5, sm: 1 } },
+              flexShrink: 1,
+              flex: { xs: '0 1 auto', sm: '0 0 auto' },
             }}
           />
           <Chip
             icon={<AlertCircle size={16} color="error" />}
-            label={`Mistakes: ${mistakes}`}
+            label={isMobile ? `M: ${mistakes}` : `Mistakes: ${mistakes}`}
             variant="outlined"
             size={isMobile ? 'small' : 'medium'}
             sx={{
@@ -566,9 +675,12 @@ const TrainStart = () => {
               borderColor: theme.palette.error.light,
               color: 'error.main',
               bgcolor: theme.palette.error.light + '20',
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              '& .MuiChip-label': { px: { xs: 0.75, sm: 1.5 } },
-              flexShrink: 0,
+              fontSize: { xs: '0.65rem', sm: '0.875rem' },
+              height: { xs: 24, sm: 32 },
+              '& .MuiChip-label': { px: { xs: 0.5, sm: 1.5 }, fontSize: { xs: '0.65rem', sm: '0.875rem' } },
+              '& .MuiChip-icon': { fontSize: { xs: '0.875rem', sm: '1rem' }, ml: { xs: 0.5, sm: 1 } },
+              flexShrink: 1,
+              flex: { xs: '0 1 auto', sm: '0 0 auto' },
             }}
           />
           <Button
@@ -578,9 +690,12 @@ const TrainStart = () => {
             onClick={handleRestart}
             sx={{ 
               minWidth: { xs: 'auto', sm: 80 },
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              px: { xs: 1, sm: 2 },
-              flexShrink: 0,
+              fontSize: { xs: '0.65rem', sm: '0.875rem' },
+              px: { xs: 0.75, sm: 2 },
+              py: { xs: 0.5, sm: 1 },
+              height: { xs: 24, sm: 'auto' },
+              flexShrink: 1,
+              flex: { xs: '0 1 auto', sm: '0 0 auto' },
               whiteSpace: 'nowrap',
             }}
           >
@@ -589,7 +704,6 @@ const TrainStart = () => {
         </Box>
       </Box>
 
-      {/* Main Content */}
       <Box
         sx={{
           width: '100%',
@@ -613,18 +727,36 @@ const TrainStart = () => {
             },
             gap: { xs: 2, sm: 2.5, md: 3 },
             pb: { xs: 12, sm: 14 },
-            pt: GRID_PADDING_TOP, // Padding để tránh sticky bar che mất card đầu tiên
+            pt: GRID_PADDING_TOP,
           }}
         >
           {[...Array(8)].map((_, idx) => (
             <Skeleton key={idx} variant="rounded" height={isMobile ? 180 : isTablet ? 200 : 220} sx={{ borderRadius: 2 }} />
           ))}
         </Box>
+      ) : items.length === 0 ? (
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '50vh',
+            py: 4,
+          }}
+        >
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            No vocabulary found
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {currentFileName ? `File "${currentFileName}" is empty or doesn't exist.` : 'Please select a vocabulary file to train.'}
+          </Typography>
+        </Box>
       ) : (
         <Box
           sx={{
             display: 'grid',
-            gap: { xs: 1.5, sm: 2.5, md: 3 }, // Reduced gap on mobile
+            gap: { xs: 1.5, sm: 2.5, md: 3 },
             gridTemplateColumns: {
               xs: 'repeat(1, minmax(0, 1fr))',
               sm: 'repeat(2, minmax(0, 1fr))',
@@ -633,15 +765,14 @@ const TrainStart = () => {
             },
             alignItems: 'stretch',
             pb: { xs: 12, sm: 14 },
-            pt: GRID_PADDING_TOP, // Padding để tránh sticky bar che mất card đầu tiên
+            pt: GRID_PADDING_TOP,
           }}
         >
           {items.map((it, idx) => (
             <Box 
               key={`${it.en}-${idx}`}
               sx={{
-                // Disable interaction when loading or items not ready
-                pointerEvents: isLoading || items.length === 0 ? 'none' : 'auto',
+                pointerEvents: isLoading || items.length === 0 || !hasStarted ? 'none' : 'auto',
                 opacity: isLoading || items.length === 0 ? 0.6 : 1,
               }}
             >
@@ -653,7 +784,6 @@ const TrainStart = () => {
                 onAttempt={() => handleAttempt(idx)}
                 shouldShake={wrongIdx === idx}
                 shakeKey={wrongTick}
-                showMeaning={showMeaningIdx === idx || showHintIdx === idx}
               />
             </Box>
           ))}
@@ -661,7 +791,84 @@ const TrainStart = () => {
         )}
       </Box>
       
-      {/* Completion Modal */}
+      <Dialog
+        open={showHintModal}
+        onClose={() => setShowHintModal(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <HelpCircle size={24} color="currentColor" style={{ color: 'inherit' }} />
+            <Typography variant="h6" fontWeight={600}>
+              Hint / Gợi ý
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {target && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, py: 2 }}>
+              <Box>
+                <Typography 
+                  variant="subtitle2" 
+                  color="text.secondary" 
+                  gutterBottom 
+                  sx={{ 
+                    fontWeight: 600,
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  }}
+                >
+                  English
+                </Typography>
+                <Typography 
+                  variant="h5" 
+                  fontWeight={700} 
+                  sx={{ 
+                    wordBreak: 'break-word',
+                    fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' },
+                  }}
+                >
+                  {target.en}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography 
+                  variant="subtitle2" 
+                  color="text.secondary" 
+                  gutterBottom 
+                  sx={{ 
+                    fontWeight: 600,
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  }}
+                >
+                  Tiếng Việt
+                </Typography>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    wordBreak: 'break-word',
+                    fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' },
+                  }}
+                >
+                  {target.vi}
+                </Typography>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setShowHintModal(false)} variant="contained" color="primary">
+            Close / Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <CompletionModal
         open={showCompletionModal}
         totalMistakes={mistakes}
@@ -671,7 +878,6 @@ const TrainStart = () => {
         onNextMode={handleCompletionNext}
       />
 
-      {/* Vocabulary Quick View */}
       <VocabularyQuickView
         vocabularyList={items}
         currentFileName={sourceFileName || currentFileName}
@@ -680,4 +886,5 @@ const TrainStart = () => {
   );
 };
 
-export default TrainStart;
+export default FlashcardsListeningPage;
+

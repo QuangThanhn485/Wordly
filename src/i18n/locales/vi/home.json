@@ -1,0 +1,54 @@
+{
+  "title": "Wordly",
+  "subtitle": "Ứng dụng học từ vựng tiếng Anh thông minh với 4 chế độ luyện tập đa dạng",
+  "buttons": {
+    "vocabulary": "Kho từ vựng",
+    "viewResults": "Xem kết quả"
+  },
+  "stats": {
+    "totalWords": "Tổng số từ",
+    "learning": "Đang học",
+    "files": "File từ vựng",
+    "created": "Đã tạo",
+    "wordsToReview": "Từ cần ôn",
+    "mistakeAtLeastOnce": "Từ sai ít nhất 1 lần",
+    "streak": "Streak",
+    "keepPracticing": "Tiếp tục luyện tập!",
+    "startNow": "Bắt đầu ngay"
+  },
+  "trainingModes": {
+    "title": "Chế độ luyện tập",
+    "flashcardsReading": {
+      "title": "Flashcards Reading",
+      "description": "Học từ vựng qua thẻ flashcard trực quan"
+    },
+    "flashcardsListening": {
+      "title": "Flashcards Listening",
+      "description": "Luyện nghe và nhận diện từ vựng"
+    },
+    "readWrite": {
+      "title": "Read & Write",
+      "description": "Đọc nghĩa và viết từ tiếng Anh"
+    },
+    "listenWrite": {
+      "title": "Listen & Write",
+      "description": "Nghe phát âm và viết chính tả"
+    }
+  },
+  "features": {
+    "title": "Tính năng nổi bật",
+    "vocabManagement": {
+      "title": "Quản lý từ vựng",
+      "description": "Tổ chức từ vựng theo folder, import/export dễ dàng"
+    },
+    "progressTracking": {
+      "title": "Theo dõi tiến độ",
+      "description": "Xem chi tiết lỗi sai, thống kê kết quả theo từng chế độ"
+    },
+    "pronunciation": {
+      "title": "Phát âm chuẩn",
+      "description": "Nghe phát âm tiếng Anh chuẩn với nhiều giọng đọc"
+    }
+  }
+}
+

@@ -14,9 +14,9 @@ import { Languages, AlertCircle, RotateCcw, ArrowLeftRight } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTrainWords } from '@/features/train/train-read-write';
-import { getNextTrainingMode } from 'features/train/utils/trainingModes';
+import { getNextTrainingMode } from '@/features/train/utils/trainingModes';
 import { WordInputCard } from '@/features/train/train-read-write';
-import { VocabularyQuickView } from 'features/train/components';
+import { VocabularyQuickView } from '@/features/train/components';
 import {
   saveTrainingSession,
   loadTrainingSession,

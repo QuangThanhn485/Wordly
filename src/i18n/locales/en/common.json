@@ -1,0 +1,66 @@
+{
+  "buttons": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "create": "Create",
+    "edit": "Edit",
+    "close": "Close",
+    "confirm": "Confirm",
+    "add": "Add",
+    "update": "Update",
+    "rename": "Rename",
+    "copy": "Copy",
+    "cut": "Cut",
+    "paste": "Paste",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "start": "Start",
+    "finish": "Finish",
+    "reset": "Reset",
+    "retry": "Retry",
+    "continue": "Continue",
+    "skip": "Skip",
+    "viewVocabulary": "View Vocabulary",
+    "viewResults": "View Results"
+  },
+  "labels": {
+    "search": "Search",
+    "loading": "Loading...",
+    "noData": "No data",
+    "empty": "Empty",
+    "all": "All",
+    "selected": "Selected",
+    "total": "Total",
+    "name": "Name",
+    "type": "Type",
+    "actions": "Actions",
+    "status": "Status",
+    "date": "Date",
+    "word": "Word",
+    "meaning": "Meaning",
+    "pronunciation": "Pronunciation",
+    "example": "Example",
+    "note": "Note",
+    "file": "File",
+    "folder": "Folder"
+  },
+  "messages": {
+    "success": "Success!",
+    "error": "Error occurred",
+    "saved": "Saved successfully",
+    "deleted": "Deleted successfully",
+    "created": "Created successfully",
+    "updated": "Updated successfully",
+    "copied": "Copied to clipboard",
+    "confirmDelete": "Are you sure you want to delete?"
+  },
+  "validation": {
+    "required": "This field is required",
+    "minLength": "Minimum {{min}} characters",
+    "maxLength": "Maximum {{max}} characters",
+    "invalidFormat": "Invalid format"
+  }
+}
+

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 interface ConfirmDeleteDialogProps {
   open: boolean;
@@ -11,35 +12,36 @@ interface ConfirmDeleteDialogProps {
 }
 
 export const ConfirmDeleteDialog: React.FC<ConfirmDeleteDialogProps> = ({ open, type, label, count, onClose, onConfirm }) => {
+  const { t } = useTranslation(['vocabulary', 'common']);
+
   const getMessage = () => {
     if (type === 'vocab') {
       return (
         <Typography>
-          Bạn có chắc muốn xoá <b>{count || 0} từ vựng</b> đã chọn?
+          {t('dialogs.confirmDelete.message', { name: `${count || 0} ${t('common:labels.word')}` })}
         </Typography>
       );
     }
     return (
       <Typography>
-        Bạn có chắc muốn xoá <b>{label}</b>
-        {type === 'folder' ? ' và toàn bộ nội dung bên trong' : ''}?
+        {t('dialogs.confirmDelete.message', { name: label })}
+        {type === 'folder' && ` ${t('dialogs.confirmDelete.warning')}`}
       </Typography>
     );
   };
 
   return (
     <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Xác nhận xoá</DialogTitle>
+      <DialogTitle>{t('dialogs.confirmDelete.title')}</DialogTitle>
       <DialogContent>
         {getMessage()}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Hủy</Button>
+        <Button onClick={onClose}>{t('common:buttons.cancel')}</Button>
         <Button color="error" variant="contained" onClick={onConfirm}>
-          Xoá
+          {t('common:buttons.delete')}
         </Button>
       </DialogActions>
     </Dialog>
   );
 };
-

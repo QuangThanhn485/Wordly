@@ -1,0 +1,19 @@
+{
+  "home": "Home",
+  "vocabulary": "Vocabulary",
+  "train": "Train",
+  "result": "Result",
+  "data": "Data",
+  "flashcardsReading": "Flashcards Reading",
+  "flashcardsListening": "Flashcards Listening",
+  "readWrite": "Read & Write",
+  "listenWrite": "Listen & Write",
+  "tooltips": {
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar",
+    "switchToDark": "Switch to dark mode",
+    "switchToLight": "Switch to light mode",
+    "switchLanguage": "Switch language"
+  }
+}
+

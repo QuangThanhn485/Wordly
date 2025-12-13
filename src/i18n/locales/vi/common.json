@@ -1,0 +1,66 @@
+{
+  "buttons": {
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "delete": "Xóa",
+    "create": "Tạo",
+    "edit": "Sửa",
+    "close": "Đóng",
+    "confirm": "Xác nhận",
+    "add": "Thêm",
+    "update": "Cập nhật",
+    "rename": "Đổi tên",
+    "copy": "Sao chép",
+    "cut": "Cắt",
+    "paste": "Dán",
+    "back": "Quay lại",
+    "next": "Tiếp theo",
+    "previous": "Trước đó",
+    "start": "Bắt đầu",
+    "finish": "Hoàn thành",
+    "reset": "Đặt lại",
+    "retry": "Thử lại",
+    "continue": "Tiếp tục",
+    "skip": "Bỏ qua",
+    "viewVocabulary": "Kho từ vựng",
+    "viewResults": "Xem kết quả"
+  },
+  "labels": {
+    "search": "Tìm kiếm",
+    "loading": "Đang tải...",
+    "noData": "Không có dữ liệu",
+    "empty": "Trống",
+    "all": "Tất cả",
+    "selected": "Đã chọn",
+    "total": "Tổng",
+    "name": "Tên",
+    "type": "Loại",
+    "actions": "Hành động",
+    "status": "Trạng thái",
+    "date": "Ngày",
+    "word": "Từ",
+    "meaning": "Nghĩa",
+    "pronunciation": "Phát âm",
+    "example": "Ví dụ",
+    "note": "Ghi chú",
+    "file": "Tệp",
+    "folder": "Thư mục"
+  },
+  "messages": {
+    "success": "Thành công!",
+    "error": "Đã xảy ra lỗi",
+    "saved": "Đã lưu thành công",
+    "deleted": "Đã xóa thành công",
+    "created": "Đã tạo thành công",
+    "updated": "Đã cập nhật thành công",
+    "copied": "Đã sao chép vào clipboard",
+    "confirmDelete": "Bạn có chắc chắn muốn xóa?"
+  },
+  "validation": {
+    "required": "Trường này là bắt buộc",
+    "minLength": "Tối thiểu {{min}} ký tự",
+    "maxLength": "Tối đa {{max}} ký tự",
+    "invalidFormat": "Định dạng không hợp lệ"
+  }
+}
+

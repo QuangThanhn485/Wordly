@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -146,6 +147,7 @@ const saveViewModeToStorage = (mode: 'tree' | 'grid') => {
 // ===== Main Component =====
 const VocabularyPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation('vocabulary');
   
   // Lazy load vocabMap - start empty, load files on-demand
   const [vocabMap, setVocabMap] = useState<Record<string, VocabItem[]>>({});
@@ -333,9 +335,7 @@ const VocabularyPage: React.FC = () => {
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const [newFolderOpen, setNewFolderOpen] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
   const [newFileOpen, setNewFileOpen] = useState(false);
-  const [newFileName, setNewFileName] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<null | { path: string[]; type: 'folder' | 'file'; label: string; fileNames: string[] }>(null);
   // Vocab delete confirmation
@@ -471,10 +471,10 @@ const VocabularyPage: React.FC = () => {
 
   const handleSaveVocab = useCallback((data: VocabItem) => {
     if (!selectedFile || !data.word.trim()) {
-      showSnack('Vui lòng nhập từ vựng.', 'warning');
+      showSnack(t('messages.enterWord'), 'warning');
       return;
     }
-    
+
     const fileName = selectedFile.name;
     updateVocabMap((prev) => {
       const vocabList = prev[fileName] || [];
@@ -482,7 +482,6 @@ const VocabularyPage: React.FC = () => {
         const newList = [...vocabList, { ...data }];
         return { ...prev, [fileName]: newList };
       } else {
-        // edit mode
         if (vocabFormIndex === null) return prev;
         const newList = [...vocabList];
         newList[vocabFormIndex] = { ...data };
@@ -490,8 +489,8 @@ const VocabularyPage: React.FC = () => {
       }
     });
     setVocabFormOpen(false);
-    showSnack(vocabFormMode === 'add' ? 'Đã thêm từ vựng.' : 'Đã cập nhật từ vựng.');
-  }, [selectedFile, vocabFormMode, vocabFormIndex, updateVocabMap]);
+    showSnack(vocabFormMode === 'add' ? t('messages.vocabAdded') : t('messages.vocabUpdated'));
+  }, [selectedFile, vocabFormMode, vocabFormIndex, updateVocabMap, t]);
 
   const handleDeleteSelectedVocabs = useCallback(() => {
     if (!selectedFile || selectedVocabs.size === 0) return;
@@ -513,7 +512,7 @@ const VocabularyPage: React.FC = () => {
     
     setSelectedVocabs(new Set());
     setVocabDeleteOpen(false);
-    showSnack(`Đã xóa ${wordsToDelete.length} từ vựng.`);
+        showSnack(t('messages.vocabDeletedCount', { count: wordsToDelete.length }));
   }, [selectedFile, selectedVocabs, vocabMap, updateVocabMap]);
 
   const handleToggleVocabSelection = useCallback((word: string) => {
@@ -765,7 +764,7 @@ const VocabularyPage: React.FC = () => {
       if (selectedPath && selectedPath.join('/') === menu.path.join('/')) setSelectedPath(menu.path);
     }
     setRenameOpen(false);
-    showSnack('Đã đổi tên.');
+    showSnack(t('messages.renamed'));
   }, [menu, renameValue, treeIndex, vocabMap, selectedPath, updateTree, updateVocabMap, tree]);
 
   const startNewSubfolder = useCallback(() => {
@@ -774,24 +773,23 @@ const VocabularyPage: React.FC = () => {
     // Use index for faster lookup
     const located = treeIndex.findByPath(targetPath);
     if (!located || located.node.kind !== 'folder') return;
-    setNewFolderName('Thư mục mới');
     setNewFolderOpen(true);
   }, [menu, treeIndex]);
 
-  const confirmNewSubfolder = useCallback(() => {
+  const confirmNewSubfolder = useCallback((folderName: string) => {
     if (!menu) return;
     const targetPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
     updateTree((prevTree) => {
       const copy = structuredClone(prevTree);
       const located = findNodeByPath(copy, targetPath);
       if (!located || located.node.kind !== 'folder') return prevTree;
-      const name = ensureUniqueName(located.node.children, newFolderName.trim() || 'Thư mục mới', true);
+      const name = ensureUniqueName(located.node.children, folderName || 'Thư mục mới', true);
       located.node.children.push({ kind: 'folder', label: name, id: genId(), children: [] });
       return copy;
     });
     setNewFolderOpen(false);
-    showSnack('Đã tạo thư mục con.');
-  }, [menu, newFolderName, updateTree]);
+    showSnack(t('messages.folderCreated'));
+  }, [menu, updateTree]);
 
   const startNewFile = useCallback(() => {
     if (!menu) return;
@@ -799,21 +797,19 @@ const VocabularyPage: React.FC = () => {
     // Use index for faster lookup
     const located = treeIndex.findByPath(targetPath);
     if (!located || located.node.kind !== 'folder') return;
-    setNewFileName('từ_vựng_mới.txt');
     setNewFileOpen(true);
   }, [menu, treeIndex]);
 
-  const confirmNewFile = useCallback(() => {
+  const confirmNewFile = useCallback((fileName: string) => {
     if (!menu) return;
     const targetPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
-    const fileName = newFileName.trim() || 'từ_vựng_mới.txt';
     // Ensure .txt extension
     let baseFileName = fileName.endsWith('.txt') ? fileName : `${fileName}.txt`;
     
     // Get current tree to determine unique file name - use index for faster lookup
     const located = treeIndex.findByPath(targetPath);
     if (!located || located.node.kind !== 'folder') {
-      showSnack('Không tìm thấy thư mục đích.', 'error');
+            showSnack(t('messages.folderNotFound'), 'error');
       return;
     }
     const finalFileName = ensureUniqueName(located.node.children, baseFileName, false);
@@ -831,9 +827,8 @@ const VocabularyPage: React.FC = () => {
     updateVocabMap((m) => ({ ...m, [finalFileName]: [] }));
     
     setNewFileOpen(false);
-    setNewFileName('');
-    showSnack(`Đã tạo file "${finalFileName}".`);
-  }, [menu, newFileName, tree, updateTree, updateVocabMap, treeIndex]);
+    showSnack(t('messages.fileCreated', { name: finalFileName }));
+  }, [menu, treeIndex, updateTree, updateVocabMap]);
 
   const startImport = useCallback(() => {
     if (!menu) return;
@@ -853,7 +848,7 @@ const VocabularyPage: React.FC = () => {
           
           // Validate import data structure
           if (!importData.vocabulary || !Array.isArray(importData.vocabulary)) {
-            showSnack('File import không đúng định dạng JSON.', 'error');
+                        showSnack(t('messages.importInvalidJson'), 'error');
             return;
           }
           
@@ -865,7 +860,7 @@ const VocabularyPage: React.FC = () => {
           // Get current tree to determine final file name - use index for faster lookup
           const located = treeIndex.findByPath(targetFolderPath);
           if (!located || located.node.kind !== 'folder') {
-            showSnack('Không tìm thấy thư mục đích.', 'error');
+            showSnack(t('messages.folderNotFound'), 'error');
             return;
           }
           const finalFileName = ensureUniqueName(located.node.children, base, false);
@@ -880,11 +875,11 @@ const VocabularyPage: React.FC = () => {
           });
           // Import vocabulary data - always save the items array (even if empty)
           updateVocabMap((m) => ({ ...m, [finalFileName]: items }));
-          showSnack(`Đã nhập tệp "${finalFileName}" với ${items.length} từ vựng.`);
+                    showSnack(t('messages.importFileSuccess', { name: finalFileName, count: items.length }));
           closeMenu();
         } catch (err) {
           console.error(err);
-          showSnack('Không thể đọc file. Đảm bảo file đúng định dạng JSON.', 'error');
+          showSnack(t('messages.readFileFailed'), 'error');
         }
       };
       reader.readAsText(file);
@@ -902,7 +897,7 @@ const VocabularyPage: React.FC = () => {
     const items = vocabMap[fileName] || [];
     
     if (items.length === 0) {
-      showSnack('File không có từ vựng để export.', 'warning');
+            showSnack(t('messages.noVocabToExport'), 'warning');
       return;
     }
     
@@ -928,7 +923,7 @@ const VocabularyPage: React.FC = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-    showSnack(`Đã export tệp "${fileName}".`);
+        showSnack(t('messages.exportFileSuccess', { name: fileName }));
     closeMenu();
   }, [menu, tree, vocabMap, closeMenu, treeIndex]);
 
@@ -974,7 +969,7 @@ const VocabularyPage: React.FC = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-    showSnack(`Đã export thư mục "${folderName}" (${allFileNames.length} files).`);
+        showSnack(t('messages.exportFolderSuccess', { name: folderName, count: allFileNames.length }));
     closeMenu();
   }, [menu, tree, vocabMap, closeMenu, treeIndex]);
 
@@ -997,7 +992,7 @@ const VocabularyPage: React.FC = () => {
           
           // Validate import data structure
           if (!importData.folderStructure || !importData.vocabularyData) {
-            showSnack('File import không đúng định dạng.', 'error');
+            showSnack(t('messages.importInvalidFormat'), 'error');
             return;
           }
           
@@ -1009,7 +1004,7 @@ const VocabularyPage: React.FC = () => {
           const located = treeIndex.findByPath(targetFolderPath);
           
           if (!located || located.node.kind !== 'folder') {
-            showSnack('Không tìm thấy thư mục đích.', 'error');
+            showSnack(t('messages.folderNotFound'), 'error');
             return;
           }
           
@@ -1085,11 +1080,11 @@ const VocabularyPage: React.FC = () => {
           
           // Count total vocabulary words
           const totalWords = Object.values(folderVocabData).reduce((sum, vocab) => sum + vocab.length, 0);
-          showSnack(`Đã import thư mục "${uniqueFolderName}" (${allFiles.length} files, ${totalWords} từ vựng).`);
+                    showSnack(t('messages.importFolderSuccess', { name: uniqueFolderName, fileCount: allFiles.length, wordCount: totalWords }));
           closeMenu();
         } catch (err) {
           console.error(err);
-          showSnack('Không thể đọc file. Đảm bảo file đúng định dạng JSON.', 'error');
+          showSnack(t('messages.readFileFailed'), 'error');
         }
       };
       reader.readAsText(file);
@@ -1103,7 +1098,7 @@ const VocabularyPage: React.FC = () => {
     const located = treeIndex.findByPath(menu.path);
     if (!located) return;
     setClip({ mode: 'copy', node: cloneNode(located.node) });
-    showSnack('Đã sao chép.');
+    showSnack(t('messages.copied'));
     closeMenu();
   }, [menu, treeIndex, closeMenu]);
 
@@ -1121,7 +1116,7 @@ const VocabularyPage: React.FC = () => {
       setSelectedPath(null);
     }
     setClip({ mode: 'cut', node: res.removed });
-    showSnack('Đã cắt. Hãy chọn thư mục đích và Dán.');
+    showSnack(t('messages.cutInstruction'));
     closeMenu();
   }, [menu, tree, treeIndex, selectedPath, closeMenu, updateTree]);
 
@@ -1162,7 +1157,7 @@ const VocabularyPage: React.FC = () => {
     });
     
     setClip(null);
-    showSnack('Đã dán.');
+    showSnack(t('messages.pasted'));
     closeMenu();
   }, [menu, clip, vocabMap, closeMenu, updateTree, updateVocabMap]);
 
@@ -1172,7 +1167,7 @@ const VocabularyPage: React.FC = () => {
     
     // Prevent deleting root folder
     if (menu.path.length === 1 && menu.type === 'folder') {
-      showSnack('Không thể xóa thư mục gốc!', 'error');
+            showSnack(t('messages.cannotDeleteRoot'), 'error');
       closeMenu();
       return;
     }
@@ -1204,7 +1199,7 @@ const VocabularyPage: React.FC = () => {
     }
     setConfirmOpen(false);
     setPendingDelete(null);
-    showSnack('Đã xoá.');
+    showSnack(t('messages.deleted'));
   }, [pendingDelete, tree, selectedPath, updateTree, updateVocabMap]);
 
   // ===== Render =====
@@ -1772,10 +1767,10 @@ const VocabularyPage: React.FC = () => {
             >
               <FileIcon size={56} style={{ color: 'gray', marginBottom: 12 }} />
               <Typography variant={isSmDown ? 'subtitle1' : 'h6'} color="text.secondary" sx={{ mb: 1 }}>
-                Chưa có tệp nào được chọn
+                {t('table.noFileSelectedTitle')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Vui lòng chọn một tệp từ danh sách bên trái để xem nội dung
+                {t('table.noFileSelectedDescription')}
               </Typography>
             </Box>
           )}
@@ -1851,47 +1846,47 @@ const VocabularyPage: React.FC = () => {
           <Divider key="divider-2" />,
           <MenuItem key="rename" onClick={startRename}>
               <ListItemIcon><RenameIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>Đổi tên</ListItemText>
+              <ListItemText primary={t('contextMenu.rename')} />
           </MenuItem>,
           <MenuItem key="cut" onClick={doCut}>
               <ListItemIcon><CutIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>Cắt</ListItemText>
+              <ListItemText primary={t('contextMenu.cut')} />
           </MenuItem>,
           <MenuItem key="copy" onClick={doCopy}>
               <ListItemIcon><CopyIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>Sao chép</ListItemText>
+              <ListItemText primary={t('contextMenu.copy')} />
           </MenuItem>,
           <MenuItem key="paste" disabled={!clip} onClick={doPaste}>
               <ListItemIcon><PasteIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>Dán</ListItemText>
+              <ListItemText primary={t('contextMenu.paste')} />
           </MenuItem>,
           <Divider key="divider-3" />,
           <MenuItem key="delete" onClick={startDelete}>
               <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>Xoá thư mục</ListItemText>
+              <ListItemText primary={t('contextMenu.deleteFolder')} />
           </MenuItem>,
         ] : [
           <MenuItem key="export-file" onClick={handleExportFile}>
               <ListItemIcon><ExportIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Export file (.json)</ListItemText>
+            <ListItemText primary={t('contextMenu.exportFile')} />
           </MenuItem>,
           <Divider key="divider-1" />,
           <MenuItem key="rename" onClick={startRename}>
               <ListItemIcon><RenameIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>Đổi tên</ListItemText>
+              <ListItemText primary={t('contextMenu.rename')} />
           </MenuItem>,
           <MenuItem key="cut" onClick={doCut}>
               <ListItemIcon><CutIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>Cắt</ListItemText>
+              <ListItemText primary={t('contextMenu.cut')} />
           </MenuItem>,
           <MenuItem key="copy" onClick={doCopy}>
               <ListItemIcon><CopyIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>Sao chép</ListItemText>
+              <ListItemText primary={t('contextMenu.copy')} />
           </MenuItem>,
           <Divider key="divider-2" />,
           <MenuItem key="delete" onClick={startDelete}>
               <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>Xoá file</ListItemText>
+              <ListItemText primary={t('contextMenu.deleteFile')} />
           </MenuItem>,
         ]}
       </Menu>
@@ -1907,16 +1902,12 @@ const VocabularyPage: React.FC = () => {
 
       <NewFolderDialog
         open={newFolderOpen}
-        value={newFolderName}
-        onChange={setNewFolderName}
         onClose={() => setNewFolderOpen(false)}
         onConfirm={confirmNewSubfolder}
       />
 
       <NewFileDialog
         open={newFileOpen}
-        value={newFileName}
-        onChange={setNewFileName}
         onClose={() => setNewFileOpen(false)}
         onConfirm={confirmNewFile}
       />
@@ -1984,3 +1975,11 @@ const VocabularyPage: React.FC = () => {
 
 export default VocabularyPage;
  
+
+
+
+
+
+
+
+
