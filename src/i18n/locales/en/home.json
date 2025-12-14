@@ -1,0 +1,54 @@
+{
+  "title": "Wordly",
+  "subtitle": "Smart English vocabulary learning app with 4 diverse practice modes",
+  "buttons": {
+    "vocabulary": "Vocabulary",
+    "viewResults": "View Results"
+  },
+  "stats": {
+    "totalWords": "Total Words",
+    "learning": "Learning",
+    "files": "Vocabulary Files",
+    "created": "Created",
+    "wordsToReview": "Words to Review",
+    "mistakeAtLeastOnce": "Made mistake at least once",
+    "streak": "Streak",
+    "keepPracticing": "Keep practicing!",
+    "startNow": "Start now"
+  },
+  "trainingModes": {
+    "title": "Training Modes",
+    "flashcardsReading": {
+      "title": "Flashcards Reading",
+      "description": "Learn vocabulary through visual flashcards"
+    },
+    "flashcardsListening": {
+      "title": "Flashcards Listening",
+      "description": "Practice listening and recognizing vocabulary"
+    },
+    "readWrite": {
+      "title": "Read & Write",
+      "description": "Read meaning and write the English word"
+    },
+    "listenWrite": {
+      "title": "Listen & Write",
+      "description": "Listen to pronunciation and write spelling"
+    }
+  },
+  "features": {
+    "title": "Key Features",
+    "vocabManagement": {
+      "title": "Vocabulary Management",
+      "description": "Organize vocabulary by folders, easy import/export"
+    },
+    "progressTracking": {
+      "title": "Progress Tracking",
+      "description": "View detailed mistakes, statistics by each mode"
+    },
+    "pronunciation": {
+      "title": "Native Pronunciation",
+      "description": "Listen to standard English pronunciation with multiple voices"
+    }
+  }
+}
+

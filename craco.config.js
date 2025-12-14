@@ -20,5 +20,35 @@ module.exports = {
       return webpackConfig;
     },
   },
-};
+  devServer: (devServerConfig) => {
+    const originalSetupMiddlewares = devServerConfig.setupMiddlewares;
+    const beforeSetup = devServerConfig.onBeforeSetupMiddleware;
+    const afterSetup = devServerConfig.onAfterSetupMiddleware;
 
+    if (beforeSetup || afterSetup) {
+      devServerConfig.setupMiddlewares = (middlewares, devServer) => {
+        if (typeof beforeSetup === 'function') {
+          beforeSetup(devServer);
+        }
+
+        if (typeof originalSetupMiddlewares === 'function') {
+          const maybeMiddlewares = originalSetupMiddlewares(middlewares, devServer);
+          if (Array.isArray(maybeMiddlewares)) {
+            middlewares = maybeMiddlewares;
+          }
+        }
+
+        if (typeof afterSetup === 'function') {
+          afterSetup(devServer);
+        }
+
+        return middlewares;
+      };
+
+      delete devServerConfig.onBeforeSetupMiddleware;
+      delete devServerConfig.onAfterSetupMiddleware;
+    }
+
+    return devServerConfig;
+  },
+};

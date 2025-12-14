@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 interface RenameDialogProps {
   open: boolean;
@@ -10,6 +11,7 @@ interface RenameDialogProps {
 }
 
 export const RenameDialog: React.FC<RenameDialogProps> = React.memo(({ open, value, onChange, onClose, onConfirm }) => {
+  const { t } = useTranslation('vocabulary');
   // Use local state for instant input response
   const [localValue, setLocalValue] = React.useState(value);
   
@@ -36,22 +38,22 @@ export const RenameDialog: React.FC<RenameDialogProps> = React.memo(({ open, val
   
   return (
     <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Đổi tên</DialogTitle>
+      <DialogTitle>{t('dialogs.rename.title')}</DialogTitle>
       <DialogContent>
         <TextField
           autoFocus
           fullWidth
           margin="dense"
-          label="Tên"
+          label={t('dialogs.rename.label')}
           value={localValue}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Hủy</Button>
+        <Button onClick={onClose}>{t('common:buttons.cancel')}</Button>
         <Button variant="contained" onClick={handleConfirm}>
-          Lưu
+          {t('common:buttons.save')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -59,4 +61,3 @@ export const RenameDialog: React.FC<RenameDialogProps> = React.memo(({ open, val
 });
 
 RenameDialog.displayName = 'RenameDialog';
-

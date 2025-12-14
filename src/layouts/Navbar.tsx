@@ -35,10 +35,12 @@ import {
   Mic 
 } from 'lucide-react';
 import { Link as RouterLink, useLocation, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useThemeMode } from 'contexts/ThemeContext';
 import { loadTrainingSession } from 'features/train/train-start/sessionStorage';
 import { loadTrainingSession as loadRWTrainingSession } from 'features/train/train-read-write/sessionStorage';
 import { Chip } from '@mui/material';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const drawerWidth = 240;
 const collapsedWidth = 72;
@@ -105,6 +107,7 @@ ListItemLink.displayName = 'ListItemLink';
 
 const Navbar: React.FC = () => {
   const theme = useTheme();
+  const { t } = useTranslation('navbar');
   const { toggleTheme, mode } = useThemeMode();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -404,7 +407,7 @@ const Navbar: React.FC = () => {
                   backgroundColor: theme.palette.action.hover,
                 },
               }}
-              aria-label={open ? 'Collapse sidebar' : 'Expand sidebar'}
+              aria-label={open ? t('tooltips.collapseSidebar') : t('tooltips.expandSidebar')}
             >
               {open ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
             </IconButton>
@@ -457,14 +460,14 @@ const Navbar: React.FC = () => {
             selected={isActive('/')}
             sx={listItemStyle(open, isActive('/'), theme)}
           >
-            <Tooltip title="Home" placement="right" disableHoverListener={open}>
+            <Tooltip title={t('home')} placement="right" disableHoverListener={open}>
               <ListItemIcon sx={iconStyle(open)}>
                 <Home size={20} />
               </ListItemIcon>
             </Tooltip>
             {open && (
               <ListItemText 
-                primary="Home" 
+                primary={t('home')} 
                 primaryTypographyProps={{ 
                   fontWeight: 500,
                   fontSize: { xs: '0.9375rem', sm: '0.875rem' }, // 15px on mobile, 14px on desktop
@@ -478,14 +481,14 @@ const Navbar: React.FC = () => {
             selected={isActive('/vocabulary')}
             sx={listItemStyle(open, isActive('/vocabulary'), theme)}
           >
-            <Tooltip title="Từ vựng" placement="right" disableHoverListener={open}>
+            <Tooltip title={t('vocabulary')} placement="right" disableHoverListener={open}>
               <ListItemIcon sx={iconStyle(open)}>
                 <Library size={20} />
               </ListItemIcon>
             </Tooltip>
             {open && (
               <ListItemText
-                primary="Vocabulary"
+                primary={t('vocabulary')}
                 primaryTypographyProps={{ 
                   fontWeight: 500,
                   fontSize: { xs: '0.9375rem', sm: '0.875rem' },
@@ -499,7 +502,7 @@ const Navbar: React.FC = () => {
             selected={isActive('/train')}
             sx={listItemStyle(open, isActive('/train'), theme)}
           >
-            <Tooltip title="Train" placement="right" disableHoverListener={open}>
+            <Tooltip title={t('train')} placement="right" disableHoverListener={open}>
               <ListItemIcon sx={iconStyle(open)}>
                 <BookOpen size={20} />
               </ListItemIcon>
@@ -516,7 +519,7 @@ const Navbar: React.FC = () => {
                           fontSize: { xs: '0.9375rem', sm: '0.875rem' },
                         }}
                       >
-                        Train
+                        {t('train')}
                       </Typography>
                       {trainFileName && (
                         <Chip
@@ -564,7 +567,7 @@ const Navbar: React.FC = () => {
                 </ListItemIcon>
                 {open && (
                   <ListItemText 
-                    primary="Flashcards Reading" 
+                    primary={t('flashcardsReading')} 
                     primaryTypographyProps={{ fontSize: { xs: '0.875rem', sm: '0.8125rem' } }}
                   />
                 )}
@@ -585,7 +588,7 @@ const Navbar: React.FC = () => {
                 </ListItemIcon>
                 {open && (
                   <ListItemText 
-                    primary="Flashcards Listening" 
+                    primary={t('flashcardsListening')} 
                     primaryTypographyProps={{ fontSize: { xs: '0.875rem', sm: '0.8125rem' } }}
                   />
                 )}
@@ -606,7 +609,7 @@ const Navbar: React.FC = () => {
                 </ListItemIcon>
                 {open && (
                   <ListItemText 
-                    primary="Read & Write" 
+                    primary={t('readWrite')} 
                     primaryTypographyProps={{ fontSize: { xs: '0.875rem', sm: '0.8125rem' } }}
                   />
                 )}
@@ -627,7 +630,7 @@ const Navbar: React.FC = () => {
                 </ListItemIcon>
                 {open && (
                   <ListItemText 
-                    primary="Listen & Write" 
+                    primary={t('listenWrite')} 
                     primaryTypographyProps={{ fontSize: { xs: '0.875rem', sm: '0.8125rem' } }}
                   />
                 )}
@@ -641,14 +644,14 @@ const Navbar: React.FC = () => {
             selected={isActive('/train/result')}
             sx={listItemStyle(open, isActive('/train/result'), theme)}
           >
-            <Tooltip title="Result" placement="right" disableHoverListener={open}>
+            <Tooltip title={t('result')} placement="right" disableHoverListener={open}>
               <ListItemIcon sx={iconStyle(open)}>
                 <BarChart3 size={20} />
               </ListItemIcon>
             </Tooltip>
             {open && (
               <ListItemText 
-                primary="Result" 
+                primary={t('result')} 
                 primaryTypographyProps={{ 
                   fontWeight: 500,
                   fontSize: { xs: '0.9375rem', sm: '0.875rem' },
@@ -663,14 +666,14 @@ const Navbar: React.FC = () => {
             selected={isActive('/data')}
             sx={listItemStyle(open, isActive('/data'), theme)}
           >
-            <Tooltip title="Data" placement="right" disableHoverListener={open}>
+            <Tooltip title={t('data')} placement="right" disableHoverListener={open}>
               <ListItemIcon sx={iconStyle(open)}>
                 <Library size={20} />
               </ListItemIcon>
             </Tooltip>
             {open && (
               <ListItemText 
-                primary="Data" 
+                primary={t('data')} 
                 primaryTypographyProps={{ 
                   fontWeight: 500,
                   fontSize: '0.875rem',
@@ -681,9 +684,9 @@ const Navbar: React.FC = () => {
         </List>
 
         <Box sx={{ mt: 'auto' }}>
-
-          <Box sx={{ p: 1, display: 'flex', justifyContent: 'center' }}>
-            <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
+          <Box sx={{ p: 1, display: 'flex', justifyContent: 'center', gap: 0.5 }}>
+            <LanguageSwitcher />
+            <Tooltip title={mode === 'dark' ? t('tooltips.switchToLight') : t('tooltips.switchToDark')}>
               <IconButton
                 onClick={toggleTheme}
                 size="small"

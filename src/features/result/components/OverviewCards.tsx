@@ -2,6 +2,7 @@
 import React from 'react';
 import { Box, Card, CardContent, Typography, useTheme } from '@mui/material';
 import { TrendingUp, AlertCircle, Star, BarChart3 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { type OverviewStats } from '../utils/dataTransform';
 
 interface OverviewCardsProps {
@@ -10,32 +11,33 @@ interface OverviewCardsProps {
 
 export const OverviewCards: React.FC<OverviewCardsProps> = ({ stats }) => {
   const theme = useTheme();
+  const { t } = useTranslation('result');
 
   const cards = [
     {
-      title: 'Tổng số từ đã sai',
+      title: t('overview.uniqueWords'),
       value: stats.totalWords,
       icon: <AlertCircle size={24} />,
       color: theme.palette.error.main,
       bgColor: theme.palette.error.light + '20',
     },
     {
-      title: 'Tổng số lần sai',
+      title: t('overview.totalMistakes'),
       value: stats.totalMistakes,
       icon: <TrendingUp size={24} />,
       color: theme.palette.warning.main,
       bgColor: theme.palette.warning.light + '20',
     },
     {
-      title: 'Từ sai nhiều nhất',
+      title: t('overview.mostMissed'),
       value: stats.mostMistakenWord?.word || '—',
-      subtitle: stats.mostMistakenWord ? `${stats.mostMistakenWord.count} lần` : '',
+      subtitle: stats.mostMistakenWord ? `${stats.mostMistakenWord.count} ${t('overview.times')}` : '',
       icon: <Star size={24} />,
       color: theme.palette.info.main,
       bgColor: theme.palette.info.light + '20',
     },
     {
-      title: 'Số file có lỗi',
+      title: t('card.file'),
       value: Object.keys(stats.mistakesByFile).length,
       icon: <BarChart3 size={24} />,
       color: theme.palette.success.main,
@@ -95,7 +97,7 @@ export const OverviewCards: React.FC<OverviewCardsProps> = ({ stats }) => {
                 fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
               }}
             >
-              {typeof card.value === 'number' ? card.value.toLocaleString('vi-VN') : card.value}
+              {typeof card.value === 'number' ? card.value.toLocaleString() : card.value}
             </Typography>
             {card.subtitle && (
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -118,4 +120,3 @@ export const OverviewCards: React.FC<OverviewCardsProps> = ({ stats }) => {
     </Box>
   );
 };
-

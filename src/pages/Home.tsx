@@ -26,6 +26,7 @@ import {
   Volume2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { loadVocabCounts, loadTreeFromStorage } from '@/features/vocabulary/utils/storageUtils';
 import { getAllFileNames } from '@/features/vocabulary/utils/treeUtils';
 import { loadMistakesStats } from '@/features/train/train-read-write/mistakesStorage';
@@ -145,6 +146,7 @@ const TrainingModeCard: React.FC<TrainingModeCardProps> = ({
 const Home: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { t } = useTranslation('home');
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [stats, setStats] = useState({
@@ -197,29 +199,29 @@ const Home: React.FC = () => {
 
   const trainingModes = [
     {
-      title: 'Flashcards Reading',
-      description: 'Học từ vựng qua thẻ flashcard trực quan',
+      title: t('trainingModes.flashcardsReading.title'),
+      description: t('trainingModes.flashcardsReading.description'),
       icon: <BookOpen size={28} />,
       color: theme.palette.primary.main,
       route: '/vocabulary',
     },
     {
-      title: 'Flashcards Listening',
-      description: 'Luyện nghe và nhận diện từ vựng',
+      title: t('trainingModes.flashcardsListening.title'),
+      description: t('trainingModes.flashcardsListening.description'),
       icon: <Headphones size={28} />,
       color: theme.palette.info.main,
       route: '/vocabulary',
     },
     {
-      title: 'Read & Write',
-      description: 'Đọc nghĩa và viết từ tiếng Anh',
+      title: t('trainingModes.readWrite.title'),
+      description: t('trainingModes.readWrite.description'),
       icon: <Edit size={28} />,
       color: theme.palette.success.main,
       route: '/vocabulary',
     },
     {
-      title: 'Listen & Write',
-      description: 'Nghe phát âm và viết chính tả',
+      title: t('trainingModes.listenWrite.title'),
+      description: t('trainingModes.listenWrite.description'),
       icon: <Mic size={28} />,
       color: theme.palette.warning.main,
       route: '/vocabulary',
@@ -251,14 +253,14 @@ const Home: React.FC = () => {
               mb: 2,
             }}
           >
-            Wordly
+            {t('title')}
           </Typography>
           <Typography
             variant={isMobile ? 'h6' : 'h5'}
             color="text.secondary"
             sx={{ mb: 3, maxWidth: 600, mx: 'auto' }}
           >
-            Ứng dụng học từ vựng tiếng Anh thông minh với 4 chế độ luyện tập đa dạng
+            {t('subtitle')}
           </Typography>
           <Stack direction="row" spacing={2} justifyContent="center" flexWrap="wrap" gap={2}>
             <Button
@@ -268,7 +270,7 @@ const Home: React.FC = () => {
               onClick={() => navigate('/vocabulary')}
               sx={{ borderRadius: 2 }}
             >
-              Kho từ vựng
+              {t('buttons.vocabulary')}
             </Button>
             <Button
               variant="outlined"
@@ -277,7 +279,7 @@ const Home: React.FC = () => {
               onClick={() => navigate('/train/result')}
               sx={{ borderRadius: 2 }}
             >
-              Xem kết quả
+              {t('buttons.viewResults')}
             </Button>
           </Stack>
         </Box>
@@ -296,32 +298,32 @@ const Home: React.FC = () => {
           }}
         >
           <StatCard
-            title="Tổng số từ"
+            title={t('stats.totalWords')}
             value={stats.totalWords.toLocaleString()}
             icon={<BookOpen size={32} />}
             color={theme.palette.primary.main}
-            subtitle="Đang học"
+            subtitle={t('stats.learning')}
           />
           <StatCard
-            title="File từ vựng"
+            title={t('stats.files')}
             value={stats.totalFiles}
             icon={<Library size={32} />}
             color={theme.palette.info.main}
-            subtitle="Đã tạo"
+            subtitle={t('stats.created')}
           />
           <StatCard
-            title="Từ cần ôn"
+            title={t('stats.wordsToReview')}
             value={stats.uniqueWords}
             icon={<Target size={32} />}
             color={theme.palette.warning.main}
-            subtitle="Từ sai ít nhất 1 lần"
+            subtitle={t('stats.mistakeAtLeastOnce')}
           />
           <StatCard
-            title="Streak"
+            title={t('stats.streak')}
             value={stats.totalMistakes > 0 ? '🔥' : '✨'}
             icon={<Flame size={32} />}
             color={theme.palette.error.main}
-            subtitle={stats.totalMistakes > 0 ? 'Tiếp tục luyện tập!' : 'Bắt đầu ngay'}
+            subtitle={stats.totalMistakes > 0 ? t('stats.keepPracticing') : t('stats.startNow')}
           />
         </Box>
 
@@ -330,7 +332,7 @@ const Home: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
             <Zap size={28} color={theme.palette.primary.main} />
             <Typography variant={isMobile ? 'h5' : 'h4'} fontWeight={700}>
-              Chế độ luyện tập
+              {t('trainingModes.title')}
             </Typography>
           </Box>
           <Box
@@ -366,7 +368,7 @@ const Home: React.FC = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
               <TrendingUp size={28} color={theme.palette.primary.main} />
               <Typography variant={isMobile ? 'h6' : 'h5'} fontWeight={700}>
-                Tính năng nổi bật
+                {t('features.title')}
               </Typography>
             </Box>
             <Box
@@ -393,10 +395,10 @@ const Home: React.FC = () => {
                 </Box>
                 <Box>
                   <Typography variant="h6" fontWeight={600} gutterBottom>
-                    Quản lý từ vựng
+                    {t('features.vocabManagement.title')}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Tổ chức từ vựng theo folder, import/export dễ dàng
+                    {t('features.vocabManagement.description')}
                   </Typography>
                 </Box>
               </Box>
@@ -414,10 +416,10 @@ const Home: React.FC = () => {
                 </Box>
                 <Box>
                   <Typography variant="h6" fontWeight={600} gutterBottom>
-                    Theo dõi tiến độ
+                    {t('features.progressTracking.title')}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Xem chi tiết lỗi sai, thống kê kết quả theo từng chế độ
+                    {t('features.progressTracking.description')}
                   </Typography>
                 </Box>
               </Box>
@@ -435,10 +437,10 @@ const Home: React.FC = () => {
                 </Box>
                 <Box>
                   <Typography variant="h6" fontWeight={600} gutterBottom>
-                    Phát âm chuẩn
+                    {t('features.pronunciation.title')}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Nghe phát âm tiếng Anh chuẩn với nhiều giọng đọc
+                    {t('features.pronunciation.description')}
                   </Typography>
                 </Box>
               </Box>
