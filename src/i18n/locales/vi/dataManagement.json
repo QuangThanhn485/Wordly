@@ -1,0 +1,102 @@
+{
+  "title": "Quản lý Dữ liệu",
+  "stats": {
+    "vocabFiles": "Tổng số file từ vựng",
+    "vocabWords": "Tổng số từ vựng",
+    "backupStatus": "Trạng thái Backup",
+    "storageUsage": "Dung lượng sử dụng",
+    "noBackup": "Chưa có backup",
+    "lastBackup": "Backup gần nhất"
+  },
+  "backup": {
+    "title": "Backup Dữ liệu",
+    "subtitle": "Backup, khôi phục và quản lý dữ liệu ứng dụng",
+    "description": "Sao lưu toàn bộ dữ liệu vào file",
+    "warning": "Dữ liệu hiện tại sẽ bị ghi đè khi khôi phục",
+    "create": "Tạo Backup",
+    "createdAt": "Backup gần nhất: {{timestamp}}"
+  },
+  "restore": {
+    "title": "Khôi phục Dữ liệu",
+    "description": "Import dữ liệu từ file backup",
+    "button": "Khôi phục Dữ liệu",
+    "fileLabel": "Chọn File Backup"
+  },
+  "delete": {
+    "title": "Xóa Dữ liệu",
+    "description": "Xóa các nhóm dữ liệu đã chọn",
+    "deleteReports": "Xóa Báo cáo Lỗi",
+    "deleteReportsDescription": "Xóa báo cáo lỗi theo khoảng thời gian hoặc toàn bộ",
+    "deleteVocab": "Xóa Từ vựng",
+    "deleteVocabDescription": "Xóa toàn bộ file và thư mục từ vựng",
+    "deleteAll": "Xóa Toàn bộ Dữ liệu",
+    "deleteAllDescription": "Xóa tất cả dữ liệu",
+    "keepBackupNote": "Backup data và timestamp sẽ được giữ lại"
+  },
+  "alerts": {
+    "noBackup": "Chưa có backup",
+    "hasChanges": "Có thay đổi sau backup",
+    "mustBackupFirst": "Vui lòng tạo backup trước khi xóa dữ liệu!",
+    "mustBackupVocab": "Bạn phải tạo backup trước khi xóa từ vựng.",
+    "invalidFile": "File không hợp lệ hoặc đã hỏng.",
+    "deleteRangeConfirm": "Tất cả báo cáo lỗi trong khoảng thời gian này sẽ bị xóa vĩnh viễn.",
+    "irreversible": "Hành động này không thể hoàn tác!",
+    "selectRange": "Vui lòng chọn khoảng thời gian hoặc chọn \"Xóa toàn bộ\""
+  },
+  "dialogs": {
+    "backupConfirmTitle": "Xác nhận Backup",
+    "backupConfirmMessage": "Bạn có chắc chắn muốn tạo backup toàn bộ dữ liệu? File backup sẽ được tải xuống tự động.",
+    "deleteReportsTitle": "Xóa Báo cáo Lỗi",
+    "deleteReportsAll": "Xóa toàn bộ báo cáo lỗi",
+    "fromDate": "Từ ngày",
+    "toDate": "Đến ngày",
+    "deleteReportsWarning": "Tất cả báo cáo lỗi trong khoảng thời gian này sẽ bị xóa vĩnh viễn.",
+    "deleteReportsCta": "Xóa",
+    "deleteReportsCancel": "Hủy",
+    "deleteVocabTitle": "Xác nhận Xóa Từ vựng",
+    "deleteVocabNoBackup": "Chưa có backup!",
+    "deleteVocabNoBackupDesc": "Bạn phải tạo backup trước khi xóa từ vựng. Vui lòng quay lại và tạo backup trước.",
+    "deleteVocabHasChanges": "Có thay đổi sau backup!",
+    "deleteVocabHasChangesDesc": "Đã phát hiện thay đổi sau thời điểm backup. Vui lòng tạo backup mới trước khi xóa để tránh mất dữ liệu mới nhất.",
+    "deleteVocabChecked": "Backup đã được kiểm tra và không thay đổi sau backup. Có thể khôi phục sau khi xóa.",
+    "deleteVocabCta": "Xóa",
+    "deleteVocabCancel": "Hủy",
+    "deleteAllTitle": "Xác nhận Xóa Toàn bộ Dữ liệu",
+    "deleteAllWarning": "Cảnh báo nguy hiểm!",
+    "deleteAllList": "Hành động này sẽ xóa: tất cả file từ vựng, tất cả báo cáo lỗi, tất cả session training, toàn bộ cấu trúc thư mục.",
+    "deleteAllChecked": "Backup đã được kiểm tra và không thay đổi sau backup. Có thể khôi phục sau khi xóa.",
+    "deleteAllCta": "Xóa Toàn bộ",
+    "deleteAllCancel": "Hủy",
+    "restoreTitle": "Import Dữ liệu",
+    "restoreWarning": "Dữ liệu hiện tại sẽ bị ghi đè bởi file backup.",
+    "restoreClose": "Đóng"
+  },
+  "buttons": {
+    "close": "Đóng",
+    "confirm": "Xác nhận",
+    "cancel": "Hủy",
+    "startBackup": "Tạo Backup",
+    "startRestore": "Khôi phục Dữ liệu",
+    "startDelete": "Xóa",
+    "startDeleteAll": "Xóa Toàn bộ",
+    "startDeleteVocab": "Xóa Từ vựng",
+    "startDeleteReports": "Xóa Báo cáo",
+    "startImport": "Import",
+    "trainTopMistakes": "Train top mistakes"
+  },
+  "messages": {
+    "backupSuccess": "Tạo backup thành công.",
+    "backupError": "Lỗi backup: {{error}}",
+    "processing": "Đang xử lý...",
+    "unknownError": "Lỗi không xác định",
+    "deleteReportsSuccess": "Đã xóa toàn bộ báo cáo lỗi.",
+    "deleteReportsRangeSuccess": "Đã xóa {{count}} báo cáo lỗi trong khoảng thời gian đã chọn.",
+    "deleteReportsError": "Lỗi xóa: {{error}}",
+    "deleteVocabSuccess": "Đã xóa {{count}} file từ vựng và cấu trúc thư mục.",
+    "deleteVocabError": "Lỗi xóa: {{error}}",
+    "deleteAllSuccess": "Đã xóa {{count}} mục dữ liệu. Backup timestamp vẫn được giữ lại.",
+    "deleteAllError": "Lỗi xóa: {{error}}",
+    "restoreSuccess": "Khôi phục dữ liệu thành công.",
+    "restoreError": "Lỗi import: File không hợp lệ hoặc đã hỏng."
+  }
+}

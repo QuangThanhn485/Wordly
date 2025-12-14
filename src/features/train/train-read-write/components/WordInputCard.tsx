@@ -1,4 +1,3 @@
-// WordInputCard.tsx
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Box,
@@ -15,6 +14,7 @@ import { alpha } from '@mui/material/styles';
 import { CheckCircle as CheckCircleIcon, Lightbulb as LightbulbIcon, Volume2 } from 'lucide-react';
 import { keyframes } from '@mui/system';
 import { speakEnglish } from '@/utils/speechUtils';
+import { useTranslation } from 'react-i18next';
 
 const shakeKF = keyframes`
   10%, 90% { transform: translate3d(-1px, 0, 0); }
@@ -48,6 +48,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   shakeKey = 0,
   hasError = false,
 }) => {
+  const { t } = useTranslation('train');
   const theme = useTheme();
   const [userInput, setUserInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -139,7 +140,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!userInput.trim()) return;
-    
+
     onAnswer(userInput.trim());
     setUserInput('');
   };
@@ -151,8 +152,9 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   };
 
   const questionLabel = mode === 'vi-en' ? 'VI' : 'EN';
-  const answerLabel = mode === 'vi-en' ? 'EN' : 'VI';
-  const placeholder = mode === 'vi-en' ? 'Nhập từ tiếng Anh...' : 'Nhập nghĩa tiếng Việt...';
+  const answerLabel = mode === 'vi-en' ? t('common.english') : t('common.vietnamese');
+  const placeholder =
+    mode === 'vi-en' ? t('readWriteCard.placeholderViEn') : t('readWriteCard.placeholderEnVi');
 
   return (
     <Card
@@ -204,7 +206,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
           </Typography>
           {canPlayAudio && (
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-              <Tooltip title="Nghe phát âm">
+              <Tooltip title={t('readWriteCard.audio')}>
                 <IconButton
                   size="small"
                   onClick={handleSpeakAnswer}
@@ -245,7 +247,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 letterSpacing: 0.5,
               }}
             >
-              Gợi ý chữ cái (VI ➜ EN)
+              {t('readWriteCard.letterHintTitle')}
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {letterHints.map((letters, wordIndex) => {
@@ -312,7 +314,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 }}
                 onKeyPress={handleKeyPress}
                 error={hasError && shouldShake}
-                helperText={hasError && shouldShake ? 'Sai rồi! Hãy thử lại.' : ''}
+                helperText={hasError && shouldShake ? t('readWriteCard.wrongHelper') : ''}
                 variant="outlined"
                 size="medium"
                 sx={{
@@ -323,7 +325,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 autoFocus
                 disabled={isCompleted}
               />
-              <Tooltip title="Gợi ý">
+              <Tooltip title={t('readWriteCard.hint')}>
                 <IconButton
                   onClick={onHint}
                   color="primary"
@@ -385,7 +387,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 fontWeight: 600,
               }}
             >
-              Kiểm tra
+              {t('readWriteCard.check')}
             </Button>
           </Box>
         ) : (
@@ -395,13 +397,9 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
               py: 2,
             }}
           >
-            <CheckCircleIcon
-              size={60}
-              color="green"
-              style={{ marginBottom: 16 }}
-            />
+            <CheckCircleIcon size={60} color="green" style={{ marginBottom: 16 }} />
             <Typography variant="h6" color="success.main" fontWeight={600} gutterBottom>
-              Đúng rồi!
+              {t('readWriteCard.correct')}
             </Typography>
             <Typography variant="body1" color="text.secondary">
               <strong>{answerLabel}:</strong> {answer}

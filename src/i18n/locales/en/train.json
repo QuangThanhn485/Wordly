@@ -9,7 +9,13 @@
     "timeSpent": "Time Spent",
     "accuracy": "Accuracy",
     "words": "words",
-    "of": "of"
+    "of": "of",
+    "english": "English",
+    "vietnamese": "Vietnamese"
+  },
+  "direction": {
+    "viEn": "VI ➜ EN",
+    "enVi": "EN ➜ VI"
   },
   "flashcardsReading": {
     "title": "Flashcards Reading",
@@ -43,6 +49,16 @@
     "incorrect": "Incorrect",
     "theAnswerIs": "The answer is"
   },
+  "readWriteCard": {
+    "placeholderViEn": "Type the English word...",
+    "placeholderEnVi": "Type the Vietnamese meaning...",
+    "audio": "Play pronunciation",
+    "letterHintTitle": "Letter hints (VI ➜ EN)",
+    "hint": "Hint",
+    "check": "Check",
+    "correct": "Correct!",
+    "wrongHelper": "Wrong! Try again."
+  },
   "listenWrite": {
     "title": "Listen & Write",
     "instruction": "Listen to the pronunciation and type the word",
@@ -54,6 +70,18 @@
     "correct": "Correct!",
     "incorrect": "Incorrect",
     "theAnswerIs": "The answer is"
+  },
+  "listenWriteCard": {
+    "title": "Listen & Write",
+    "placeholderViEn": "Type the English word...",
+    "placeholderEnVi": "Type the Vietnamese meaning...",
+    "startSpeak": "Start pronunciation",
+    "replay": "Replay audio",
+    "played": "Played the English word",
+    "hint": "Hint",
+    "check": "Check",
+    "correct": "Correct!",
+    "wrongHelper": "Wrong! Try again."
   },
   "completion": {
     "title": "Training Complete!",
@@ -74,6 +102,14 @@
     "continueSession": "Continue",
     "startNew": "Start New"
   },
+  "buttons": {
+    "start": "Start",
+    "exit": "Exit",
+    "restart": "Restart",
+    "nextMode": "Next Training Mode",
+    "hint": "Hint",
+    "close": "Close"
+  },
   "errors": {
     "noWords": "No words to practice",
     "loadFailed": "Failed to load vocabulary",
@@ -85,4 +121,3 @@
     "close": "Close"
   }
 }
-

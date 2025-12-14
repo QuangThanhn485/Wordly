@@ -48,12 +48,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const sortOptions: { value: SortOption; label: string }[] = [
-    { value: 'mistakes-desc', label: `${t('filters.sortByCount')} ↓` },
-    { value: 'mistakes-asc', label: `${t('filters.sortByCount')} ↑` },
-    { value: 'time-desc', label: `${t('filters.sortByDate')} ↓` },
-    { value: 'time-asc', label: `${t('filters.sortByDate')} ↑` },
-    { value: 'word-asc', label: 'A → Z' },
-    { value: 'word-desc', label: 'Z → A' },
+    { value: 'mistakes-desc', label: t('filters.countDesc') },
+    { value: 'mistakes-asc', label: t('filters.countAsc') },
+    { value: 'time-desc', label: t('filters.dateDesc') },
+    { value: 'time-asc', label: t('filters.dateAsc') },
+    { value: 'word-asc', label: t('filters.wordAsc') },
+    { value: 'word-desc', label: t('filters.wordDesc') },
   ];
   
   // Local state for search input (for debouncing)
@@ -413,3 +413,4 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     </Paper>
   );
 };
+

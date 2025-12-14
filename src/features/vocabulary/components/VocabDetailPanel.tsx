@@ -14,6 +14,7 @@ import {
   Tab,
 } from '@mui/material';
 import { Volume2, X, BookOpen, Sparkles } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { speak } from '@/utils/speechUtils';
 import type { VocabItem } from '../types';
 import { useTracauDetail } from '../hooks/useTracauDetail';
@@ -39,6 +40,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({
   vocab,
   onClose,
 }) => {
+  const { t } = useTranslation('vocabulary');
   const word = (vocab as VocabItem | null)?.word || (vocab as any)?.en || null;
   const { data, loading, error, retry } = useTracauDetail(word, open);
   const displayVi = (vocab as any)?.vi;
@@ -93,10 +95,10 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({
             fontWeight={800}
             sx={{ wordBreak: 'break-word', lineHeight: 1.2 }}
           >
-            {word || '—'}
+            {word || t('detail.wordFallback')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            EN - VI
+            {t('detail.langPair')}
           </Typography>
           {displayVi ? (
             <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
@@ -107,7 +109,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <IconButton
             onClick={() => handleSpeak(word ?? undefined)}
-            aria-label="Phát âm từ"
+            aria-label={t('actions.speakWord', { word: word || t('detail.wordFallback') })}
             size="small"
             sx={{ border: (theme) => `1px solid ${theme.palette.divider}` }}
           >
@@ -115,7 +117,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({
           </IconButton>
           <IconButton
             onClick={onClose}
-            aria-label="Đóng"
+            aria-label={t('actions.close')}
             size="small"
             sx={{ border: (theme) => `1px solid ${theme.palette.divider}` }}
           >
@@ -144,7 +146,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({
           >
             <CircularProgress size={26} />
             <Typography variant="body2" color="text.secondary">
-              Đang tải nội dung...
+              {t('detail.loading')}
             </Typography>
           </Box>
         ) : error ? (
@@ -153,11 +155,11 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({
               severity="error"
               action={
                 <Button color="inherit" size="small" onClick={() => retry()}>
-                  Thử lại
+                  {t('detail.retry')}
                 </Button>
               }
             >
-              Không tải được dữ liệu từ điển. Vui lòng thử lại sau.
+              {t('detail.error')}
             </Alert>
           </Box>
         ) : (
@@ -174,8 +176,8 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({
                 '& .MuiTab-root': { textTransform: 'none', fontWeight: 700, fontSize: '0.92rem', minHeight: 40, py: 0.25 },
               }}
             >
-              <Tab value="dict" label="Nghĩa & Từ điển" icon={<BookOpen size={16} />} iconPosition="start" />
-              <Tab value="examples" label="Ví dụ câu" icon={<Sparkles size={16} />} iconPosition="start" />
+              <Tab value="dict" label={t('detail.tabs.dict')} icon={<BookOpen size={16} />} iconPosition="start" />
+              <Tab value="examples" label={t('detail.tabs.examples')} icon={<Sparkles size={16} />} iconPosition="start" />
             </Tabs>
 
             {activeTab === 'dict' ? (
@@ -207,7 +209,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({
                   />
                 ) : (
                   <Typography variant="body2" color="text.secondary">
-                    Chưa có dữ liệu từ điển chi tiết cho từ này.
+                    {t('detail.noDictData')}
                   </Typography>
                 )}
               </Paper>
@@ -223,7 +225,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({
                 >
                   {sentences.length === 0 ? (
                     <Typography variant="body2" color="text.secondary">
-                      Chưa có ví dụ câu cho từ này.
+                      {t('detail.noExamples')}
                     </Typography>
                   ) : (
                     sentences.map((sentence) => (

@@ -1,4 +1,3 @@
-// WordInputCard.tsx for listen-write mode
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
@@ -12,15 +11,16 @@ import {
   Tooltip,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { 
-  CheckCircle as CheckCircleIcon, 
-  Lightbulb as LightbulbIcon, 
-  Volume2 as VolumeUpIcon, 
-  RotateCcw as ReplayIcon, 
-  Play as PlayArrowIcon 
+import {
+  CheckCircle as CheckCircleIcon,
+  Lightbulb as LightbulbIcon,
+  Volume2 as VolumeUpIcon,
+  RotateCcw as ReplayIcon,
+  Play as PlayArrowIcon,
 } from 'lucide-react';
 import { keyframes } from '@mui/system';
 import { speakEnglish } from '@/utils/speechUtils';
+import { useTranslation } from 'react-i18next';
 
 const shakeKF = keyframes`
   10%, 90% { transform: translate3d(-1px, 0, 0); }
@@ -60,6 +60,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   hasStarted = false,
   isFirstWord = false,
 }) => {
+  const { t } = useTranslation('train');
   const theme = useTheme();
   const [userInput, setUserInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -124,7 +125,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!userInput.trim()) return;
-    
+
     onAnswer(userInput.trim());
     setUserInput('');
   };
@@ -138,8 +139,9 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   // For listen-write mode:
   // - mode 'vi-en': hear EN, type EN (answer is EN)
   // - mode 'en-vi': hear EN, type VI (answer is VI)
-  const answerLabel = mode === 'vi-en' ? 'EN' : 'VI';
-  const placeholder = mode === 'vi-en' ? 'Nhập từ tiếng Anh...' : 'Nhập nghĩa tiếng Việt...';
+  const answerLabel = mode === 'vi-en' ? t('common.english') : t('common.vietnamese');
+  const placeholder =
+    mode === 'vi-en' ? t('listenWriteCard.placeholderViEn') : t('listenWriteCard.placeholderEnVi');
 
   return (
     <Card
@@ -172,18 +174,27 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
               fontSize: { xs: '0.75rem', sm: '0.875rem' },
             }}
           >
-            🎧 Nghe và viết
+            {t('listenWriteCard.title')}
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-            <VolumeUpIcon 
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 2,
+              mb: 2,
+              flexWrap: 'wrap',
+            }}
+          >
+            <VolumeUpIcon
               size={64}
               style={{
                 color: 'inherit',
                 opacity: hasStarted ? 0.8 : 0.4,
-              }} 
+              }}
             />
             {!hasStarted && isFirstWord ? (
-              <Tooltip title="Bắt đầu phát âm">
+              <Tooltip title={t('listenWriteCard.startSpeak')}>
                 <Button
                   variant="contained"
                   color="primary"
@@ -197,23 +208,27 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                     fontWeight: 600,
                   }}
                 >
-                  Start
+                  {t('buttons.start')}
                 </Button>
               </Tooltip>
             ) : null}
-            <Tooltip title="Phát lại âm thanh">
+            <Tooltip title={t('listenWriteCard.replay')}>
               <IconButton
                 onClick={handleReplayAudio}
                 color="primary"
                 size="large"
                 disabled={!hasStarted}
                 sx={{
-                  border: hasStarted ? `2px solid ${theme.palette.primary.main}` : `2px solid ${theme.palette.divider}`,
+                  border: hasStarted
+                    ? `2px solid ${theme.palette.primary.main}`
+                    : `2px solid ${theme.palette.divider}`,
                   opacity: hasStarted ? 1 : 0.5,
-                  '&:hover': hasStarted ? {
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                  } : {},
+                  '&:hover': hasStarted
+                    ? {
+                        bgcolor: 'primary.main',
+                        color: 'primary.contrastText',
+                      }
+                    : {},
                 }}
               >
                 <ReplayIcon />
@@ -229,7 +244,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 fontStyle: 'italic',
               }}
             >
-              Đã phát âm từ tiếng Anh
+              {t('listenWriteCard.played')}
             </Typography>
           )}
         </Box>
@@ -249,7 +264,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 }}
                 onKeyPress={handleKeyPress}
                 error={hasError && shouldShake}
-                helperText={hasError && shouldShake ? 'Sai rồi! Hãy thử lại.' : ''}
+                helperText={hasError && shouldShake ? t('listenWriteCard.wrongHelper') : ''}
                 variant="outlined"
                 size="medium"
                 sx={{
@@ -260,7 +275,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 autoFocus={hasPlayed && hasStarted}
                 disabled={isCompleted || !hasStarted}
               />
-              <Tooltip title="Gợi ý">
+              <Tooltip title={t('listenWriteCard.hint')}>
                 <IconButton
                   onClick={onHint}
                   color="primary"
@@ -327,7 +342,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 fontWeight: 600,
               }}
             >
-              Kiểm tra
+              {t('listenWriteCard.check')}
             </Button>
           </Box>
         ) : (
@@ -337,13 +352,9 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
               py: 2,
             }}
           >
-            <CheckCircleIcon
-              size={60}
-              color="green"
-              style={{ marginBottom: 16 }}
-            />
+            <CheckCircleIcon size={60} color="green" style={{ marginBottom: 16 }} />
             <Typography variant="h6" color="success.main" fontWeight={600} gutterBottom>
-              Đúng rồi!
+              {t('listenWriteCard.correct')}
             </Typography>
             <Typography variant="body1" color="text.secondary">
               <strong>{answerLabel}:</strong> {answer}
@@ -354,4 +365,3 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
     </Card>
   );
 };
-

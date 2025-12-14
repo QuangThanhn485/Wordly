@@ -13,6 +13,7 @@ import { X as CloseIcon, FolderOpen as FolderOpenIcon } from 'lucide-react';
 import type { FolderNode, FileLeaf } from '../../types';
 import { FolderGridView } from '../FolderGrid/FolderGridView';
 import { BreadcrumbNav, type BreadcrumbItem } from '../FolderGrid/Breadcrumb';
+import { useTranslation } from 'react-i18next';
 
 // ===== Types =====
 interface FolderGridModalProps {
@@ -43,6 +44,7 @@ export const FolderGridModal: React.FC<FolderGridModalProps> = ({
   onEmptySpaceContextMenu,
   vocabCountMap,
 }) => {
+  const { t } = useTranslation('vocabulary');
   const theme = useTheme();
   const isSmDown = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -79,10 +81,10 @@ export const FolderGridModal: React.FC<FolderGridModalProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <FolderOpenIcon color="primary" />
           <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
-            Chọn file từ vựng
+            {t('gridModal.title')}
           </Typography>
         </Box>
-        <IconButton onClick={onClose} size="small" aria-label="Đóng">
+        <IconButton onClick={onClose} size="small" aria-label={t('actions.close')}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
@@ -118,11 +120,10 @@ export const FolderGridModal: React.FC<FolderGridModalProps> = ({
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            💡 Click vào thư mục để mở, click vào file để xem từ vựng
+            {t('gridModal.helper')}
           </Typography>
         </Box>
       </DialogContent>
     </Dialog>
   );
 };
-

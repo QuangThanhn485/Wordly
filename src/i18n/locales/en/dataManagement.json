@@ -1,0 +1,102 @@
+{
+  "title": "Data Management",
+  "stats": {
+    "vocabFiles": "Total vocabulary files",
+    "vocabWords": "Total vocabulary words",
+    "backupStatus": "Backup status",
+    "storageUsage": "Storage usage",
+    "noBackup": "No backup available",
+    "lastBackup": "Last backup"
+  },
+  "backup": {
+    "title": "Backup Data",
+    "subtitle": "Backup, restore and manage your app data",
+    "description": "Backup all data to a file",
+    "warning": "Current data will be overwritten when restoring",
+    "create": "Create Backup",
+    "createdAt": "Last backup: {{timestamp}}"
+  },
+  "restore": {
+    "title": "Restore Data",
+    "description": "Import data from a backup file",
+    "button": "Restore Data",
+    "fileLabel": "Select Backup File"
+  },
+  "delete": {
+    "title": "Delete Data",
+    "description": "Delete selected data sets",
+    "deleteReports": "Delete Reports",
+    "deleteReportsDescription": "Delete error reports by time range or all",
+    "deleteVocab": "Delete Vocabulary",
+    "deleteVocabDescription": "Delete all vocabulary files and folder structure",
+    "deleteAll": "Delete All Data",
+    "deleteAllDescription": "Delete all data sets",
+    "keepBackupNote": "Backup data and timestamp will be kept"
+  },
+  "alerts": {
+    "noBackup": "No backup yet",
+    "hasChanges": "Changes detected after last backup",
+    "mustBackupFirst": "Please create a backup before deleting data!",
+    "mustBackupVocab": "You must create a backup before deleting vocabulary.",
+    "invalidFile": "Invalid or corrupted file.",
+    "deleteRangeConfirm": "All reports in this range will be permanently deleted.",
+    "irreversible": "This action cannot be undone!",
+    "selectRange": "Please select a date range or choose \"Delete all\""
+  },
+  "dialogs": {
+    "backupConfirmTitle": "Confirm Backup",
+    "backupConfirmMessage": "Are you sure you want to back up all data? The backup file will be downloaded automatically.",
+    "deleteReportsTitle": "Delete Reports",
+    "deleteReportsAll": "Delete all reports",
+    "fromDate": "From date",
+    "toDate": "To date",
+    "deleteReportsWarning": "All reports in this range will be deleted permanently.",
+    "deleteReportsCta": "Delete",
+    "deleteReportsCancel": "Cancel",
+    "deleteVocabTitle": "Confirm Delete Vocabulary",
+    "deleteVocabNoBackup": "No backup!",
+    "deleteVocabNoBackupDesc": "You must create a backup before deleting vocabulary. Please go back and create a backup first.",
+    "deleteVocabHasChanges": "Changes after backup!",
+    "deleteVocabHasChangesDesc": "Changes detected after the backup time. Please create a new backup before deleting to avoid losing newest data.",
+    "deleteVocabChecked": "Backup verified and unchanged after backup. Safe to restore later.",
+    "deleteVocabCta": "Delete",
+    "deleteVocabCancel": "Cancel",
+    "deleteAllTitle": "Confirm Delete All Data",
+    "deleteAllWarning": "Danger warning!",
+    "deleteAllList": "This will delete: all vocabulary files, all error reports, all training sessions, all folder structures.",
+    "deleteAllChecked": "Backup verified and unchanged after backup. Safe to restore later.",
+    "deleteAllCta": "Delete All",
+    "deleteAllCancel": "Cancel",
+    "restoreTitle": "Import Data",
+    "restoreWarning": "Current data will be overwritten by the backup file.",
+    "restoreClose": "Close"
+  },
+  "buttons": {
+    "close": "Close",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "startBackup": "Create Backup",
+    "startRestore": "Restore Data",
+    "startDelete": "Delete",
+    "startDeleteAll": "Delete All",
+    "startDeleteVocab": "Delete Vocabulary",
+    "startDeleteReports": "Delete Reports",
+    "startImport": "Import",
+    "trainTopMistakes": "Train top mistakes"
+  },
+  "messages": {
+    "backupSuccess": "Backup created successfully.",
+    "backupError": "Backup failed: {{error}}",
+    "processing": "Processing...",
+    "unknownError": "Unknown error",
+    "deleteReportsSuccess": "Deleted all error reports.",
+    "deleteReportsRangeSuccess": "Deleted {{count}} error reports in the selected range.",
+    "deleteReportsError": "Delete failed: {{error}}",
+    "deleteVocabSuccess": "Deleted {{count}} vocabulary files and folder structure.",
+    "deleteVocabError": "Delete failed: {{error}}",
+    "deleteAllSuccess": "Deleted {{count}} data items. Backup timestamps kept.",
+    "deleteAllError": "Delete failed: {{error}}",
+    "restoreSuccess": "Data restored successfully.",
+    "restoreError": "Import failed: file invalid or corrupted."
+  }
+}

@@ -16,7 +16,13 @@
     "sortBy": "Sắp xếp theo",
     "sortByCount": "Số lần sai",
     "sortByDate": "Gần đây",
-    "sortByWord": "Theo bảng chữ cái"
+    "sortByWord": "Theo bảng chữ cái",
+    "countDesc": "Số lần sai ↓",
+    "countAsc": "Số lần sai ↑",
+    "dateDesc": "Gần đây ↓",
+    "dateAsc": "Gần đây ↑",
+    "wordAsc": "A → Z",
+    "wordDesc": "Z → A"
   },
   "card": {
     "mistakeCount": "Số lần sai",
@@ -42,7 +48,10 @@
     "showMore": "Xem thêm",
     "showLess": "Thu gọn",
     "words": "từ",
-    "mistakes": "lỗi"
+    "mistakes": "lỗi",
+    "summary": "{{words}} từ vựng với {{mistakes}} lỗi",
+    "wordsLabel": "{{count}} từ",
+    "mistakesLabel": "{{count}} lỗi",
+    "trainTop": "Train 40% ({{count}} từ sai nhiều nhất)"
   }
 }
-

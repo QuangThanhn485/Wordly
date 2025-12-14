@@ -23,7 +23,7 @@ import {
   type TrainingSession 
 } from '@/features/train/train-start/sessionStorage';
 import { recordMistakes } from '@/features/train/train-start/mistakesStorage';
-import { CompletionModal, type SessionMistake } from '@/features/train/train-start/components/CompletionModal';
+import { CompletionModal, type SessionMistake } from '@/features/train/train-read-write/components/CompletionModal';
 import { speakEnglish } from '@/utils/speechUtils';
 
 const normalize = (s: string) =>
@@ -681,4 +681,3 @@ const FlashcardsReadingPage = () => {
 };
 
 export default FlashcardsReadingPage;
-

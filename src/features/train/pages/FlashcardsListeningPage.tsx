@@ -31,7 +31,7 @@ import {
   type TrainingSession 
 } from '@/features/train/train-listen/sessionStorage';
 import { recordMistakes } from '@/features/train/train-listen/mistakesStorage';
-import { CompletionModal, type SessionMistake } from '@/features/train/train-listen/components/CompletionModal';
+import { CompletionModal, type SessionMistake } from '@/features/train/train-listen-write/components/CompletionModal';
 import { speakEnglish, getBestEnglishVoice, type SpeechOptions } from '@/utils/speechUtils';
 
 const normalize = (s: string) =>
@@ -887,4 +887,3 @@ const FlashcardsListeningPage = () => {
 };
 
 export default FlashcardsListeningPage;
-

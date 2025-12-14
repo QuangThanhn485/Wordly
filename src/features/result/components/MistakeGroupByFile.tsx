@@ -19,6 +19,7 @@ import { saveTrainingSession as saveReadingSession } from '@/features/train/trai
 import { saveTrainingSession as saveListeningSession } from '@/features/train/train-listen/sessionStorage';
 import { saveTrainingSession as saveReadWriteSession } from '@/features/train/train-read-write/sessionStorage';
 import { saveTrainingSession as saveListenWriteSession } from '@/features/train/train-listen-write/sessionStorage';
+import { useTranslation } from 'react-i18next';
 
 interface MistakeGroupByFileProps {
   group: MistakesByFile;
@@ -50,6 +51,7 @@ const buildTrainingFileName = (fileName: string): string => {
 
 export const MistakeGroupByFile: React.FC<MistakeGroupByFileProps> = ({ group }) => {
   const theme = useTheme();
+  const { t } = useTranslation('result');
   const displayFileName = getDisplayFileName(group.fileName);
   const navigate = useNavigate();
 
@@ -174,19 +176,19 @@ export const MistakeGroupByFile: React.FC<MistakeGroupByFileProps> = ({ group })
                 {displayFileName}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {group.totalWords} tu vung voi {group.totalMistakes} loi
+                {t('group.summary', { words: group.totalWords, mistakes: group.totalMistakes })}
               </Typography>
             </Box>
           </Box>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
             <Chip
-              label={`${group.totalWords} tu`}
+              label={t('group.wordsLabel', { count: group.totalWords })}
               size="small"
               color="secondary"
               variant="outlined"
             />
             <Chip
-              label={`${group.totalMistakes} loi`}
+              label={t('group.mistakesLabel', { count: group.totalMistakes })}
               size="small"
               color="error"
               variant="outlined"
@@ -199,7 +201,7 @@ export const MistakeGroupByFile: React.FC<MistakeGroupByFileProps> = ({ group })
               disabled={group.mistakes.length === 0}
               sx={{ whiteSpace: 'nowrap' }}
             >
-              Train 40% ({topCount} tu sai nhieu nhat)
+              {t('group.trainTop', { count: topCount })}
             </Button>
           </Box>
         </Box>

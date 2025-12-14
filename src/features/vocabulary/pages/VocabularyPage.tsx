@@ -732,7 +732,12 @@ const VocabularyPage: React.FC = () => {
     const located = findNodeByPath(tree, menu.path);
     if (!located || !located.parent) return;
     const siblings = located.parent.children.filter((c) => c.id !== located.node.id);
-    const finalName = ensureUniqueName(siblings, renameValue.trim() || (menu.type === 'folder' ? 'Thư mục' : 'file.txt'), menu.type === 'folder');
+    const folderFallback = t('defaults.folder');
+    const finalName = ensureUniqueName(
+      siblings,
+      renameValue.trim() || (menu.type === 'folder' ? folderFallback : 'file.txt'),
+      menu.type === 'folder',
+    );
 
     updateTree((prevTree) => {
       const copy = structuredClone(prevTree);
@@ -783,7 +788,8 @@ const VocabularyPage: React.FC = () => {
       const copy = structuredClone(prevTree);
       const located = findNodeByPath(copy, targetPath);
       if (!located || located.node.kind !== 'folder') return prevTree;
-      const name = ensureUniqueName(located.node.children, folderName || 'Thư mục mới', true);
+      const newFolderName = folderName || t('defaults.newFolder');
+      const name = ensureUniqueName(located.node.children, newFolderName, true);
       located.node.children.push({ kind: 'folder', label: name, id: genId(), children: [] });
       return copy;
     });
@@ -1257,7 +1263,7 @@ const VocabularyPage: React.FC = () => {
       >
         {sidebarOpen && (
           <>
-            {/* Sticky Header - "Kho từ vựng" */}
+            {/* Sticky Header - vocabulary title */}
             <Box sx={{ 
               px: 2, 
               pt: 3, 
@@ -1272,35 +1278,35 @@ const VocabularyPage: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <MenuBookIcon size={24} style={{ marginRight: 8, color: 'inherit' }} />
                   <Typography variant={isSmDown ? 'subtitle1' : 'h6'} sx={{ fontWeight: 600 }}>
-                    Kho từ vựng
+                    {t('title')}
                   </Typography>
                 </Box>
                 <Stack direction="row" spacing={0.5}>
-                  <Tooltip title={viewMode === 'tree' ? 'Chế độ lưới' : 'Chế độ cây'} arrow>
+                  <Tooltip title={viewMode === 'tree' ? t('viewMode.grid') : t('viewMode.tree')} arrow>
                     <IconButton
                       size="small"
                       onClick={toggleViewMode}
-                      aria-label="Đổi chế độ xem"
+                      aria-label={t('viewMode.toggle')}
                     >
                       {viewMode === 'tree' ? <ViewModuleIcon fontSize="small" /> : <ViewListIcon fontSize="small" />}
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Thu gọn tất cả" arrow>
+                  <Tooltip title={t('actions.collapseAll')} arrow>
                     <IconButton
                       size="small"
                       onClick={collapseAll}
-                      aria-label="Thu gọn tất cả"
+                      aria-label={t('actions.collapseAll')}
                     >
                       <UnfoldLessIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
                   {!isMdDown && (
-                    <Tooltip title="Ẩn kho từ vựng" arrow>
+                    <Tooltip title={t('actions.hideVocabulary')} arrow>
                       <IconButton
                         size="small"
                         onClick={toggleSidebar}
                         sx={{ ml: 0.5 }}
-                        aria-label="Ẩn kho từ vựng"
+                        aria-label={t('actions.hideVocabulary')}
                       >
                         <ChevronLeftIcon fontSize="small" />
                       </IconButton>
@@ -1355,7 +1361,7 @@ const VocabularyPage: React.FC = () => {
             alignItems: 'center',
           }}
         >
-          <Tooltip title="Hiển thị kho từ vựng" arrow placement="right">
+          <Tooltip title={t('actions.showVocabulary')} arrow placement="right">
             <IconButton
               onClick={toggleSidebar}
               sx={{
@@ -1377,7 +1383,7 @@ const VocabularyPage: React.FC = () => {
                   duration: theme.transitions.duration.shorter,
                 }),
               }}
-              aria-label="Hiển thị kho từ vựng"
+              aria-label={t('actions.showVocabulary')}
             >
               <ChevronRightIcon />
             </IconButton>
@@ -1428,7 +1434,7 @@ const VocabularyPage: React.FC = () => {
                       flexShrink: 0,
                       color: 'text.primary',
                     }}
-                    aria-label="Quay lại danh sách thư mục"
+                    aria-label={t('actions.backToFolders')}
                   >
                     <ArrowBackIcon size={isSmDown ? 20 : 24} />
                   </IconButton>
@@ -1458,7 +1464,7 @@ const VocabularyPage: React.FC = () => {
                         fontSize: { xs: '0.6875rem', sm: '0.75rem' },
                       }}
                     >
-                      {vocabCountMap[selectedFile.name]} từ vựng
+                      {t('table.wordCount', { count: vocabCountMap[selectedFile.name] })}
                     </Typography>
                   )}
               </Box>
@@ -1479,13 +1485,13 @@ const VocabularyPage: React.FC = () => {
                     size={isSmDown ? 'small' : 'medium'}
                     startIcon={<DeleteIcon />}
                     onClick={handleDeleteSelectedVocabs}
-                    sx={{ 
-                      fontSize: { xs: '0.6875rem', sm: undefined }, // Desktop giữ fontSize mặc định
-                      px: { xs: 1, sm: 2 },
-                    }}
-                  >
-                    Xóa ({selectedVocabs.size})
-                  </Button>
+                  sx={{ 
+                    fontSize: { xs: '0.6875rem', sm: undefined }, // Desktop giữ fontSize mặc định
+                    px: { xs: 1, sm: 2 },
+                  }}
+                >
+                  {t('actions.deleteSelectedCount', { count: selectedVocabs.size })}
+                </Button>
                 )}
                 <Button
                   variant="contained"
@@ -1547,25 +1553,25 @@ const VocabularyPage: React.FC = () => {
                       navigate(`/train/flashcards-reading?file=${encodeURIComponent(fileName)}`);
                     }
                   }}
-                  sx={{ 
-                    fontWeight: 600,
-                    fontSize: { xs: '0.6875rem', sm: undefined }, // Desktop giữ fontSize mặc định
-                    px: { xs: 1, sm: 2 },
-                  }}
-                >
-                  Train
+                sx={{ 
+                  fontWeight: 600,
+                  fontSize: { xs: '0.6875rem', sm: undefined }, // Desktop giữ fontSize mặc định
+                  px: { xs: 1, sm: 2 },
+                }}
+              >
+                  {t('actions.train')}
                 </Button>
                 <Button
                   variant="contained"
                   size={isSmDown ? 'small' : 'medium'}
                   startIcon={<AddIcon />}
                   onClick={openAddVocabForm}
-                  sx={{ 
-                    fontSize: { xs: '0.6875rem', sm: undefined }, // Desktop giữ fontSize mặc định
-                    px: { xs: 1, sm: 2 },
-                  }}
-                >
-                  {isSmDown ? 'Thêm' : 'Thêm từ vựng'}
+                sx={{ 
+                  fontSize: { xs: '0.6875rem', sm: undefined }, // Desktop giữ fontSize mặc định
+                  px: { xs: 1, sm: 2 },
+                }}
+              >
+                  {isSmDown ? t('actions.addWordShort') : t('actions.addWord')}
                 </Button>
               </Stack>
             </Box>
@@ -1573,7 +1579,7 @@ const VocabularyPage: React.FC = () => {
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <CategoryIcon size={24} style={{ marginRight: 8, color: 'inherit' }} />
               <Typography variant={isSmDown ? 'h6' : 'h5'} sx={{ fontWeight: 600 }}>
-                Từ vựng
+                {t('title')}
               </Typography>
             </Box>
           )}
@@ -1619,11 +1625,11 @@ const VocabularyPage: React.FC = () => {
                           size={isSmDown ? 'small' : 'medium'}
                         />
                       </StyledTableCell>
-                      <StyledTableCell>Từ vựng</StyledTableCell>
-                      <StyledTableCell>Nghĩa tiếng Việt</StyledTableCell>
-                      <StyledTableCell>Từ loại</StyledTableCell>
-                      <StyledTableCell>Phát âm</StyledTableCell>
-                      <StyledTableCell align="center">Hành động</StyledTableCell>
+                      <StyledTableCell>{t('table.word')}</StyledTableCell>
+                      <StyledTableCell>{t('table.meaning')}</StyledTableCell>
+                      <StyledTableCell>{t('table.type')}</StyledTableCell>
+                      <StyledTableCell>{t('table.pronunciation')}</StyledTableCell>
+                      <StyledTableCell align="center">{t('table.actions')}</StyledTableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1657,12 +1663,12 @@ const VocabularyPage: React.FC = () => {
                                 p: 0.5,
                                 minWidth: 'auto',
                                 '&:hover': { 
-                                  backgroundColor: 'primary.light', 
-                                  color: 'primary.main',
-                                  borderRadius: 1,
-                                },
-                              }}
-                              aria-label={`Phát âm ${item.word}`}
+                              backgroundColor: 'primary.light', 
+                              color: 'primary.main',
+                              borderRadius: 1,
+                            },
+                          }}
+                              aria-label={t('actions.speakWord', { word: item.word })}
                             >
                               <VolumeUpIcon 
                                 size={18}
@@ -1708,7 +1714,7 @@ const VocabularyPage: React.FC = () => {
                                 size={isSmDown ? 'small' : 'medium'}
                             onClick={(e) => handleRowMenuOpen(e, item.word, itemIndex)}
                                 sx={{ '&:hover': { backgroundColor: 'primary.light', color: 'primary.main' } }}
-                            aria-label={`Menu cho ${item.word}`}
+                            aria-label={t('actions.rowMenuFor', { word: item.word })}
                               >
                             <MoreVertIcon fontSize={isSmDown ? 'small' : 'medium'} />
                               </IconButton>
@@ -1732,16 +1738,16 @@ const VocabularyPage: React.FC = () => {
                               <ListItemIcon>
                                 <EditIcon fontSize="small" />
                               </ListItemIcon>
-                              <ListItemText>Sửa</ListItemText>
+                              <ListItemText>{t('actions.editWord')}</ListItemText>
                             </MenuItem>
                             <MenuItem onClick={handleRowMenuClose} disabled>
-                              <ListItemText>Item 1 (Tính năng tương lai)</ListItemText>
+                              <ListItemText>{t('contextMenu.futureItem', { index: 1 })}</ListItemText>
                             </MenuItem>
                             <MenuItem onClick={handleRowMenuClose} disabled>
-                              <ListItemText>Item 2 (Tính năng tương lai)</ListItemText>
+                              <ListItemText>{t('contextMenu.futureItem', { index: 2 })}</ListItemText>
                             </MenuItem>
                             <MenuItem onClick={handleRowMenuClose} disabled>
-                              <ListItemText>Item 3 (Tính năng tương lai)</ListItemText>
+                              <ListItemText>{t('contextMenu.futureItem', { index: 3 })}</ListItemText>
                             </MenuItem>
                           </Menu>
                         </StyledTableCell>
@@ -1806,7 +1812,7 @@ const VocabularyPage: React.FC = () => {
               <NewFolderIcon fontSize={isSmDown ? 'small' : 'medium'} />
             </ListItemIcon>
             <ListItemText 
-              primary="Tạo thư mục con"
+              primary={t('contextMenu.newSubfolder')}
               primaryTypographyProps={{
                 fontSize: { xs: '0.875rem', sm: '1rem' },
               }}
@@ -1824,7 +1830,7 @@ const VocabularyPage: React.FC = () => {
               <FileIcon fontSize={isSmDown ? 'small' : 'medium'} />
             </ListItemIcon>
             <ListItemText 
-              primary="Tạo file"
+              primary={t('contextMenu.newFile')}
               primaryTypographyProps={{
                 fontSize: { xs: '0.875rem', sm: '1rem' },
               }}
@@ -1833,15 +1839,15 @@ const VocabularyPage: React.FC = () => {
           <Divider key="divider-1" />,
           <MenuItem key="export-folder" onClick={handleExportFolder}>
             <ListItemIcon><ExportIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Export thư mục (.json)</ListItemText>
+            <ListItemText primary={t('contextMenu.exportFolder')} />
           </MenuItem>,
           <MenuItem key="import-folder" onClick={startImportFolder}>
               <ListItemIcon><ImportIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Import thư mục (.json)</ListItemText>
+            <ListItemText primary={t('contextMenu.importFolder')} />
           </MenuItem>,
           <MenuItem key="import-file" onClick={startImport}>
             <ListItemIcon><ImportIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Import file (.json)</ListItemText>
+            <ListItemText primary={t('contextMenu.importFile')} />
           </MenuItem>,
           <Divider key="divider-2" />,
           <MenuItem key="rename" onClick={startRename}>
@@ -1975,11 +1981,3 @@ const VocabularyPage: React.FC = () => {
 
 export default VocabularyPage;
  
-
-
-
-
-
-
-
-
