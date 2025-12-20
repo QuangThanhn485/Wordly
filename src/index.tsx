@@ -10,6 +10,13 @@ import '@fontsource/roboto';
 // Initialize i18n
 import './i18n';
 
+// Cleanup legacy storage key (removed change-tracking mechanism)
+try {
+  localStorage.removeItem('wordly_last_change_timestamp');
+} catch {
+  // Ignore storage access errors
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Provider store={store}>

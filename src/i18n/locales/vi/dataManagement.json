@@ -41,13 +41,20 @@
     "invalidFile": "File không hợp lệ hoặc đã hỏng.",
     "deleteRangeConfirm": "Tất cả báo cáo lỗi trong khoảng thời gian này sẽ bị xóa vĩnh viễn.",
     "irreversible": "Hành động này không thể hoàn tác!",
-    "selectRange": "Vui lòng chọn khoảng thời gian hoặc chọn \"Xóa toàn bộ\""
+    "selectRange": "Vui lòng chọn khoảng thời gian"
   },
   "dialogs": {
     "backupConfirmTitle": "Xác nhận Backup",
     "backupConfirmMessage": "Bạn có chắc chắn muốn tạo backup toàn bộ dữ liệu? File backup sẽ được tải xuống tự động.",
     "deleteReportsTitle": "Xóa Báo cáo Lỗi",
-    "deleteReportsAll": "Xóa toàn bộ báo cáo lỗi",
+    "deleteReportsAll": "Tất cả",
+    "deleteReportsToday": "Hôm nay",
+    "deleteReportsLast7Days": "7 ngày gần đây",
+    "deleteReportsLast4Hours": "4 giờ trước",
+    "deleteReportsLast1Hour": "1 giờ trước",
+    "deleteReportsQuick": "Chọn nhanh",
+    "deleteReportsRange": "Khoảng ngày",
+    "deleteReportsRangeApplied": "{{from}} → {{to}}",
     "fromDate": "Từ ngày",
     "toDate": "Đến ngày",
     "deleteReportsWarning": "Tất cả báo cáo lỗi trong khoảng thời gian này sẽ bị xóa vĩnh viễn.",

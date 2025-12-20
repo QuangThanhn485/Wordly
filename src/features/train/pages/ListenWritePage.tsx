@@ -10,7 +10,7 @@ import {
   useMediaQuery,
   Alert,
 } from '@mui/material';
-import { Languages, AlertCircle, RotateCcw, ArrowLeftRight } from 'lucide-react';
+import { AlertCircle, RotateCcw, ArrowLeftRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTrainWords } from '@/features/train/train-listen-write';
@@ -132,7 +132,6 @@ const ListenWritePage = () => {
   const [mistakesSaved, setMistakesSaved] = useState(false); // Track if mistakes have been saved
   const [completionModalShown, setCompletionModalShown] = useState(false); // Track if completion modal has been shown
   const [hasStarted, setHasStarted] = useState(false); // Track if user has clicked start button for current word
-  const [isFirstWord, setIsFirstWord] = useState(true); // Track if this is the first word (show Start button)
 
   // Track mistakes per word
   const [wordMistakes, setWordMistakes] = useState<Map<string, number>>(new Map());
@@ -168,7 +167,6 @@ const ListenWritePage = () => {
       setCompletionModalShown(false);
       setMode('vi-en');
       setHasStarted(false);
-      setIsFirstWord(true);
       return;
     }
     
@@ -184,8 +182,6 @@ const ListenWritePage = () => {
         setMistakes(session.mistakes || 0);
         setMode(session.mode || 'vi-en');
         setHasStarted(session.hasStarted || false);
-        // If there are completed words, it's not the first word
-        setIsFirstWord((session.completedWords || []).length === 0 && !session.hasStarted);
         return; // Session restored
       }
     }
@@ -200,7 +196,6 @@ const ListenWritePage = () => {
     setHasError(false);
     setMode('vi-en');
     setHasStarted(false);
-    setIsFirstWord(true);
   }, [currentFileName, isLoading, items.length, sessionRestored, trainingSource]);
 
   // Save session to localStorage
@@ -282,12 +277,10 @@ const ListenWritePage = () => {
     setShowHint(false);
     setCurrentWordCompleted(false);
     setHasStarted(false);
-    setIsFirstWord(true); // Reset to first word state when changing mode
   };
 
   const handleStart = useCallback(() => {
     setHasStarted(true);
-    setIsFirstWord(false); // After first start, no longer first word
     // Play audio for current word
     const currentWord = items[currentWordIndex];
     if (currentWord) {
@@ -330,7 +323,6 @@ const ListenWritePage = () => {
           setCurrentWordCompleted(false);
           setShowHint(false);
           setHasError(false);
-          setIsFirstWord(false); // No longer first word
           setHasStarted(true); // Auto-start for next word
           // Auto-play audio for next word
           const nextWord = items[nextIndex];
@@ -380,7 +372,6 @@ const ListenWritePage = () => {
     setMistakesSaved(false);
     setCompletionModalShown(false);
     setHasStarted(false);
-    setIsFirstWord(true); // Reset to first word state
     if (currentFileName) {
       clearTrainingSession();
     }
@@ -433,6 +424,7 @@ const ListenWritePage = () => {
   // For listen-write: always play EN audio, answer depends on mode
   const question = currentWord ? currentWord.en : ''; // Always English (for audio)
   const answer = currentWord ? (mode === 'vi-en' ? currentWord.en : currentWord.vi) : ''; // EN for vi-en mode, VI for en-vi mode
+  const shouldCenterMain = !isLoading && items.length > 0 && !!currentWord;
 
   // Handle keyboard shortcut Ctrl+X for hint
   useEffect(() => {
@@ -561,40 +553,51 @@ const ListenWritePage = () => {
       {/* Main Content */}
       <Box
         sx={{
-          width: '100%',
-          maxWidth: { xs: '100%', sm: '1200px' },
-          mx: 'auto',
-          px: { xs: 2, sm: 3, md: 4 },
-          py: { xs: 2, sm: 3, md: 4 },
           flex: 1,
-          boxSizing: 'border-box',
+          width: '100%',
+          bgcolor: 'background.default',
         }}
       >
-        {isLoading ? (
-          <Box sx={{ maxWidth: 700, mx: 'auto' }}>
-            <Skeleton variant="rounded" height={400} sx={{ borderRadius: 2 }} />
-          </Box>
-        ) : items.length === 0 ? (
-          <Alert severity="warning" sx={{ maxWidth: 600, mx: 'auto' }}>
-            Không có từ vựng nào. Vui lòng chọn file từ vựng trước.
-          </Alert>
-        ) : currentWord ? (
-          <WordInputCard
-            question={question}
-            answer={answer}
-            mode={mode}
-            onAnswer={handleAnswer}
-            onHint={handleHint}
-            onStart={handleStart}
-            showHint={showHint}
-            isCompleted={currentWordCompleted}
-            shouldShake={shouldShake}
-            shakeKey={shakeKey}
-            hasError={hasError}
-            hasStarted={hasStarted}
-            isFirstWord={isFirstWord}
-          />
-        ) : null}
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: { xs: '100%', sm: '1200px' },
+            mx: 'auto',
+            px: { xs: 2, sm: 3, md: 4 },
+            py: { xs: 2, sm: 3, md: 4 },
+            boxSizing: 'border-box',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: shouldCenterMain ? { xs: 'flex-start', md: 'center' } : 'flex-start',
+            minHeight: '100%',
+          }}
+        >
+          {isLoading ? (
+            <Box sx={{ width: '100%', maxWidth: 760 }}>
+              <Skeleton variant="rounded" height={420} sx={{ borderRadius: { xs: 2, sm: 2.5 } }} />
+            </Box>
+          ) : items.length === 0 ? (
+            <Alert severity="warning" sx={{ width: '100%', maxWidth: 760 }}>
+              Không có từ vựng nào. Vui lòng chọn file từ vựng trước.
+            </Alert>
+          ) : currentWord ? (
+            <WordInputCard
+              question={question}
+              answer={answer}
+              mode={mode}
+              onAnswer={handleAnswer}
+              onHint={handleHint}
+              onStart={handleStart}
+              showHint={showHint}
+              isCompleted={currentWordCompleted}
+              shouldShake={shouldShake}
+              shakeKey={shakeKey}
+              hasError={hasError}
+              hasStarted={hasStarted}
+            />
+          ) : null}
+        </Box>
       </Box>
 
       {/* Completion Modal */}
@@ -617,4 +620,3 @@ const ListenWritePage = () => {
 };
 
 export default ListenWritePage;
-

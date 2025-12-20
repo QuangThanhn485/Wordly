@@ -13,7 +13,6 @@ import { type MistakesByFile } from '../utils/dataTransform';
 import { getTrainingModeLabel } from '../utils/dataTransform';
 import { Folder } from 'lucide-react';
 import { getDisplayFileName } from '@/utils/fileUtils';
-import { trackedSetItem } from '@/utils/storageTracker';
 import { useNavigate } from 'react-router-dom';
 import { saveTrainingSession as saveReadingSession } from '@/features/train/train-start/sessionStorage';
 import { saveTrainingSession as saveListeningSession } from '@/features/train/train-listen/sessionStorage';
@@ -79,7 +78,7 @@ export const MistakeGroupByFile: React.FC<MistakeGroupByFileProps> = ({ group })
       pronunciation: '',
     }));
 
-    trackedSetItem(`wordly_vocab_file:${trainingFileName}`, JSON.stringify(vocabItems));
+    localStorage.setItem(`wordly_vocab_file:${trainingFileName}`, JSON.stringify(vocabItems));
 
     // Prime training sessions for all modes so the top-mistake file is used consistently
     const baseSession = {

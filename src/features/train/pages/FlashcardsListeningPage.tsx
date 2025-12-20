@@ -731,7 +731,7 @@ const FlashcardsListeningPage = () => {
           }}
         >
           {[...Array(8)].map((_, idx) => (
-            <Skeleton key={idx} variant="rounded" height={isMobile ? 180 : isTablet ? 200 : 220} sx={{ borderRadius: 2 }} />
+            <Skeleton key={idx} variant="rounded" height={isMobile ? 168 : isTablet ? 210 : 236} sx={{ borderRadius: 2 }} />
           ))}
         </Box>
       ) : items.length === 0 ? (

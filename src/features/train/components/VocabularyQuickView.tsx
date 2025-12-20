@@ -17,6 +17,7 @@ import {
   MenuItem,
   ListItemIcon,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { List as ListIcon, X, Volume2, MoreVertical, Eye } from 'lucide-react';
 import { speakEnglish } from '@/utils/speechUtils';
 import { removeFileExtension } from '@/utils/fileUtils';
@@ -41,6 +42,7 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
   const [detailVocab, setDetailVocab] = useState<VocabularyItem | null>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isDark = theme.palette.mode === 'dark';
 
   const handleToggle = () => {
     setOpen(!open);
@@ -74,7 +76,7 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
       {/* Floating Action Button - Pinned to right edge */}
       <Tooltip title="Vocabulary List" placement="left">
         <Fab
-          color="primary"
+          color="default"
           aria-label="vocabulary list"
           onClick={handleToggle}
           sx={{
@@ -82,8 +84,18 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
             right: 0,
             top: { xs: 180, sm: 180 },
             zIndex: (theme) => theme.zIndex.speedDial,
-            borderRadius: { xs: '50% 0 0 50%', sm: '50% 0 0 50%' },
-            boxShadow: 3,
+            width: 56,
+            height: 56,
+            borderRadius: '24px 0 0 24px',
+            boxShadow: 'none',
+            border: '1px solid',
+            borderColor: alpha(theme.palette.primary.main, isDark ? 0.55 : 0.35),
+            bgcolor: alpha(theme.palette.background.paper, isDark ? 0.92 : 0.98),
+            color: theme.palette.primary.main,
+            backdropFilter: 'blur(8px)',
+            '&:hover': {
+              bgcolor: alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08),
+            },
           }}
         >
           <ListIcon size={24} />
@@ -245,4 +257,3 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
     </>
   );
 };
-

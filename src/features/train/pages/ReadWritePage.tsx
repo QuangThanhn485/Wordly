@@ -535,37 +535,49 @@ const ReadWritePage = () => {
       {/* Main Content */}
       <Box
         sx={{
-          width: '100%',
-          maxWidth: { xs: '100%', sm: '1200px' },
-          mx: 'auto',
-          px: { xs: 2, sm: 3, md: 4 },
-          py: { xs: 2, sm: 3, md: 4 },
           flex: 1,
-          boxSizing: 'border-box',
+          width: '100%',
+          bgcolor: 'background.default',
         }}
       >
-        {isLoading ? (
-          <Box sx={{ maxWidth: 700, mx: 'auto' }}>
-            <Skeleton variant="rounded" height={400} sx={{ borderRadius: 2 }} />
-          </Box>
-        ) : items.length === 0 ? (
-          <Alert severity="warning" sx={{ maxWidth: 600, mx: 'auto' }}>
-            Không có từ vựng nào. Vui lòng chọn file từ vựng trước.
-          </Alert>
-        ) : currentWord ? (
-          <WordInputCard
-            question={question}
-            answer={answer}
-            mode={mode}
-            onAnswer={handleAnswer}
-            onHint={handleHint}
-            showHint={showHint}
-            isCompleted={currentWordCompleted}
-            shouldShake={shouldShake}
-            shakeKey={shakeKey}
-            hasError={hasError}
-          />
-        ) : null}
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: { xs: '100%', sm: '1200px' },
+            mx: 'auto',
+            px: { xs: 2, sm: 3, md: 4 },
+            py: { xs: 2, sm: 3, md: 4 },
+            boxSizing: 'border-box',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: currentWord ? { xs: 'flex-start', md: 'center' } : 'flex-start',
+            minHeight: '100%',
+          }}
+        >
+          {isLoading ? (
+            <Box sx={{ width: '100%', maxWidth: 760 }}>
+              <Skeleton variant="rounded" height={420} sx={{ borderRadius: { xs: 2, sm: 2.5 } }} />
+            </Box>
+          ) : items.length === 0 ? (
+            <Alert severity="warning" sx={{ width: '100%', maxWidth: 760 }}>
+              Không có từ vựng nào. Vui lòng chọn file từ vựng trước.
+            </Alert>
+          ) : currentWord ? (
+            <WordInputCard
+              question={question}
+              answer={answer}
+              mode={mode}
+              onAnswer={handleAnswer}
+              onHint={handleHint}
+              showHint={showHint}
+              isCompleted={currentWordCompleted}
+              shouldShake={shouldShake}
+              shakeKey={shakeKey}
+              hasError={hasError}
+            />
+          ) : null}
+        </Box>
       </Box>
 
       {/* Completion Modal */}
@@ -588,4 +600,3 @@ const ReadWritePage = () => {
 };
 
 export default ReadWritePage;
-

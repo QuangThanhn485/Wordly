@@ -41,13 +41,20 @@
     "invalidFile": "Invalid or corrupted file.",
     "deleteRangeConfirm": "All reports in this range will be permanently deleted.",
     "irreversible": "This action cannot be undone!",
-    "selectRange": "Please select a date range or choose \"Delete all\""
+    "selectRange": "Please choose a time range"
   },
   "dialogs": {
     "backupConfirmTitle": "Confirm Backup",
     "backupConfirmMessage": "Are you sure you want to back up all data? The backup file will be downloaded automatically.",
     "deleteReportsTitle": "Delete Reports",
-    "deleteReportsAll": "Delete all reports",
+    "deleteReportsAll": "All",
+    "deleteReportsToday": "Today",
+    "deleteReportsLast7Days": "Last 7 days",
+    "deleteReportsLast4Hours": "Last 4 hours",
+    "deleteReportsLast1Hour": "Last 1 hour",
+    "deleteReportsQuick": "Quick range",
+    "deleteReportsRange": "Date range",
+    "deleteReportsRangeApplied": "{{from}} → {{to}}",
     "fromDate": "From date",
     "toDate": "To date",
     "deleteReportsWarning": "All reports in this range will be deleted permanently.",
