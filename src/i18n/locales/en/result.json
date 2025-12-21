@@ -1,5 +1,8 @@
 {
   "title": "Training Results",
+  "subtitle": "See detailed statistics of the words you missed during training",
+  "showingCount_one": "Showing <strong>{{count}}</strong> word",
+  "showingCount_other": "Showing <strong>{{count}}</strong> words",
   "overview": {
     "totalMistakes": "Total Mistakes",
     "uniqueWords": "Unique Words",
@@ -17,6 +20,7 @@
     "sortByCount": "Mistake Count",
     "sortByDate": "Recent",
     "sortByWord": "Alphabetical",
+    "noMatches": "No vocabulary matches your filters.",
     "countDesc": "Mistake Count ↓",
     "countAsc": "Mistake Count ↑",
     "dateDesc": "Recent ↓",

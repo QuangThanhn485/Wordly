@@ -374,7 +374,7 @@ export const VocabFormDialog: React.FC<VocabFormDialogProps> = React.memo(
                   </MenuItem>
                   {WORD_TYPES.map((type) => (
                     <MenuItem key={type.value} value={type.value}>
-                      {type.label}
+                      {t(type.labelKey)}
                     </MenuItem>
                   ))}
                 </Select>

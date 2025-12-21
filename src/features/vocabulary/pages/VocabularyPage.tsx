@@ -1614,7 +1614,7 @@ const VocabularyPage: React.FC = () => {
                 overflow: 'auto', // Cho phép scroll khi cần
                 overflowX: 'hidden', // Không scroll ngang
               }}>
-                <Table aria-label="vocabulary table" stickyHeader={isMdDown} size="medium" sx={{ minWidth: 650 }}>
+                <Table aria-label={t('table.ariaLabel')} stickyHeader={isMdDown} size="medium" sx={{ minWidth: 650 }}>
                   <TableHead>
                     <TableRow>
                       <StyledTableCell padding="checkbox">

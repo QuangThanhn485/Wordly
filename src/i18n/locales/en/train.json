@@ -17,6 +17,16 @@
     "viEn": "VI ➜ EN",
     "enVi": "EN ➜ VI"
   },
+  "topBar": {
+    "progress": "Progress: {{completed}} / {{total}} ({{percent}}%)",
+    "remaining": "Remaining: {{remaining}}",
+    "mistakes": "Mistakes: {{count}}",
+    "mistakesShort": "M: {{count}}"
+  },
+  "flashcards": {
+    "tapToAnswer": "Tap a card to answer",
+    "cardAriaLabel": "Flashcard for {{word}}"
+  },
   "flashcardsReading": {
     "title": "Flashcards Reading",
     "instruction": "Look at the word and try to remember its meaning",
@@ -33,6 +43,7 @@
     "instruction": "Listen to the pronunciation and identify the word",
     "playAudio": "Play Audio",
     "replay": "Replay",
+    "hintTooltip": "Show hint ({{shortcut}})",
     "showWord": "Show Word",
     "hideWord": "Hide Word",
     "iKnow": "I Know",
@@ -116,7 +127,11 @@
     "selectFile": "Please select a vocabulary file first"
   },
   "quickView": {
-    "title": "Vocabulary Quick View",
+    "title": "Vocabulary List",
+    "openAriaLabel": "Open vocabulary list",
+    "empty": "No vocabulary loaded",
+    "totalCount_one": "Total: {{count}} word",
+    "totalCount_other": "Total: {{count}} words",
     "totalWords": "Total Words",
     "close": "Close"
   }

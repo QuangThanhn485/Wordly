@@ -11,6 +11,7 @@
     "emptyFolder": "Thư mục trống"
   },
   "table": {
+    "ariaLabel": "Bảng từ vựng",
     "word": "Từ",
     "type": "Loại từ",
     "meaning": "Nghĩa tiếng Việt",
@@ -143,6 +144,11 @@
     "backToFolders": "Quay lại danh sách thư mục",
     "addWordShort": "Thêm",
     "rowMenuFor": "Menu cho {{word}}",
+    "fileAriaLabel": "Tệp {{name}}",
+    "fileMenuAriaLabel": "Menu tệp {{name}}",
+    "folderToggleAriaLabel": "Mở/đóng thư mục {{name}}",
+    "folderMenuAriaLabel": "Menu thư mục {{name}}",
+    "breadcrumbAriaLabel": "Điều hướng",
     "close": "Đóng"
   },
   "viewMode": {
@@ -159,6 +165,9 @@
     "conjunction": "Liên từ",
     "pronoun": "Đại từ",
     "interjection": "Thán từ",
+    "article": "Mạo từ",
+    "determiner": "Từ hạn định",
+    "auxiliary": "Trợ động từ",
     "phrase": "Cụm từ",
     "idiom": "Thành ngữ"
   },

@@ -36,6 +36,7 @@
     "name": "Tên",
     "type": "Loại",
     "actions": "Hành động",
+    "moreActions": "Thêm hành động",
     "status": "Trạng thái",
     "date": "Ngày",
     "word": "Từ",
@@ -44,7 +45,8 @@
     "example": "Ví dụ",
     "note": "Ghi chú",
     "file": "Tệp",
-    "folder": "Thư mục"
+    "folder": "Thư mục",
+    "aboutUs": "Về chúng tôi"
   },
   "messages": {
     "success": "Thành công!",
@@ -56,6 +58,15 @@
     "copied": "Đã sao chép vào clipboard",
     "confirmDelete": "Bạn có chắc chắn muốn xóa?"
   },
+  "errors": {
+    "notFound": "404 - Không tìm thấy trang"
+  },
+  "time": {
+    "justNow": "Vừa xong",
+    "minutesAgo": "{{count}} phút trước",
+    "hoursAgo": "{{count}} giờ trước",
+    "daysAgo": "{{count}} ngày trước"
+  },
   "validation": {
     "required": "Trường này là bắt buộc",
     "minLength": "Tối thiểu {{min}} ký tự",
@@ -63,4 +74,3 @@
     "invalidFormat": "Định dạng không hợp lệ"
   }
 }
-

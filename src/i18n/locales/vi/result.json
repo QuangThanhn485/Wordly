@@ -1,5 +1,7 @@
 {
   "title": "Kết quả luyện tập",
+  "subtitle": "Xem thống kê chi tiết về các từ vựng bạn đã sai trong quá trình luyện tập",
+  "showingCount": "Hiển thị <strong>{{count}}</strong> từ vựng",
   "overview": {
     "totalMistakes": "Tổng lỗi sai",
     "uniqueWords": "Từ duy nhất",
@@ -17,6 +19,7 @@
     "sortByCount": "Số lần sai",
     "sortByDate": "Gần đây",
     "sortByWord": "Theo bảng chữ cái",
+    "noMatches": "Không tìm thấy từ vựng nào phù hợp với bộ lọc của bạn.",
     "countDesc": "Số lần sai ↓",
     "countAsc": "Số lần sai ↑",
     "dateDesc": "Gần đây ↓",
@@ -34,10 +37,10 @@
     "viewHistory": "Xem lịch sử"
   },
   "modes": {
-    "flashcardsReading": "Flashcards Reading",
-    "flashcardsListening": "Flashcards Listening",
-    "readWrite": "Read & Write",
-    "listenWrite": "Listen & Write"
+    "flashcardsReading": "Flashcards Đọc",
+    "flashcardsListening": "Flashcards Nghe",
+    "readWrite": "Đọc & Viết",
+    "listenWrite": "Nghe & Viết"
   },
   "empty": {
     "title": "Chưa có lỗi sai",

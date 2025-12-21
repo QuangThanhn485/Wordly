@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { MapPin, AlertCircle, Volume2, HelpCircle, Play, ArrowLeftRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTrainWords } from '@/features/train/train-listen';
 import { getNextTrainingMode } from '@/features/train/utils/trainingModes';
@@ -71,6 +72,7 @@ const FlashcardsListeningPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  const { t } = useTranslation('train');
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const currentFileName = searchParams.get('file');
@@ -580,7 +582,7 @@ const FlashcardsListeningPage = () => {
             fontWeight: 600,
           }}
         >
-          {language === 'vi' ? 'VI ➜ EN' : 'EN ➜ VI'}
+          {language === 'vi' ? t('direction.viEn') : t('direction.enVi')}
         </Button>
 
         <Box
@@ -614,11 +616,11 @@ const FlashcardsListeningPage = () => {
                 whiteSpace: 'nowrap',
               }}
             >
-              Start
+              {t('buttons.start')}
             </Button>
           ) : (
             <>
-              <Tooltip title="Replay audio">
+              <Tooltip title={t('flashcardsListening.replay')}>
                 <IconButton
                   onClick={handleReplayAudio}
                   disabled={allFlipped}
@@ -632,7 +634,7 @@ const FlashcardsListeningPage = () => {
                   <Volume2 size={isMobile ? 16 : 24} />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Show hint (Ctrl+X)">
+              <Tooltip title={t('flashcardsListening.hintTooltip', { shortcut: 'Ctrl+X' })}>
                 <IconButton
                   onClick={handleShowAnswer}
                   disabled={allFlipped}
@@ -667,7 +669,7 @@ const FlashcardsListeningPage = () => {
           />
           <Chip
             icon={<AlertCircle size={16} color="error" />}
-            label={isMobile ? `M: ${mistakes}` : `Mistakes: ${mistakes}`}
+            label={t(isMobile ? 'topBar.mistakesShort' : 'topBar.mistakes', { count: mistakes })}
             variant="outlined"
             size={isMobile ? 'small' : 'medium'}
             sx={{
@@ -699,7 +701,7 @@ const FlashcardsListeningPage = () => {
               whiteSpace: 'nowrap',
             }}
           >
-            Restart
+            {t('buttons.restart')}
           </Button>
         </Box>
       </Box>
@@ -806,7 +808,7 @@ const FlashcardsListeningPage = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <HelpCircle size={24} color="currentColor" style={{ color: 'inherit' }} />
             <Typography variant="h6" fontWeight={600}>
-              Hint / Gợi ý
+              {t('buttons.hint')}
             </Typography>
           </Box>
         </DialogTitle>
@@ -823,7 +825,7 @@ const FlashcardsListeningPage = () => {
                     fontSize: { xs: '0.75rem', sm: '0.875rem' },
                   }}
                 >
-                  English
+                  {t('common.english')}
                 </Typography>
                 <Typography 
                   variant="h5" 
@@ -847,7 +849,7 @@ const FlashcardsListeningPage = () => {
                     fontSize: { xs: '0.75rem', sm: '0.875rem' },
                   }}
                 >
-                  Tiếng Việt
+                  {t('common.vietnamese')}
                 </Typography>
                 <Typography 
                   variant="h6" 
@@ -864,7 +866,7 @@ const FlashcardsListeningPage = () => {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setShowHintModal(false)} variant="contained" color="primary">
-            Close / Đóng
+            {t('buttons.close')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -17,6 +17,16 @@
     "viEn": "VI ➜ EN",
     "enVi": "EN ➜ VI"
   },
+  "topBar": {
+    "progress": "Tiến trình: {{completed}} / {{total}} ({{percent}}%)",
+    "remaining": "Còn lại: {{remaining}}",
+    "mistakes": "Lỗi sai: {{count}}",
+    "mistakesShort": "Sai: {{count}}"
+  },
+  "flashcards": {
+    "tapToAnswer": "Chạm vào thẻ để trả lời",
+    "cardAriaLabel": "Thẻ từ cho {{word}}"
+  },
   "flashcardsReading": {
     "title": "Flashcards Reading",
     "instruction": "Nhìn từ và thử nhớ nghĩa của nó",
@@ -33,6 +43,7 @@
     "instruction": "Nghe phát âm và nhận diện từ",
     "playAudio": "Phát âm thanh",
     "replay": "Phát lại",
+    "hintTooltip": "Xem gợi ý ({{shortcut}})",
     "showWord": "Hiện từ",
     "hideWord": "Ẩn từ",
     "iKnow": "Tôi biết",
@@ -116,7 +127,10 @@
     "selectFile": "Vui lòng chọn file từ vựng trước"
   },
   "quickView": {
-    "title": "Xem nhanh từ vựng",
+    "title": "Danh sách từ vựng",
+    "openAriaLabel": "Mở danh sách từ vựng",
+    "empty": "Chưa có từ vựng",
+    "totalCount": "Tổng: {{count}} từ",
     "totalWords": "Tổng số từ",
     "close": "Đóng"
   }

@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { AlertCircle, RotateCcw, ArrowLeftRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useTrainWords } from '@/features/train/train-listen-write';
 import { WordInputCard } from '@/features/train/train-listen-write';
@@ -51,6 +52,7 @@ function pickRandomIndex(arrLength: number, exclude: Set<number>): number {
 const ListenWritePage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { t } = useTranslation('train');
   const [searchParams, setSearchParams] = useSearchParams();
   const currentFileName = searchParams.get('file');
   const sourceFileName = searchParams.get('sourceFile');
@@ -474,14 +476,14 @@ const ListenWritePage = () => {
       >
         {/* Progress Bar */}
         <Box sx={{ width: '100%' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-              Tiến trình: {completedWords.length} / {total} ({Math.round(progress)}%)
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-              Còn lại: {remaining}
-            </Typography>
-          </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                {t('topBar.progress', { completed: completedWords.length, total, percent: Math.round(progress) })}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                {t('topBar.remaining', { remaining })}
+              </Typography>
+            </Box>
           <LinearProgress
             variant="determinate"
             value={progress}
@@ -517,13 +519,13 @@ const ListenWritePage = () => {
               fontWeight: 600,
             }}
           >
-            {mode === 'vi-en' ? 'VI ➜ EN' : 'EN ➜ VI'}
+            {mode === 'vi-en' ? t('direction.viEn') : t('direction.enVi')}
           </Button>
 
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
             <Chip
               icon={<AlertCircle size={16} color="error" />}
-              label={`Mistakes: ${mistakes}`}
+              label={t('topBar.mistakes', { count: mistakes })}
               variant="outlined"
               size={isMobile ? 'small' : 'medium'}
               sx={{
@@ -544,7 +546,7 @@ const ListenWritePage = () => {
                 whiteSpace: 'nowrap',
               }}
             >
-              Bắt đầu lại
+              {t('buttons.restart')}
             </Button>
           </Box>
         </Box>
@@ -579,7 +581,7 @@ const ListenWritePage = () => {
             </Box>
           ) : items.length === 0 ? (
             <Alert severity="warning" sx={{ width: '100%', maxWidth: 760 }}>
-              Không có từ vựng nào. Vui lòng chọn file từ vựng trước.
+              {t('errors.selectFile')}
             </Alert>
           ) : currentWord ? (
             <WordInputCard

@@ -3,6 +3,7 @@ import React from 'react';
 import { Box, Card, CardContent, Typography, Chip } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from 'lucide-react';
 import { alpha, useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 import {
   cardFront,
   cardBackRotate,
@@ -34,6 +35,7 @@ export const WordCard: React.FC<WordCardProps> = ({
   shakeKey = 0,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation('train');
   const isDark = theme.palette.mode === 'dark';
   const frontAccent = theme.palette.primary.main;
   return (
@@ -60,7 +62,7 @@ export const WordCard: React.FC<WordCardProps> = ({
       }}
       data-shake-seq={shakeKey}
       role="button"
-      aria-label={`Flashcard for ${en}`}
+      aria-label={t('flashcards.cardAriaLabel', { word: en })}
       tabIndex={0}
     >
       <Box sx={boxRotate(flipped)}>
@@ -147,7 +149,7 @@ export const WordCard: React.FC<WordCardProps> = ({
                 opacity: isDark ? 0.9 : 0.8,
               }}
             >
-              Tap a card to answer
+              {t('flashcards.tapToAnswer')}
             </Typography>
           </CardContent>
         </Card>
@@ -165,7 +167,7 @@ export const WordCard: React.FC<WordCardProps> = ({
               '&:last-child': { pb: { xs: 2, sm: 2.5, md: 3 } },
             }}
           >
-            <Chip icon={<CheckCircleIcon size={16} />} label="Correct" size="small" sx={solvedBadgeSx(theme)} />
+            <Chip icon={<CheckCircleIcon size={16} />} label={t('common.correct')} size="small" sx={solvedBadgeSx(theme)} />
 
             <Box
               sx={{

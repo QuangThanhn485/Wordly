@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Breadcrumbs, Link, Typography } from '@mui/material';
 import { ChevronRight, Home } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // ===== Types =====
 export interface BreadcrumbItem {
@@ -15,11 +16,12 @@ interface BreadcrumbNavProps {
 
 // ===== Component =====
 export const BreadcrumbNav: React.FC<BreadcrumbNavProps> = ({ path, onNavigate }) => {
+  const { t } = useTranslation('vocabulary');
   return (
     <Box sx={{ px: 2, py: 1.5, backgroundColor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
       <Breadcrumbs
         separator={<ChevronRight size={16} />}
-        aria-label="breadcrumb"
+        aria-label={t('actions.breadcrumbAriaLabel')}
         maxItems={4}
         itemsBeforeCollapse={1}
         itemsAfterCollapse={2}
@@ -62,4 +64,3 @@ export const BreadcrumbNav: React.FC<BreadcrumbNavProps> = ({ path, onNavigate }
     </Box>
   );
 };
-

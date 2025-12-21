@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { Languages, MapPin, AlertCircle, ArrowLeftRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTrainWords } from '@/features/train/train-start';
 import { getNextTrainingMode } from '@/features/train/utils/trainingModes';
@@ -66,6 +67,7 @@ const FlashcardsReadingPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  const { t } = useTranslation('train');
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const currentFileName = searchParams.get('file');
@@ -529,7 +531,7 @@ const FlashcardsReadingPage = () => {
             fontWeight: 600,
           }}
         >
-          {language === 'vi' ? 'VI ➜ EN' : 'EN ➜ VI'}
+          {language === 'vi' ? t('direction.viEn') : t('direction.enVi')}
         </Button>
 
         <Box
@@ -558,7 +560,7 @@ const FlashcardsReadingPage = () => {
           />
           <Chip
             icon={<AlertCircle size={16} color="error" />}
-            label={`Mistakes: ${mistakes}`}
+            label={t('topBar.mistakes', { count: mistakes })}
             variant="outlined"
             size={isMobile ? 'small' : 'medium'}
             sx={{
@@ -584,7 +586,7 @@ const FlashcardsReadingPage = () => {
               whiteSpace: 'nowrap',
             }}
           >
-            Restart
+            {t('buttons.restart')}
           </Button>
         </Box>
       </Box>

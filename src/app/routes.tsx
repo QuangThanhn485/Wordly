@@ -11,6 +11,7 @@ import {
   ResultPage,
 } from '@/features/train/pages';
 import DataManagementPage from '@/pages/DataManagementPage';
+import NotFoundPage from '@/pages/NotFoundPage';
 
 export default function AppRoutes() {
   return useRoutes([
@@ -31,7 +32,7 @@ export default function AppRoutes() {
     },
     {
       path: '*',
-      element: <div>404 - Not Found</div>,
+      element: <NotFoundPage />,
     },
   ]);
 }

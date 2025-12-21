@@ -33,7 +33,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ size = 'small' }) =
           alignItems: 'center',
           gap: 0.5,
         }}
-        aria-label="Switch language"
+        aria-label={t('tooltips.switchLanguage')}
       >
         <Languages size={18} />
         <span style={{ 
@@ -49,4 +49,3 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ size = 'small' }) =
 };
 
 export default LanguageSwitcher;
-

@@ -36,6 +36,7 @@
     "name": "Name",
     "type": "Type",
     "actions": "Actions",
+    "moreActions": "More actions",
     "status": "Status",
     "date": "Date",
     "word": "Word",
@@ -44,7 +45,8 @@
     "example": "Example",
     "note": "Note",
     "file": "File",
-    "folder": "Folder"
+    "folder": "Folder",
+    "aboutUs": "About Us"
   },
   "messages": {
     "success": "Success!",
@@ -56,6 +58,18 @@
     "copied": "Copied to clipboard",
     "confirmDelete": "Are you sure you want to delete?"
   },
+  "errors": {
+    "notFound": "404 - Not Found"
+  },
+  "time": {
+    "justNow": "Just now",
+    "minutesAgo_one": "{{count}} minute ago",
+    "minutesAgo_other": "{{count}} minutes ago",
+    "hoursAgo_one": "{{count}} hour ago",
+    "hoursAgo_other": "{{count}} hours ago",
+    "daysAgo_one": "{{count}} day ago",
+    "daysAgo_other": "{{count}} days ago"
+  },
   "validation": {
     "required": "This field is required",
     "minLength": "Minimum {{min}} characters",
@@ -63,4 +77,3 @@
     "invalidFormat": "Invalid format"
   }
 }
-

@@ -11,6 +11,7 @@
     "emptyFolder": "Empty folder"
   },
   "table": {
+    "ariaLabel": "Vocabulary table",
     "word": "Word",
     "type": "Type",
     "meaning": "Vietnamese Meaning",
@@ -143,6 +144,11 @@
     "backToFolders": "Back to folder list",
     "addWordShort": "Add",
     "rowMenuFor": "Menu for {{word}}",
+    "fileAriaLabel": "File {{name}}",
+    "fileMenuAriaLabel": "File menu for {{name}}",
+    "folderToggleAriaLabel": "Toggle folder {{name}}",
+    "folderMenuAriaLabel": "Folder menu for {{name}}",
+    "breadcrumbAriaLabel": "Breadcrumb",
     "close": "Close"
   },
   "viewMode": {
@@ -159,6 +165,9 @@
     "conjunction": "Conjunction",
     "pronoun": "Pronoun",
     "interjection": "Interjection",
+    "article": "Article",
+    "determiner": "Determiner",
+    "auxiliary": "Auxiliary",
     "phrase": "Phrase",
     "idiom": "Idiom"
   },

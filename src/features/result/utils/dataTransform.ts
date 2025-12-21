@@ -1,4 +1,5 @@
 // src/features/result/utils/dataTransform.ts
+import i18n from '@/i18n';
 import { type MistakeRecord, type MistakesStats } from '@/features/train/train-read-write/mistakesStorage';
 
 export type ProcessedMistake = {
@@ -130,13 +131,15 @@ export const calculateOverviewStats = (processedMistakes: ProcessedMistake[]): O
  * Get training mode display name
  */
 export const getTrainingModeLabel = (mode: string): string => {
-  const labels: Record<string, string> = {
-    'flashcards-reading': 'Flashcards Đọc',
-    'flashcards-listening': 'Flashcards Nghe',
-    'read-write': 'Đọc-Viết',
-    'listen-write': 'Nghe-Viết',
-  };
-  return labels[mode] || mode;
+  const modeKey = {
+    'flashcards-reading': 'flashcardsReading',
+    'flashcards-listening': 'flashcardsListening',
+    'read-write': 'readWrite',
+    'listen-write': 'listenWrite',
+  } as const;
+
+  const key = modeKey[mode as keyof typeof modeKey];
+  return key ? i18n.t(`result:modes.${key}`) : mode;
 };
 
 /**
@@ -163,10 +166,10 @@ export const formatTimeAgo = (timestamp: number): string => {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (days > 0) return `${days} ngày trước`;
-  if (hours > 0) return `${hours} giờ trước`;
-  if (minutes > 0) return `${minutes} phút trước`;
-  return 'Vừa xong';
+  if (days > 0) return i18n.t('common:time.daysAgo', { count: days });
+  if (hours > 0) return i18n.t('common:time.hoursAgo', { count: hours });
+  if (minutes > 0) return i18n.t('common:time.minutesAgo', { count: minutes });
+  return i18n.t('common:time.justNow');
 };
 
 /**
@@ -266,4 +269,3 @@ export const groupMistakesByFile = (
   // Sort by total mistakes (descending)
   return result.sort((a, b) => b.totalMistakes - a.totalMistakes);
 };
-

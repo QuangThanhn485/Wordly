@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { List as ListIcon, X, Volume2, MoreVertical, Eye } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { speakEnglish } from '@/utils/speechUtils';
 import { removeFileExtension } from '@/utils/fileUtils';
 import { VocabDetailPanel } from '@/features/vocabulary/components/VocabDetailPanel';
@@ -43,6 +44,7 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isDark = theme.palette.mode === 'dark';
+  const { t } = useTranslation(['train', 'vocabulary', 'common']);
 
   const handleToggle = () => {
     setOpen(!open);
@@ -74,10 +76,10 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
   return (
     <>
       {/* Floating Action Button - Pinned to right edge */}
-      <Tooltip title="Vocabulary List" placement="left">
+      <Tooltip title={t('quickView.title')} placement="left">
         <Fab
           color="default"
-          aria-label="vocabulary list"
+          aria-label={t('quickView.openAriaLabel')}
           onClick={handleToggle}
           sx={{
             position: 'fixed',
@@ -135,7 +137,7 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
           >
             <Box>
               <Typography variant="h6" fontWeight={600}>
-                Vocabulary List
+                {t('quickView.title')}
               </Typography>
               {currentFileName && (
                 <Typography variant="caption" color="text.secondary">
@@ -161,7 +163,7 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
                 }}
               >
                 <Typography color="text.secondary">
-                  No vocabulary loaded
+                  {t('quickView.empty')}
                 </Typography>
               </Box>
             ) : (
@@ -206,7 +208,7 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
                           size="small"
                           onClick={(e) => openMenu(e, item)}
                           sx={{ ml: 1 }}
-                          aria-label="More actions"
+                          aria-label={t('common:labels.moreActions')}
                         >
                           <MoreVertical size={18} />
                         </IconButton>
@@ -228,7 +230,7 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
             }}
           >
             <Typography variant="body2" color="text.secondary" align="center">
-              Total: {vocabularyList.length} {vocabularyList.length === 1 ? 'word' : 'words'}
+              {t('quickView.totalCount', { count: vocabularyList.length })}
             </Typography>
           </Box>
         </Box>
@@ -245,7 +247,7 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
           <ListItemIcon>
             <Eye size={16} />
           </ListItemIcon>
-          Xem chi tiết
+          {t('vocabulary:actions.viewDetail')}
         </MenuItem>
       </Menu>
 
