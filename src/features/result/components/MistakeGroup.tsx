@@ -10,6 +10,7 @@ import {
 import { MistakeCard } from './MistakeCard';
 import { type MistakesByMode } from '../utils/dataTransform';
 import { BookOpen, Headphones, Edit, Mic } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface MistakeGroupProps {
   group: MistakesByMode;
@@ -26,6 +27,7 @@ const getModeIcon = (mode: string) => {
 };
 
 export const MistakeGroup: React.FC<MistakeGroupProps> = ({ group }) => {
+  const { t } = useTranslation('result');
   const theme = useTheme();
 
   if (group.mistakes.length === 0) return null;
@@ -68,21 +70,21 @@ export const MistakeGroup: React.FC<MistakeGroupProps> = ({ group }) => {
                 }}
               >
                 {group.label}
-              </Typography>
+            </Typography>
               <Typography variant="body2" color="text.secondary">
-                {group.totalWords} tu vung voi {group.totalMistakes} loi
+                {t('group.summary', { words: group.totalWords, mistakes: group.totalMistakes })}
               </Typography>
             </Box>
           </Box>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Chip
-              label={`${group.totalWords} tu`}
+              label={t('group.wordsLabel', { count: group.totalWords })}
               size="small"
               color="primary"
               variant="outlined"
             />
             <Chip
-              label={`${group.totalMistakes} loi`}
+              label={t('group.mistakesLabel', { count: group.totalMistakes })}
               size="small"
               color="error"
               variant="outlined"
@@ -124,8 +126,6 @@ export const MistakeGroup: React.FC<MistakeGroupProps> = ({ group }) => {
     </Box>
   );
 };
-
-
 
 
 

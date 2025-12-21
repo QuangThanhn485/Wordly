@@ -9,11 +9,27 @@
     "timeSpent": "Thời gian",
     "accuracy": "Độ chính xác",
     "words": "từ",
-    "of": "của"
+    "of": "của",
+    "english": "Tiếng Anh",
+    "vietnamese": "Tiếng Việt"
+  },
+  "direction": {
+    "viEn": "VI ➜ EN",
+    "enVi": "EN ➜ VI"
+  },
+  "topBar": {
+    "progress": "Tiến trình: {{completed}} / {{total}} ({{percent}}%)",
+    "remaining": "Còn lại: {{remaining}}",
+    "mistakes": "Lỗi sai: {{count}}",
+    "mistakesShort": "Sai: {{count}}"
+  },
+  "flashcards": {
+    "tapToAnswer": "Chạm vào thẻ để trả lời",
+    "cardAriaLabel": "Thẻ từ cho {{word}}"
   },
   "flashcardsReading": {
     "title": "Flashcards Reading",
-    "instruction": "Nhìn từ và cố nhớ nghĩa của nó",
+    "instruction": "Nhìn từ và thử nhớ nghĩa của nó",
     "showMeaning": "Hiện nghĩa",
     "hideMeaning": "Ẩn nghĩa",
     "iKnow": "Tôi biết",
@@ -27,6 +43,7 @@
     "instruction": "Nghe phát âm và nhận diện từ",
     "playAudio": "Phát âm thanh",
     "replay": "Phát lại",
+    "hintTooltip": "Xem gợi ý ({{shortcut}})",
     "showWord": "Hiện từ",
     "hideWord": "Ẩn từ",
     "iKnow": "Tôi biết",
@@ -43,6 +60,16 @@
     "incorrect": "Sai rồi",
     "theAnswerIs": "Đáp án là"
   },
+  "readWriteCard": {
+    "placeholderViEn": "Nhập từ tiếng Anh...",
+    "placeholderEnVi": "Nhập nghĩa tiếng Việt...",
+    "audio": "Nghe phát âm",
+    "letterHintTitle": "Gợi ý chữ cái (VI ➜ EN)",
+    "hint": "Gợi ý",
+    "check": "Kiểm tra",
+    "correct": "Đúng rồi!",
+    "wrongHelper": "Sai rồi! Hãy thử lại."
+  },
   "listenWrite": {
     "title": "Listen & Write",
     "instruction": "Nghe phát âm và gõ từ",
@@ -55,6 +82,18 @@
     "incorrect": "Sai rồi",
     "theAnswerIs": "Đáp án là"
   },
+  "listenWriteCard": {
+    "title": "Nghe và viết",
+    "placeholderViEn": "Nhập từ tiếng Anh...",
+    "placeholderEnVi": "Nhập nghĩa tiếng Việt...",
+    "startSpeak": "Bắt đầu phát âm",
+    "replay": "Phát lại âm thanh",
+    "played": "Đã phát âm từ tiếng Anh",
+    "hint": "Gợi ý",
+    "check": "Kiểm tra",
+    "correct": "Đúng rồi!",
+    "wrongHelper": "Sai rồi! Hãy thử lại."
+  },
   "completion": {
     "title": "Hoàn thành luyện tập!",
     "congratulations": "Chúc mừng!",
@@ -65,8 +104,8 @@
     "viewMistakes": "Xem lỗi sai",
     "practiceAgain": "Luyện lại",
     "backToVocabulary": "Quay về từ vựng",
-    "nextMode": "Chế độ tiếp",
-    "noMistakes": "Không có lỗi sai! Tuyệt vời!"
+    "nextMode": "Chế độ tiếp theo",
+    "noMistakes": "Không có lỗi! Tuyệt vời!"
   },
   "session": {
     "resume": "Tiếp tục phiên",
@@ -74,15 +113,25 @@
     "continueSession": "Tiếp tục",
     "startNew": "Bắt đầu mới"
   },
+  "buttons": {
+    "start": "Bắt đầu",
+    "exit": "Thoát",
+    "restart": "Làm lại",
+    "nextMode": "Chế độ kế tiếp",
+    "hint": "Gợi ý",
+    "close": "Đóng"
+  },
   "errors": {
     "noWords": "Không có từ để luyện tập",
     "loadFailed": "Không thể tải từ vựng",
     "selectFile": "Vui lòng chọn file từ vựng trước"
   },
   "quickView": {
-    "title": "Xem nhanh từ vựng",
+    "title": "Danh sách từ vựng",
+    "openAriaLabel": "Mở danh sách từ vựng",
+    "empty": "Chưa có từ vựng",
+    "totalCount": "Tổng: {{count}} từ",
     "totalWords": "Tổng số từ",
     "close": "Đóng"
   }
 }
-

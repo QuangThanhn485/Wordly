@@ -4,10 +4,10 @@
   "train": "Luyện tập",
   "result": "Kết quả",
   "data": "Dữ liệu",
-  "flashcardsReading": "Flashcards Reading",
-  "flashcardsListening": "Flashcards Listening",
-  "readWrite": "Read & Write",
-  "listenWrite": "Listen & Write",
+  "flashcardsReading": "Flashcards Đọc",
+  "flashcardsListening": "Flashcards Nghe",
+  "readWrite": "Đọc & Viết",
+  "listenWrite": "Nghe & Viết",
   "tooltips": {
     "expandSidebar": "Mở rộng sidebar",
     "collapseSidebar": "Thu gọn sidebar",
@@ -16,4 +16,3 @@
     "switchLanguage": "Đổi ngôn ngữ"
   }
 }
-

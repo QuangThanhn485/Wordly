@@ -1,9 +1,10 @@
-// WordInputCard.tsx
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Box,
   Card,
-  CardContent,
+  Divider,
+  InputAdornment,
+  Stack,
   TextField,
   Button,
   Typography,
@@ -12,9 +13,10 @@ import {
   Tooltip,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { CheckCircle as CheckCircleIcon, Lightbulb as LightbulbIcon, Volume2 } from 'lucide-react';
+import { BookOpen, CheckCircle as CheckCircleIcon, Lightbulb as LightbulbIcon, Volume2 } from 'lucide-react';
 import { keyframes } from '@mui/system';
 import { speakEnglish } from '@/utils/speechUtils';
+import { useTranslation } from 'react-i18next';
 
 const shakeKF = keyframes`
   10%, 90% { transform: translate3d(-1px, 0, 0); }
@@ -48,7 +50,9 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   shakeKey = 0,
   hasError = false,
 }) => {
+  const { t } = useTranslation('train');
   const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const [userInput, setUserInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const isViToEnMode = mode === 'vi-en';
@@ -139,7 +143,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!userInput.trim()) return;
-    
+
     onAnswer(userInput.trim());
     setUserInput('');
   };
@@ -151,103 +155,184 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   };
 
   const questionLabel = mode === 'vi-en' ? 'VI' : 'EN';
-  const answerLabel = mode === 'vi-en' ? 'EN' : 'VI';
-  const placeholder = mode === 'vi-en' ? 'Nhập từ tiếng Anh...' : 'Nhập nghĩa tiếng Việt...';
+  const answerLabel = mode === 'vi-en' ? t('common.english') : t('common.vietnamese');
+  const placeholder =
+    mode === 'vi-en' ? t('readWriteCard.placeholderViEn') : t('readWriteCard.placeholderEnVi');
+  const accent = isCompleted
+    ? theme.palette.success.main
+    : hasError && shouldShake
+      ? theme.palette.error.main
+      : theme.palette.primary.main;
+  const subtitle = isCompleted
+    ? t('readWriteCard.correct')
+    : mode === 'vi-en'
+      ? t('readWriteCard.placeholderViEn')
+      : t('readWriteCard.placeholderEnVi');
 
   return (
     <Card
       sx={{
         width: '100%',
-        maxWidth: { xs: '100%', sm: 600, md: 700 },
+        maxWidth: { xs: '100%', sm: 680, md: 760 },
         mx: 'auto',
         mb: 3,
         animation:
           shouldShake && !isCompleted
             ? `${shakeKF} 0.35s cubic-bezier(.36,.07,.19,.97) both`
             : 'none',
-        boxShadow: isCompleted ? 4 : 2,
-        border: isCompleted
-          ? `2px solid ${theme.palette.success.main}`
-          : `1px solid ${theme.palette.divider}`,
-        transition: 'all 0.3s ease',
+        boxShadow: 'none',
+        borderRadius: { xs: 2, sm: 2.5 },
+        border: '1px solid',
+        borderColor: isCompleted
+          ? alpha(theme.palette.success.main, isDark ? 0.6 : 0.4)
+          : alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
+        overflow: 'hidden',
+        transition: 'border-color 160ms ease',
+        '&:focus-within': {
+          borderColor: alpha(accent, isDark ? 0.55 : 0.45),
+        },
       }}
     >
-      <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-        {/* Question Display */}
-        <Box sx={{ mb: 3 }}>
-          <Typography
-            variant="caption"
+      {/* Header */}
+      <Box
+        sx={{
+          px: { xs: 2, sm: 2.5 },
+          py: { xs: 1.75, sm: 2 },
+          borderBottom: '1px solid',
+          borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.65),
+          bgcolor: alpha(accent, isDark ? 0.08 : 0.06),
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 4,
+            bgcolor: alpha(accent, isDark ? 0.75 : 0.55),
+          },
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box
             sx={{
-              display: 'block',
-              textAlign: 'center',
-              mb: 1,
-              opacity: 0.7,
-              fontWeight: 500,
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              width: 44,
+              height: 44,
+              borderRadius: 999,
+              display: 'grid',
+              placeItems: 'center',
+              flexShrink: 0,
+              border: '1px solid',
+              borderColor: alpha(accent, isDark ? 0.55 : 0.35),
+              bgcolor: alpha(accent, isDark ? 0.16 : 0.1),
+              color: accent,
             }}
           >
-            {questionLabel}
-          </Typography>
-          <Typography
-            variant="h4"
-            align="center"
-            fontWeight="bold"
-            sx={{
-              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
-              lineHeight: 1.3,
-              wordBreak: 'break-word',
-              color: 'primary.main',
-              mb: 1.5,
-            }}
-          >
-            {question}
-          </Typography>
-          {canPlayAudio && (
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-              <Tooltip title="Nghe phát âm">
-                <IconButton
-                  size="small"
-                  onClick={handleSpeakAnswer}
-                  sx={{
-                    bgcolor: 'primary.light',
-                    color: 'primary.dark',
-                    '&:hover': {
-                      bgcolor: 'primary.main',
-                      color: 'primary.contrastText',
-                    },
-                  }}
-                >
-                  <Volume2 size={18} />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          )}
+            {isCompleted ? <CheckCircleIcon size={22} /> : <BookOpen size={22} />}
+          </Box>
+
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="subtitle1" fontWeight={950} sx={{ letterSpacing: '-0.01em' }} noWrap>
+              {t('readWrite.title')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+              {subtitle}
+            </Typography>
+          </Box>
         </Box>
+      </Box>
+
+      <Box sx={{ p: { xs: 2, sm: 2.5 } }}>
+        <Stack spacing={2}>
+          {/* Question Display */}
+          <Box sx={{ textAlign: 'center' }}>
+            <Box
+              sx={{
+                mx: 'auto',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                px: 1.25,
+                py: 0.5,
+                borderRadius: 999,
+                border: '1px solid',
+                borderColor: alpha(theme.palette.divider, isDark ? 0.22 : 0.55),
+                bgcolor: alpha(theme.palette.background.paper, isDark ? 0.08 : 0.6),
+                color: 'text.secondary',
+                fontWeight: 900,
+                fontSize: '0.75rem',
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {questionLabel}
+            </Box>
+
+            <Typography
+              variant="h4"
+              sx={{
+                mt: 1.25,
+                fontWeight: 950,
+                fontSize: { xs: '1.6rem', sm: '2.1rem', md: '2.5rem' },
+                lineHeight: 1.15,
+                letterSpacing: '-0.02em',
+                wordBreak: 'break-word',
+                color: 'text.primary',
+              }}
+            >
+              {question}
+            </Typography>
+
+            {canPlayAudio && (
+              <Box sx={{ mt: 1.25, display: 'flex', justifyContent: 'center' }}>
+                <Tooltip title={t('readWriteCard.audio')}>
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={handleSpeakAnswer}
+                      sx={{
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
+                        color: 'text.secondary',
+                        '&:hover': {
+                          bgcolor: alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08),
+                          color: 'text.primary',
+                        },
+                      }}
+                    >
+                      <Volume2 size={18} />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Box>
+            )}
+          </Box>
 
         {hasLetterHints && (
           <Box
             sx={{
-              mb: 3,
-              p: 2,
+              p: { xs: 1.5, sm: 2 },
               borderRadius: 2,
-              bgcolor: theme.palette.primary.light + '20',
-              border: `1px dashed ${theme.palette.primary.main}66`,
+              border: '1px solid',
+              borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.65),
+              bgcolor: alpha(theme.palette.background.paper, isDark ? 0.04 : 0.7),
             }}
           >
             <Typography
-              variant="body2"
-              fontWeight={600}
+              variant="caption"
               sx={{
                 textTransform: 'uppercase',
                 fontSize: { xs: '0.75rem', sm: '0.85rem' },
-                mb: 1.5,
-                color: 'primary.main',
-                letterSpacing: 0.5,
+                mb: 1.25,
+                color: 'text.secondary',
+                letterSpacing: '0.12em',
+                fontWeight: 900,
               }}
             >
-              Gợi ý chữ cái (VI ➜ EN)
+              {t('readWriteCard.letterHintTitle')}
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
               {letterHints.map((letters, wordIndex) => {
                 if (letters.length === 0) return null;
                 return (
@@ -268,19 +353,20 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                           sx={{
                             width: 38,
                             height: 46,
-                            borderRadius: 1.5,
-                            border: `2px solid ${
-                              highlighted ? theme.palette.success.main : theme.palette.divider
-                            }`,
+                            borderRadius: 1.75,
+                            border: '1px solid',
+                            borderColor: highlighted
+                              ? alpha(theme.palette.success.main, isDark ? 0.7 : 0.55)
+                              : alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
                             bgcolor: highlighted
-                              ? theme.palette.success.light + '40'
-                              : theme.palette.background.paper,
+                              ? alpha(theme.palette.success.main, isDark ? 0.18 : 0.12)
+                              : alpha(theme.palette.background.paper, isDark ? 0.08 : 0.6),
                             color: highlighted ? 'success.main' : 'text.primary',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontWeight: 700,
-                            fontSize: '1.125rem',
+                            fontWeight: 900,
+                            fontSize: '1.05rem',
                             textTransform: 'uppercase',
                             transition: 'all 0.2s ease',
                             minWidth: 38,
@@ -300,55 +386,72 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
         {/* Input Section */}
         {!isCompleted ? (
           <Box component="form" onSubmit={handleSubmit}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 2 }}>
-              <TextField
-                inputRef={inputRef}
-                fullWidth
-                label={answerLabel}
-                placeholder={placeholder}
-                value={userInput}
-                onChange={(e) => {
-                  setUserInput(e.target.value);
-                }}
-                onKeyPress={handleKeyPress}
-                error={hasError && shouldShake}
-                helperText={hasError && shouldShake ? 'Sai rồi! Hãy thử lại.' : ''}
-                variant="outlined"
-                size="medium"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    fontSize: { xs: '1rem', sm: '1.125rem' },
-                  },
-                }}
-                autoFocus
-                disabled={isCompleted}
-              />
-              <Tooltip title="Gợi ý">
-                <IconButton
-                  onClick={onHint}
-                  color="primary"
-                  sx={{
-                    mt: 0.5,
-                    border: `1px solid ${theme.palette.primary.main}`,
-                    '&:hover': {
-                      bgcolor: 'primary.main',
-                      color: 'primary.contrastText',
-                    },
-                  }}
-                >
-                  <LightbulbIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
+            <Divider sx={{ mb: 2, borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.65) }} />
+
+            <TextField
+              inputRef={inputRef}
+              fullWidth
+              label={answerLabel}
+              placeholder={placeholder}
+              value={userInput}
+              onChange={(e) => {
+                setUserInput(e.target.value);
+              }}
+              onKeyPress={handleKeyPress}
+              error={hasError && shouldShake}
+              helperText={hasError && shouldShake ? t('readWriteCard.wrongHelper') : ' '}
+              variant="outlined"
+              size="medium"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  fontSize: { xs: '1rem', sm: '1.1rem' },
+                  bgcolor: alpha(theme.palette.background.paper, isDark ? 0.1 : 0.65),
+                },
+              }}
+              autoFocus
+              disabled={isCompleted}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end" sx={{ mr: 0.75 }}>
+                    <Tooltip title={t('readWriteCard.hint')}>
+                      <span>
+                        <IconButton
+                          onClick={onHint}
+                          disabled={isCompleted}
+                          edge="end"
+                          sx={{
+                            borderRadius: 2,
+                            border: '1px solid',
+                            borderColor: alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
+                            color: 'text.secondary',
+                            '&:hover': {
+                              bgcolor: alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08),
+                              color: 'text.primary',
+                            },
+                            '&.Mui-disabled': {
+                              borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.5),
+                              color: alpha(theme.palette.text.primary, 0.35),
+                            },
+                          }}
+                        >
+                          <LightbulbIcon size={18} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </InputAdornment>
+                ),
+              }}
+            />
 
             {/* Hint Display */}
             {showHint && (
               <Box
                 sx={{
-                  p: 2,
-                  mb: 2,
+                  mt: 1.25,
+                  p: 1.5,
                   bgcolor: hintBackground,
-                  borderRadius: 1,
+                  borderRadius: 2,
                   border: `1px solid ${hintBorder}`,
                   color: hintText,
                 }}
@@ -359,15 +462,18 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1,
-                    fontWeight: 500,
+                    fontWeight: 700,
                     color: hintText,
                     '& svg': { color: hintText, stroke: hintText },
                   }}
                 >
-                  <LightbulbIcon fontSize="small" />
-                  <span>
-                    <strong>{answerLabel}:</strong> {answer}
-                  </span>
+                  <LightbulbIcon size={18} />
+                  <Box component="span" sx={{ minWidth: 0 }}>
+                    <Box component="span" sx={{ fontWeight: 900 }}>
+                      {answerLabel}:
+                    </Box>{' '}
+                    {answer}
+                  </Box>
                 </Typography>
               </Box>
             )}
@@ -380,35 +486,45 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
               size="large"
               disabled={!userInput.trim()}
               sx={{
-                py: 1.5,
+                mt: 1.5,
+                py: 1.25,
+                borderRadius: 2,
                 fontSize: { xs: '0.875rem', sm: '1rem' },
-                fontWeight: 600,
+                fontWeight: 900,
               }}
             >
-              Kiểm tra
+              {t('readWriteCard.check')}
             </Button>
           </Box>
         ) : (
-          <Box
-            sx={{
-              textAlign: 'center',
-              py: 2,
-            }}
-          >
-            <CheckCircleIcon
-              size={60}
-              color="green"
-              style={{ marginBottom: 16 }}
-            />
-            <Typography variant="h6" color="success.main" fontWeight={600} gutterBottom>
-              Đúng rồi!
+          <Box sx={{ textAlign: 'center', py: { xs: 1.5, sm: 2 } }}>
+            <Box
+              sx={{
+                mx: 'auto',
+                mb: 1.5,
+                width: 72,
+                height: 72,
+                borderRadius: 999,
+                display: 'grid',
+                placeItems: 'center',
+                border: '1px solid',
+                borderColor: alpha(theme.palette.success.main, isDark ? 0.55 : 0.35),
+                bgcolor: alpha(theme.palette.success.main, isDark ? 0.16 : 0.1),
+                color: theme.palette.success.main,
+              }}
+            >
+              <CheckCircleIcon size={34} />
+            </Box>
+            <Typography variant="h6" color="success.main" fontWeight={950} gutterBottom>
+              {t('readWriteCard.correct')}
             </Typography>
-            <Typography variant="body1" color="text.secondary">
-              <strong>{answerLabel}:</strong> {answer}
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 800 }}>
+              {answerLabel}: {answer}
             </Typography>
           </Box>
         )}
-      </CardContent>
+        </Stack>
+      </Box>
     </Card>
   );
 };

@@ -1,5 +1,8 @@
 {
   "title": "Training Results",
+  "subtitle": "See detailed statistics of the words you missed during training",
+  "showingCount_one": "Showing <strong>{{count}}</strong> word",
+  "showingCount_other": "Showing <strong>{{count}}</strong> words",
   "overview": {
     "totalMistakes": "Total Mistakes",
     "uniqueWords": "Unique Words",
@@ -16,7 +19,14 @@
     "sortBy": "Sort By",
     "sortByCount": "Mistake Count",
     "sortByDate": "Recent",
-    "sortByWord": "Alphabetical"
+    "sortByWord": "Alphabetical",
+    "noMatches": "No vocabulary matches your filters.",
+    "countDesc": "Mistake Count ↓",
+    "countAsc": "Mistake Count ↑",
+    "dateDesc": "Recent ↓",
+    "dateAsc": "Recent ↑",
+    "wordAsc": "A → Z",
+    "wordDesc": "Z → A"
   },
   "card": {
     "mistakeCount": "Mistake Count",
@@ -42,7 +52,10 @@
     "showMore": "Show More",
     "showLess": "Show Less",
     "words": "words",
-    "mistakes": "mistakes"
+    "mistakes": "mistakes",
+    "summary": "{{words}} words with {{mistakes}} mistakes",
+    "wordsLabel": "{{count}} words",
+    "mistakesLabel": "{{count}} mistakes",
+    "trainTop": "Train top mistakes ({{count}} words)"
   }
 }
-

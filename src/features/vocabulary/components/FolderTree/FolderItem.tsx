@@ -8,6 +8,7 @@ import {
   FileText as FileIcon,
   MoreVertical as MoreIcon,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { FolderNode, FileLeaf } from '../../types';
 import { removeFileExtension } from '@/utils/fileUtils';
 
@@ -68,6 +69,7 @@ export const FileItem = memo(function FileItem({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
   const showMenuButton = forceShowMenu || isMobile;
+  const { t } = useTranslation('vocabulary');
 
   return (
     <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -100,7 +102,7 @@ export const FileItem = memo(function FileItem({
         }}
         onClick={onClick}
         onContextMenu={isMobile ? undefined : onContext} // Disable context menu on mobile, use button instead
-        aria-label={`File ${node.name}`}
+        aria-label={t('actions.fileAriaLabel', { name: removeFileExtension(node.name) })}
       >
         <FileIcon size={16} style={{ marginRight: 8, color: 'inherit' }} />
         <ListItemText 
@@ -135,7 +137,7 @@ export const FileItem = memo(function FileItem({
             right: 4,
             opacity: 1,
           }}
-          aria-label={`File menu for ${node.name}`}
+          aria-label={t('actions.fileMenuAriaLabel', { name: removeFileExtension(node.name) })}
         >
           <MoreIcon fontSize="small" />
         </IconButton>
@@ -171,6 +173,7 @@ const FolderItemComponent = function FolderItem({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
   const showMenuButton = forceShowMenu || isMobile;
+  const { t } = useTranslation('vocabulary');
 
   // Optimize: check if isFolderOpen is a Set (direct lookup) or function
   const open = !isFolderOpen 
@@ -221,7 +224,7 @@ const FolderItemComponent = function FolderItem({
                 : undefined,
           }}
           aria-expanded={open}
-          aria-label={`Toggle folder ${node.label}`}
+          aria-label={t('actions.folderToggleAriaLabel', { name: node.label })}
         >
           {open ? <FolderOpenIcon size={20} style={{ marginRight: 8, color: 'inherit' }} /> : <FolderIcon size={20} style={{ marginRight: 8, color: 'inherit' }} />}
           <ListItemText primary={<Typography variant="body1" sx={{ fontWeight: 500 }}>{node.label}</Typography>} />
@@ -239,7 +242,7 @@ const FolderItemComponent = function FolderItem({
               right: 4,
               opacity: 1,
             }}
-            aria-label={`Folder menu for ${node.label}`}
+            aria-label={t('actions.folderMenuAriaLabel', { name: node.label })}
           >
             <MoreIcon fontSize="small" />
           </IconButton>
@@ -303,4 +306,3 @@ const FolderItemComponent = function FolderItem({
 
 // Memoize component for performance - React will handle re-renders when props change
 export const FolderItem = memo(FolderItemComponent);
-

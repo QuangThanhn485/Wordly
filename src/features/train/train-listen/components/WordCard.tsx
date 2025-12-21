@@ -2,7 +2,8 @@
 import React from 'react';
 import { Box, Card, CardContent, Typography, Chip } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from 'lucide-react';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 import {
   cardFront,
   cardBackRotate,
@@ -34,145 +35,223 @@ export const WordCard: React.FC<WordCardProps> = ({
   shakeKey = 0,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation('train');
+  const isDark = theme.palette.mode === 'dark';
+  const frontAccent = theme.palette.primary.main;
   return (
     <Box
       onClick={onAttempt}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onAttempt();
+        }
+      }}
       sx={{
         ...cardContainer,
         animation:
           shouldShake && !flipped
             ? `${shakeKF} 0.35s cubic-bezier(.36,.07,.19,.97) both`
             : 'none',
+        outline: 'none',
+        borderRadius: { xs: 3, sm: 3.5, md: 4 },
+        '&:focus-visible': {
+          outline: `2px solid ${alpha(frontAccent, isDark ? 0.55 : 0.45)}`,
+          outlineOffset: 4,
+        },
       }}
       data-shake-seq={shakeKey}
       role="button"
-      aria-label={`Flashcard for ${en}`}
+      aria-label={t('flashcards.cardAriaLabel', { word: en })}
+      tabIndex={0}
     >
       <Box sx={boxRotate(flipped)}>
-        <Card sx={cardFront(theme)}>
-          <CardContent sx={{ width: '100%' }}>
-            {/* Show language label based on mode */}
+        <Card elevation={0} sx={cardFront(theme)}>
+          <CardContent
+            sx={{
+              width: '100%',
+              height: '100%',
+              p: { xs: 2, sm: 2.5, md: 3 },
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              '&:last-child': { pb: { xs: 2, sm: 2.5, md: 3 } },
+            }}
+          >
             <Typography
-              variant="caption"
-              sx={{ 
-                display: 'block', 
-                textAlign: 'center', 
-                mb: { xs: 0.25, sm: 0.5 },
-                opacity: 0.8,
-                fontWeight: 500,
-                fontSize: { xs: '0.6875rem', sm: '0.75rem' }, // Smaller on mobile
+              variant="overline"
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                px: 1,
+                py: 0.25,
+                borderRadius: 999,
+                border: `1px solid ${alpha(frontAccent, isDark ? 0.45 : 0.3)}`,
+                bgcolor: alpha(frontAccent, isDark ? 0.16 : 0.08),
+                color: isDark ? theme.palette.primary.light : theme.palette.primary.dark,
+                fontWeight: 800,
+                letterSpacing: 1.4,
+                lineHeight: 1,
+                userSelect: 'none',
+                fontSize: { xs: '0.625rem', sm: '0.6875rem' },
               }}
             >
               {showLang === 'vi' ? 'EN' : 'VI'}
             </Typography>
-            <Typography
-              variant="h5"
-              align="center"
-              fontWeight="bold"
+
+            <Box
               sx={{
-                fontSize: { xs: '1rem', sm: '1.35rem', md: '1.5rem' }, // Smaller on mobile
-                lineHeight: 1.25,
-                wordBreak: 'break-word',
-                // Ensure text is always readable with high contrast
-                color: 'inherit',
+                flex: 1,
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
               }}
             >
-              {/* VI-EN mode (showLang === 'vi'): show English on cards */}
-              {/* EN-VI mode (showLang === 'en'): show Vietnamese on cards */}
-              {showLang === 'vi' ? en : vi}
-            </Typography>
+              <Typography
+                variant="h5"
+                align="center"
+                fontWeight={800}
+                sx={{
+                  fontSize: { xs: '1.35rem', sm: '1.6rem', md: '1.85rem' },
+                  lineHeight: 1.15,
+                  letterSpacing: '-0.02em',
+                  wordBreak: 'break-word',
+                  color: 'inherit',
+                }}
+              >
+                {showLang === 'vi' ? en : vi}
+              </Typography>
+              <Box
+                sx={{
+                  width: { xs: '42%', sm: '36%' },
+                  height: 2,
+                  borderRadius: 999,
+                  bgcolor: alpha(frontAccent, isDark ? 0.35 : 0.25),
+                  mt: { xs: 1, sm: 1.25 },
+                }}
+              />
+            </Box>
+
             <Typography
-              variant="body2"
+              variant="caption"
               align="center"
-              sx={{ 
-                mt: { xs: 0.75, sm: 1.25 },
+              sx={{
                 userSelect: 'none',
-                opacity: 0.7,
-                fontSize: { xs: '0.75rem', sm: '0.875rem' }, // Smaller on mobile
+                color: 'text.secondary',
+                fontWeight: 600,
+                letterSpacing: 0.2,
+                fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+                opacity: isDark ? 0.9 : 0.8,
               }}
             >
-              Tap a card to answer
+              {t('flashcards.tapToAnswer')}
             </Typography>
           </CardContent>
         </Card>
 
-        <Card sx={cardBackRotate(theme)}>
-          <CardContent sx={{ width: '100%' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
-              <Chip icon={<CheckCircleIcon size={16} />} label="Correct" size="small" sx={solvedBadgeSx(theme)} />
-            </Box>
+        <Card elevation={0} sx={cardBackRotate(theme)}>
+          <CardContent
+            sx={{
+              width: '100%',
+              height: '100%',
+              p: { xs: 2, sm: 2.5, md: 3 },
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+              '&:last-child': { pb: { xs: 2, sm: 2.5, md: 3 } },
+            }}
+          >
+            <Chip icon={<CheckCircleIcon size={16} />} label={t('common.correct')} size="small" sx={solvedBadgeSx(theme)} />
 
-            <Typography 
-              variant="subtitle2" 
-              align="center" 
-              sx={{ 
-                mb: { xs: 0.25, sm: 0.5 },
-                opacity: 0.8,
-                fontWeight: 500,
-                color: 'inherit',
-                fontSize: { xs: '0.6875rem', sm: '0.75rem' },
+            <Box
+              sx={{
+                width: '100%',
+                display: 'grid',
+                gap: { xs: 1.1, sm: 1.25 },
+                mt: { xs: 1.25, sm: 1.5 },
               }}
             >
-              EN
-            </Typography>
-            <Typography 
-              variant="h6" 
-              align="center" 
-              fontWeight={700} 
-              sx={{ 
-                wordBreak: 'break-word', 
-                mb: { xs: 0.5, sm: 1 },
-                color: 'inherit',
-                fontSize: { xs: '0.875rem', sm: '1rem' },
-              }}
-            >
-              {en}
-            </Typography>
-
-            <Typography 
-              variant="subtitle2" 
-              align="center" 
-              sx={{ 
-                mb: { xs: 0.125, sm: 0.25 },
-                opacity: 0.8,
-                fontWeight: 500,
-                color: 'inherit',
-                fontSize: { xs: '0.6875rem', sm: '0.75rem' },
-              }}
-            >
-              VI
-            </Typography>
-            <Typography 
-              variant="body1" 
-              align="center" 
-              sx={{ 
-                fontSize: { xs: '0.8125rem', sm: '1rem' },
-                wordBreak: 'break-word', 
-                mb: { xs: 0.5, sm: 1 },
-                color: 'inherit',
-              }}
-            >
-              {vi}
-            </Typography>
-
-            {meaning && (
-              <>
-                <Typography variant="subtitle2" color="text.secondary" align="center">
-                  Meaning
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
+                <Typography
+                  variant="overline"
+                  sx={{
+                    letterSpacing: 1.4,
+                    fontWeight: 800,
+                    color: 'text.secondary',
+                    userSelect: 'none',
+                    fontSize: { xs: '0.625rem', sm: '0.6875rem' },
+                  }}
+                >
+                  EN
                 </Typography>
                 <Typography
-                  variant="body2"
+                  variant="h6"
                   align="center"
-                  sx={{ fontSize: { xs: '0.9rem', sm: '0.95rem' }, lineHeight: 1.5, wordBreak: 'break-word' }}
+                  fontWeight={800}
+                  sx={{
+                    wordBreak: 'break-word',
+                    letterSpacing: '-0.01em',
+                    fontSize: { xs: '1rem', sm: '1.05rem' },
+                    color: 'inherit',
+                  }}
                 >
-                  {meaning}
+                  {en}
                 </Typography>
-              </>
-            )}
+              </Box>
+
+              <Box sx={{ height: 1, width: '100%', bgcolor: alpha(theme.palette.divider, isDark ? 0.35 : 0.9) }} />
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
+                <Typography
+                  variant="overline"
+                  sx={{
+                    letterSpacing: 1.4,
+                    fontWeight: 800,
+                    color: 'text.secondary',
+                    userSelect: 'none',
+                    fontSize: { xs: '0.625rem', sm: '0.6875rem' },
+                  }}
+                >
+                  VI
+                </Typography>
+                <Typography
+                  variant="body1"
+                  align="center"
+                  sx={{
+                    fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                    fontWeight: 800,
+                    wordBreak: 'break-word',
+                    color: 'inherit',
+                  }}
+                >
+                  {vi}
+                </Typography>
+              </Box>
+
+              {meaning && (
+                <Box sx={{ mt: { xs: 0.25, sm: 0.5 } }}>
+                  <Typography variant="overline" align="center" sx={{ display: 'block', color: 'text.secondary' }}>
+                    Meaning
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    align="center"
+                    sx={{ fontSize: { xs: '0.875rem', sm: '0.95rem' }, lineHeight: 1.5, wordBreak: 'break-word' }}
+                  >
+                    {meaning}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
           </CardContent>
         </Card>
       </Box>
     </Box>
   );
 };
-

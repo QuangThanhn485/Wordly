@@ -10,6 +10,7 @@ import {
 import { Folder as FolderIcon, FileText as FileIcon } from 'lucide-react';
 import type { FolderNode, FileLeaf } from '../../types';
 import { removeFileExtension } from '@/utils/fileUtils';
+import { useTranslation } from 'react-i18next';
 
 // ===== Types =====
 interface FolderGridViewProps {
@@ -54,6 +55,7 @@ export const FolderGridView: React.FC<FolderGridViewProps> = ({
   vocabCountMap,
   onEmptySpaceContextMenu,
 }) => {
+  const { t } = useTranslation('vocabulary');
   const handleClick = (item: FolderNode | FileLeaf) => {
     if (item.kind === 'folder') {
       onFolderClick(item);
@@ -157,7 +159,7 @@ export const FolderGridView: React.FC<FolderGridViewProps> = ({
                           fontWeight: 500,
                         }}
                       >
-                        ({vocabCountMap[item.name]} từ)
+                        {t('grid.count', { count: vocabCountMap[item.name] })}
                       </Typography>
                     )}
                   </Box>
@@ -177,11 +179,10 @@ export const FolderGridView: React.FC<FolderGridViewProps> = ({
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            Thư mục trống
+            {t('sidebar.emptyFolder')}
           </Typography>
         </Box>
       )}
     </Box>
   );
 };
-

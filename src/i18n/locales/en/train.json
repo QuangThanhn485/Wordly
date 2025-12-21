@@ -9,7 +9,23 @@
     "timeSpent": "Time Spent",
     "accuracy": "Accuracy",
     "words": "words",
-    "of": "of"
+    "of": "of",
+    "english": "English",
+    "vietnamese": "Vietnamese"
+  },
+  "direction": {
+    "viEn": "VI ➜ EN",
+    "enVi": "EN ➜ VI"
+  },
+  "topBar": {
+    "progress": "Progress: {{completed}} / {{total}} ({{percent}}%)",
+    "remaining": "Remaining: {{remaining}}",
+    "mistakes": "Mistakes: {{count}}",
+    "mistakesShort": "M: {{count}}"
+  },
+  "flashcards": {
+    "tapToAnswer": "Tap a card to answer",
+    "cardAriaLabel": "Flashcard for {{word}}"
   },
   "flashcardsReading": {
     "title": "Flashcards Reading",
@@ -27,6 +43,7 @@
     "instruction": "Listen to the pronunciation and identify the word",
     "playAudio": "Play Audio",
     "replay": "Replay",
+    "hintTooltip": "Show hint ({{shortcut}})",
     "showWord": "Show Word",
     "hideWord": "Hide Word",
     "iKnow": "I Know",
@@ -43,6 +60,16 @@
     "incorrect": "Incorrect",
     "theAnswerIs": "The answer is"
   },
+  "readWriteCard": {
+    "placeholderViEn": "Type the English word...",
+    "placeholderEnVi": "Type the Vietnamese meaning...",
+    "audio": "Play pronunciation",
+    "letterHintTitle": "Letter hints (VI ➜ EN)",
+    "hint": "Hint",
+    "check": "Check",
+    "correct": "Correct!",
+    "wrongHelper": "Wrong! Try again."
+  },
   "listenWrite": {
     "title": "Listen & Write",
     "instruction": "Listen to the pronunciation and type the word",
@@ -54,6 +81,18 @@
     "correct": "Correct!",
     "incorrect": "Incorrect",
     "theAnswerIs": "The answer is"
+  },
+  "listenWriteCard": {
+    "title": "Listen & Write",
+    "placeholderViEn": "Type the English word...",
+    "placeholderEnVi": "Type the Vietnamese meaning...",
+    "startSpeak": "Start pronunciation",
+    "replay": "Replay audio",
+    "played": "Played the English word",
+    "hint": "Hint",
+    "check": "Check",
+    "correct": "Correct!",
+    "wrongHelper": "Wrong! Try again."
   },
   "completion": {
     "title": "Training Complete!",
@@ -74,15 +113,26 @@
     "continueSession": "Continue",
     "startNew": "Start New"
   },
+  "buttons": {
+    "start": "Start",
+    "exit": "Exit",
+    "restart": "Restart",
+    "nextMode": "Next Training Mode",
+    "hint": "Hint",
+    "close": "Close"
+  },
   "errors": {
     "noWords": "No words to practice",
     "loadFailed": "Failed to load vocabulary",
     "selectFile": "Please select a vocabulary file first"
   },
   "quickView": {
-    "title": "Vocabulary Quick View",
+    "title": "Vocabulary List",
+    "openAriaLabel": "Open vocabulary list",
+    "empty": "No vocabulary loaded",
+    "totalCount_one": "Total: {{count}} word",
+    "totalCount_other": "Total: {{count}} words",
     "totalWords": "Total Words",
     "close": "Close"
   }
 }
-

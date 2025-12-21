@@ -1,5 +1,9 @@
 {
   "title": "Vocabulary",
+  "defaults": {
+    "folder": "Folder",
+    "newFolder": "New Folder"
+  },
   "sidebar": {
     "title": "Folders",
     "newFolder": "New Folder",
@@ -7,16 +11,38 @@
     "emptyFolder": "Empty folder"
   },
   "table": {
+    "ariaLabel": "Vocabulary table",
     "word": "Word",
     "type": "Type",
     "meaning": "Vietnamese Meaning",
     "pronunciation": "Pronunciation",
     "actions": "Actions",
+    "wordCount": "{{count}} words",
     "noVocabulary": "No vocabulary yet",
     "addFirst": "Add your first word",
     "selectFile": "Select a file to view vocabulary",
     "noFileSelectedTitle": "No file selected",
     "noFileSelectedDescription": "Please select a file from the left list to view its content"
+  },
+  "detail": {
+    "wordFallback": "-",
+    "langPair": "EN - VI",
+    "loading": "Loading content...",
+    "retry": "Retry",
+    "error": "Could not load dictionary data. Please try again later.",
+    "tabs": {
+      "dict": "Meaning & Dictionary",
+      "examples": "Example sentences"
+    },
+    "noDictData": "No detailed dictionary data for this word.",
+    "noExamples": "No example sentences for this word."
+  },
+  "gridModal": {
+    "title": "Choose vocabulary file",
+    "helper": "Tip: click a folder to open, click a file to view vocabulary"
+  },
+  "grid": {
+    "count": "({{count}} words)"
   },
   "dialogs": {
     "newFile": {
@@ -68,7 +94,11 @@
     "paste": "Paste",
     "deleteFolder": "Delete folder",
     "deleteFile": "Delete file",
-    "exportFile": "Export file (.json)"
+    "exportFile": "Export file (.json)",
+    "exportFolder": "Export folder (.json)",
+    "importFolder": "Import folder (.json)",
+    "importFile": "Import file (.json)",
+    "futureItem": "Item {{index}} (Coming soon)"
   },
   "messages": {
     "fileCreated": "File \"{{name}}\" created",
@@ -102,14 +132,29 @@
     "deleteWord": "Delete",
     "viewDetail": "View Detail",
     "speak": "Speak",
+    "speakWord": "Speak {{word}}",
     "train": "Train",
     "selectAll": "Select All",
     "deselectAll": "Deselect All",
-    "deleteSelected": "Delete Selected"
+    "deleteSelected": "Delete Selected",
+    "deleteSelectedCount": "Delete ({{count}})",
+    "collapseAll": "Collapse all",
+    "hideVocabulary": "Hide vocabulary",
+    "showVocabulary": "Show vocabulary",
+    "backToFolders": "Back to folder list",
+    "addWordShort": "Add",
+    "rowMenuFor": "Menu for {{word}}",
+    "fileAriaLabel": "File {{name}}",
+    "fileMenuAriaLabel": "File menu for {{name}}",
+    "folderToggleAriaLabel": "Toggle folder {{name}}",
+    "folderMenuAriaLabel": "Folder menu for {{name}}",
+    "breadcrumbAriaLabel": "Breadcrumb",
+    "close": "Close"
   },
   "viewMode": {
     "tree": "Tree View",
-    "grid": "Grid View"
+    "grid": "Grid View",
+    "toggle": "Toggle view mode"
   },
   "wordTypes": {
     "noun": "Noun",
@@ -120,6 +165,9 @@
     "conjunction": "Conjunction",
     "pronoun": "Pronoun",
     "interjection": "Interjection",
+    "article": "Article",
+    "determiner": "Determiner",
+    "auxiliary": "Auxiliary",
     "phrase": "Phrase",
     "idiom": "Idiom"
   },

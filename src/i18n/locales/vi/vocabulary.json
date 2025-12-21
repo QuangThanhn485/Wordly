@@ -1,5 +1,9 @@
 {
   "title": "Từ vựng",
+  "defaults": {
+    "folder": "Thư mục",
+    "newFolder": "Thư mục mới"
+  },
   "sidebar": {
     "title": "Thư mục",
     "newFolder": "Thư mục mới",
@@ -7,6 +11,7 @@
     "emptyFolder": "Thư mục trống"
   },
   "table": {
+    "ariaLabel": "Bảng từ vựng",
     "word": "Từ",
     "type": "Loại từ",
     "meaning": "Nghĩa tiếng Việt",
@@ -16,14 +21,35 @@
     "addFirst": "Thêm từ đầu tiên",
     "selectFile": "Chọn một tệp để xem từ vựng",
     "noFileSelectedTitle": "Chưa có tệp nào được chọn",
-    "noFileSelectedDescription": "Vui lòng chọn một tệp từ danh sách bên trái để xem nội dung"
+    "noFileSelectedDescription": "Vui lòng chọn một tệp từ danh sách bên trái để xem nội dung",
+    "wordCount": "{{count}} từ vựng"
+  },
+  "detail": {
+    "wordFallback": "-",
+    "langPair": "EN - VI",
+    "loading": "Đang tải nội dung...",
+    "retry": "Thử lại",
+    "error": "Không tải được dữ liệu từ điển. Vui lòng thử lại sau.",
+    "tabs": {
+      "dict": "Nghĩa & Từ điển",
+      "examples": "Ví dụ câu"
+    },
+    "noDictData": "Chưa có dữ liệu từ điển chi tiết cho từ này.",
+    "noExamples": "Chưa có ví dụ câu cho từ này."
+  },
+  "gridModal": {
+    "title": "Chọn file từ vựng",
+    "helper": "Mẹo: click vào thư mục để mở, click vào file để xem từ vựng"
+  },
+  "grid": {
+    "count": "({{count}} từ)"
   },
   "dialogs": {
     "newFile": {
       "title": "Tạo file từ vựng mới",
       "label": "Tên file",
-      "placeholder": "từ_vựng_mới.txt",
-      "helper": "File sẽ có phần mở rộng .txt tự động nếu chưa có"
+      "placeholder": "tu_vung_moi.txt",
+      "helper": "File sẽ tự thêm phần mở rộng .txt nếu chưa có"
     },
     "newFolder": {
       "title": "Tạo thư mục con",
@@ -36,7 +62,7 @@
     },
     "confirmDelete": {
       "title": "Xác nhận xóa",
-      "message": "Bạn có chắc chắn muốn xóa \"{{name}}\"?",
+      "message": "Bạn có chắc muốn xóa \"{{name}}\"?",
       "warning": "Hành động này không thể hoàn tác.",
       "fileCount": "Thư mục này chứa {{count}} tệp"
     },
@@ -50,7 +76,7 @@
       "meaning": "Nghĩa tiếng Việt",
       "meaningPlaceholder": "vd: quả táo",
       "pronunciation": "Phát âm",
-      "pronunciationPlaceholder": "vd: /ˈæpəl/",
+      "pronunciationPlaceholder": "vd: /ˈæp.əl/",
       "example": "Câu ví dụ",
       "examplePlaceholder": "vd: I eat an apple every day",
       "note": "Ghi chú",
@@ -66,9 +92,13 @@
     "cut": "Cắt",
     "copy": "Sao chép",
     "paste": "Dán",
-    "deleteFolder": "Xo� thu m?c",
-    "deleteFile": "Xo� file",
-    "exportFile": "Export file (.json)"
+    "deleteFolder": "Xóa thư mục",
+    "deleteFile": "Xóa file",
+    "exportFile": "Export file (.json)",
+    "exportFolder": "Export thư mục (.json)",
+    "importFolder": "Import thư mục (.json)",
+    "importFile": "Import file (.json)",
+    "futureItem": "Mục {{index}} (Tính năng tương lai)"
   },
   "messages": {
     "fileCreated": "Đã tạo file \"{{name}}\"",
@@ -92,7 +122,7 @@
     "exportFileSuccess": "Đã export tệp \"{{name}}\".",
     "exportFolderSuccess": "Đã export thư mục \"{{name}}\" ({{count}} files).",
     "importFileSuccess": "Đã nhập tệp \"{{name}}\" với {{count}} từ vựng.",
-    "importFolderSuccess": "Đã import thư mục \"{{name}}\" ({{fileCount}} files, {{wordCount}} từ vựng).",
+    "importFolderSuccess": "Đã nhập thư mục \"{{name}}\" ({{fileCount}} files, {{wordCount}} từ vựng).",
     "cutInstruction": "Đã cắt. Hãy chọn thư mục đích và Dán.",
     "cannotDeleteRoot": "Không thể xóa thư mục gốc!"
   },
@@ -105,11 +135,26 @@
     "train": "Luyện tập",
     "selectAll": "Chọn tất cả",
     "deselectAll": "Bỏ chọn tất cả",
-    "deleteSelected": "Xóa đã chọn"
+    "deleteSelected": "Xóa đã chọn",
+    "speakWord": "Phát âm {{word}}",
+    "deleteSelectedCount": "Xóa ({{count}})",
+    "collapseAll": "Thu gọn tất cả",
+    "hideVocabulary": "Ẩn kho từ vựng",
+    "showVocabulary": "Hiển thị kho từ vựng",
+    "backToFolders": "Quay lại danh sách thư mục",
+    "addWordShort": "Thêm",
+    "rowMenuFor": "Menu cho {{word}}",
+    "fileAriaLabel": "Tệp {{name}}",
+    "fileMenuAriaLabel": "Menu tệp {{name}}",
+    "folderToggleAriaLabel": "Mở/đóng thư mục {{name}}",
+    "folderMenuAriaLabel": "Menu thư mục {{name}}",
+    "breadcrumbAriaLabel": "Điều hướng",
+    "close": "Đóng"
   },
   "viewMode": {
     "tree": "Chế độ cây",
-    "grid": "Chế độ lưới"
+    "grid": "Chế độ lưới",
+    "toggle": "Đổi chế độ xem"
   },
   "wordTypes": {
     "noun": "Danh từ",
@@ -120,6 +165,9 @@
     "conjunction": "Liên từ",
     "pronoun": "Đại từ",
     "interjection": "Thán từ",
+    "article": "Mạo từ",
+    "determiner": "Từ hạn định",
+    "auxiliary": "Trợ động từ",
     "phrase": "Cụm từ",
     "idiom": "Thành ngữ"
   },

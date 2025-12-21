@@ -1,9 +1,13 @@
 // ===== Date Utilities =====
+import i18n from '@/i18n';
 
 /**
  * Format date to locale string
  */
-export const formatDate = (date: Date | string, locale = 'vi-VN'): string => {
+export const formatDate = (
+  date: Date | string,
+  locale = i18n.language === 'vi' ? 'vi-VN' : 'en-US'
+): string => {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString(locale);
 };
@@ -11,7 +15,10 @@ export const formatDate = (date: Date | string, locale = 'vi-VN'): string => {
 /**
  * Format datetime to locale string
  */
-export const formatDateTime = (date: Date | string, locale = 'vi-VN'): string => {
+export const formatDateTime = (
+  date: Date | string,
+  locale = i18n.language === 'vi' ? 'vi-VN' : 'en-US'
+): string => {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleString(locale);
 };
@@ -19,7 +26,10 @@ export const formatDateTime = (date: Date | string, locale = 'vi-VN'): string =>
 /**
  * Get relative time (e.g., "2 hours ago")
  */
-export const getRelativeTime = (date: Date | string, locale = 'vi-VN'): string => {
+export const getRelativeTime = (
+  date: Date | string,
+  locale = i18n.language === 'vi' ? 'vi-VN' : 'en-US'
+): string => {
   const d = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
   const diffInMs = now.getTime() - d.getTime();
@@ -27,10 +37,10 @@ export const getRelativeTime = (date: Date | string, locale = 'vi-VN'): string =
   const diffInHours = Math.floor(diffInMinutes / 60);
   const diffInDays = Math.floor(diffInHours / 24);
 
-  if (diffInMinutes < 1) return 'vừa xong';
-  if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
-  if (diffInHours < 24) return `${diffInHours} giờ trước`;
-  if (diffInDays < 7) return `${diffInDays} ngày trước`;
+  if (diffInMinutes < 1) return i18n.t('common:time.justNow');
+  if (diffInMinutes < 60) return i18n.t('common:time.minutesAgo', { count: diffInMinutes });
+  if (diffInHours < 24) return i18n.t('common:time.hoursAgo', { count: diffInHours });
+  if (diffInDays < 7) return i18n.t('common:time.daysAgo', { count: diffInDays });
   
   return formatDate(d, locale);
 };
@@ -47,4 +57,3 @@ export const isToday = (date: Date | string): boolean => {
     d.getFullYear() === today.getFullYear()
   );
 };
-

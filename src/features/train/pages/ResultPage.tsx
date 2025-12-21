@@ -11,6 +11,7 @@ import {
   Tab,
 } from '@mui/material';
 import { BarChart3 } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 import { useMistakesStats } from '@/features/result/hooks/useMistakesStats';
 import { OverviewCards } from '@/features/result/components/OverviewCards';
 import { MistakeCard } from '@/features/result/components/MistakeCard';
@@ -22,6 +23,7 @@ import { MistakeGroupByFile } from '@/features/result/components/MistakeGroupByF
 const ResultPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { t } = useTranslation('result');
   const [viewMode, setViewMode] = React.useState<'all' | 'grouped' | 'byFile'>('grouped');
 
   const {
@@ -75,7 +77,7 @@ const ResultPage = () => {
                 fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
               }}
             >
-              Kết quả Lỗi Từ Vựng
+              {t('title')}
             </Typography>
           </Box>
           <Typography
@@ -85,7 +87,7 @@ const ResultPage = () => {
               fontSize: { xs: '0.875rem', sm: '1rem' },
             }}
           >
-            Xem thống kê chi tiết về các từ vựng bạn đã sai trong quá trình training
+            {t('subtitle')}
           </Typography>
         </Box>
 
@@ -119,9 +121,9 @@ const ResultPage = () => {
                   },
                 }}
               >
-                <Tab label="Theo chế độ training" value="grouped" />
-                <Tab label="Theo file từ vựng" value="byFile" />
-                <Tab label="Tất cả" value="all" />
+                <Tab label={t('filters.byMode')} value="grouped" />
+                <Tab label={t('filters.byFile')} value="byFile" />
+                <Tab label={t('filters.all')} value="all" />
               </Tabs>
             </Paper>
 
@@ -144,7 +146,12 @@ const ResultPage = () => {
             {viewMode === 'all' && mistakes.length > 0 && (
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="text.secondary">
-                  Hiển thị <strong>{mistakes.length}</strong> từ vựng
+                  <Trans
+                    ns="result"
+                    i18nKey="showingCount"
+                    values={{ count: mistakes.length }}
+                    components={{ strong: <strong /> }}
+                  />
                 </Typography>
               </Box>
             )}
@@ -168,7 +175,7 @@ const ResultPage = () => {
                   }}
                 >
                   <Typography variant="body1" color="text.secondary">
-                    Không tìm thấy từ vựng nào phù hợp với bộ lọc của bạn.
+                    {t('filters.noMatches')}
                   </Typography>
                 </Paper>
               )
@@ -190,7 +197,7 @@ const ResultPage = () => {
                   }}
                 >
                   <Typography variant="body1" color="text.secondary">
-                    Không tìm thấy từ vựng nào phù hợp với bộ lọc của bạn.
+                    {t('filters.noMatches')}
                   </Typography>
                 </Paper>
               )
@@ -228,7 +235,7 @@ const ResultPage = () => {
                   }}
                 >
                   <Typography variant="body1" color="text.secondary">
-                    Không tìm thấy từ vựng nào phù hợp với bộ lọc của bạn.
+                    {t('filters.noMatches')}
                   </Typography>
                 </Paper>
               )
@@ -243,4 +250,3 @@ const ResultPage = () => {
 };
 
 export default ResultPage;
-

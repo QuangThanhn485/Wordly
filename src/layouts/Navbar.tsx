@@ -246,15 +246,15 @@ const Navbar: React.FC = () => {
             }}
           >
             <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
-              <IconButton
-                edge="start"
-                color="inherit"
-                aria-label="menu"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleToggleDrawer(e);
-                }}
+                <IconButton
+                  edge="start"
+                  color="inherit"
+                  aria-label={open ? t('tooltips.collapseSidebar') : t('tooltips.expandSidebar')}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleToggleDrawer(e);
+                  }}
                 onTouchStart={(e) => {
                   e.stopPropagation();
                 }}
@@ -510,8 +510,8 @@ const Navbar: React.FC = () => {
             {open && (
               <>
                 <ListItemText 
-                  primary={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                    primary={
+                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0, flexWrap: 'nowrap' }}>
                       <Typography
                         component="span"
                         sx={{
@@ -529,13 +529,20 @@ const Navbar: React.FC = () => {
                             height: 20,
                             fontSize: '0.6875rem', // 11px
                             fontWeight: 500,
+                            maxWidth: 160,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                             '& .MuiChip-label': {
                               px: 0.75,
                               py: 0,
+                              maxWidth: 140,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
                             },
                           }}
                           color="primary"
                           variant="outlined"
+                          title={trainFileName.replace(/\.txt$/i, '')}
                         />
                       )}
                     </Box>
@@ -697,7 +704,7 @@ const Navbar: React.FC = () => {
                     backgroundColor: theme.palette.action.hover,
                   },
                 }}
-                aria-label="Toggle theme"
+                aria-label={mode === 'dark' ? t('tooltips.switchToLight') : t('tooltips.switchToDark')}
               >
                 {mode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
               </IconButton>

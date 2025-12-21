@@ -9,6 +9,7 @@ import enNavbar from './locales/en/navbar.json';
 import enVocabulary from './locales/en/vocabulary.json';
 import enTrain from './locales/en/train.json';
 import enResult from './locales/en/result.json';
+import enDataManagement from './locales/en/dataManagement.json';
 
 // Import Vietnamese translations
 import viCommon from './locales/vi/common.json';
@@ -17,6 +18,7 @@ import viNavbar from './locales/vi/navbar.json';
 import viVocabulary from './locales/vi/vocabulary.json';
 import viTrain from './locales/vi/train.json';
 import viResult from './locales/vi/result.json';
+import viDataManagement from './locales/vi/dataManagement.json';
 
 export const resources = {
   en: {
@@ -26,6 +28,7 @@ export const resources = {
     vocabulary: enVocabulary,
     train: enTrain,
     result: enResult,
+    dataManagement: enDataManagement,
   },
   vi: {
     common: viCommon,
@@ -34,6 +37,7 @@ export const resources = {
     vocabulary: viVocabulary,
     train: viTrain,
     result: viResult,
+    dataManagement: viDataManagement,
   },
 } as const;
 
@@ -47,7 +51,7 @@ i18n
     resources,
     fallbackLng,
     defaultNS,
-    ns: ['common', 'home', 'navbar', 'vocabulary', 'train', 'result'],
+    ns: ['common', 'home', 'navbar', 'vocabulary', 'train', 'result', 'dataManagement'],
     interpolation: {
       escapeValue: false, // React already escapes values
     },
@@ -58,4 +62,3 @@ i18n
   });
 
 export default i18n;
-

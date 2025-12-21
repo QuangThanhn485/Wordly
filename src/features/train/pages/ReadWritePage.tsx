@@ -10,8 +10,9 @@ import {
   useMediaQuery,
   Alert,
 } from '@mui/material';
-import { Languages, AlertCircle, RotateCcw, ArrowLeftRight } from 'lucide-react';
+import { AlertCircle, RotateCcw, ArrowLeftRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTrainWords } from '@/features/train/train-read-write';
 import { getNextTrainingMode } from '@/features/train/utils/trainingModes';
@@ -52,6 +53,7 @@ function pickRandomIndex(arrLength: number, exclude: Set<number>): number {
 const ReadWritePage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { t } = useTranslation('train');
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const currentFileName = searchParams.get('file');
@@ -456,14 +458,14 @@ const ReadWritePage = () => {
       >
         {/* Progress Bar */}
         <Box sx={{ width: '100%' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-              Tiến trình: {completedWords.length} / {total} ({Math.round(progress)}%)
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-              Còn lại: {remaining}
-            </Typography>
-          </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                {t('topBar.progress', { completed: completedWords.length, total, percent: Math.round(progress) })}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                {t('topBar.remaining', { remaining })}
+              </Typography>
+            </Box>
           <LinearProgress
             variant="determinate"
             value={progress}
@@ -499,13 +501,13 @@ const ReadWritePage = () => {
               fontWeight: 600,
             }}
           >
-            {mode === 'vi-en' ? 'VI ➜ EN' : 'EN ➜ VI'}
+            {mode === 'vi-en' ? t('direction.viEn') : t('direction.enVi')}
           </Button>
 
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
             <Chip
               icon={<AlertCircle size={16} color="error" />}
-              label={`Mistakes: ${mistakes}`}
+              label={t('topBar.mistakes', { count: mistakes })}
               variant="outlined"
               size={isMobile ? 'small' : 'medium'}
               sx={{
@@ -526,7 +528,7 @@ const ReadWritePage = () => {
                 whiteSpace: 'nowrap',
               }}
             >
-              Bắt đầu lại
+              {t('buttons.restart')}
             </Button>
           </Box>
         </Box>
@@ -535,37 +537,49 @@ const ReadWritePage = () => {
       {/* Main Content */}
       <Box
         sx={{
-          width: '100%',
-          maxWidth: { xs: '100%', sm: '1200px' },
-          mx: 'auto',
-          px: { xs: 2, sm: 3, md: 4 },
-          py: { xs: 2, sm: 3, md: 4 },
           flex: 1,
-          boxSizing: 'border-box',
+          width: '100%',
+          bgcolor: 'background.default',
         }}
       >
-        {isLoading ? (
-          <Box sx={{ maxWidth: 700, mx: 'auto' }}>
-            <Skeleton variant="rounded" height={400} sx={{ borderRadius: 2 }} />
-          </Box>
-        ) : items.length === 0 ? (
-          <Alert severity="warning" sx={{ maxWidth: 600, mx: 'auto' }}>
-            Không có từ vựng nào. Vui lòng chọn file từ vựng trước.
-          </Alert>
-        ) : currentWord ? (
-          <WordInputCard
-            question={question}
-            answer={answer}
-            mode={mode}
-            onAnswer={handleAnswer}
-            onHint={handleHint}
-            showHint={showHint}
-            isCompleted={currentWordCompleted}
-            shouldShake={shouldShake}
-            shakeKey={shakeKey}
-            hasError={hasError}
-          />
-        ) : null}
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: { xs: '100%', sm: '1200px' },
+            mx: 'auto',
+            px: { xs: 2, sm: 3, md: 4 },
+            py: { xs: 2, sm: 3, md: 4 },
+            boxSizing: 'border-box',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: currentWord ? { xs: 'flex-start', md: 'center' } : 'flex-start',
+            minHeight: '100%',
+          }}
+        >
+          {isLoading ? (
+            <Box sx={{ width: '100%', maxWidth: 760 }}>
+              <Skeleton variant="rounded" height={420} sx={{ borderRadius: { xs: 2, sm: 2.5 } }} />
+            </Box>
+          ) : items.length === 0 ? (
+            <Alert severity="warning" sx={{ width: '100%', maxWidth: 760 }}>
+              {t('errors.selectFile')}
+            </Alert>
+          ) : currentWord ? (
+            <WordInputCard
+              question={question}
+              answer={answer}
+              mode={mode}
+              onAnswer={handleAnswer}
+              onHint={handleHint}
+              showHint={showHint}
+              isCompleted={currentWordCompleted}
+              shouldShake={shouldShake}
+              shakeKey={shakeKey}
+              hasError={hasError}
+            />
+          ) : null}
+        </Box>
       </Box>
 
       {/* Completion Modal */}
@@ -588,4 +602,3 @@ const ReadWritePage = () => {
 };
 
 export default ReadWritePage;
-

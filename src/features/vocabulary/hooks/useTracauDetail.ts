@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchTracauDetail, type TracauResponse } from '../utils/tracauApi';
 
 export const useTracauDetail = (word: string | null, enabled = true) => {
+  const { t } = useTranslation('vocabulary');
   const [data, setData] = useState<TracauResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +16,7 @@ export const useTracauDetail = (word: string | null, enabled = true) => {
       const res = await fetchTracauDetail(word);
       setData(res);
     } catch (err) {
-      setError('Không tải được dữ liệu từ điển.');
+      setError(t('detail.error'));
       setData(null);
     } finally {
       setLoading(false);

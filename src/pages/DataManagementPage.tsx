@@ -1,31 +1,33 @@
 // src/pages/DataManagementPage.tsx
 import React, { useState, useCallback } from 'react';
 import {
-  Box,
-  Container,
-  Typography,
-  Paper,
-  Button,
-  Card,
-  CardContent,
-  CardActions,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  useTheme,
-  LinearProgress,
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Backdrop,
+  Box,
+  Button,
   Checkbox,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  TextField,
+  LinearProgress,
   FormControlLabel,
+  Paper,
   Stack,
+  Typography,
 } from '@mui/material';
-import { Database, Upload, Trash2, RotateCcw, CheckCircle } from 'lucide-react';
+import { alpha, useTheme } from '@mui/material/styles';
+import { AlertTriangle, ArrowRight, BookOpen, CalendarDays, CalendarRange, CheckCircle, ChevronDown, Clock, Database, Folder, HardDrive, RotateCcw, Trash2, Upload } from 'lucide-react';
 import { loadVocabCounts, loadVocabFromStorage, loadTreeFromStorage } from '@/features/vocabulary/utils/storageUtils';
 import { getAllFileNames } from '@/features/vocabulary/utils/treeUtils';
 import { loadMistakesStats } from '@/features/train/train-read-write/mistakesStorage';
-import { getLastChangeTimestamp, trackedSetItem, trackedRemoveItem, updateLastChangeTimestamp } from '@/utils/storageTracker';
+import { useTranslation } from 'react-i18next';
 
 const BACKUP_TIMESTAMP_KEY = 'wordly_backup_timestamp';
 
@@ -46,6 +48,7 @@ interface BackupData {
 
 const DataManagementPage: React.FC = () => {
   const theme = useTheme();
+  const { t, i18n } = useTranslation('dataManagement');
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [successDialog, setSuccessDialog] = useState<{ title: string; description?: string } | null>(null);
@@ -60,11 +63,13 @@ const DataManagementPage: React.FC = () => {
   const [deleteVocabDialogOpen, setDeleteVocabDialogOpen] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [deleteSectionExpanded, setDeleteSectionExpanded] = useState(false);
   
   // Date picker states
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [deleteAllResults, setDeleteAllResults] = useState(false);
+  type DeleteReportsPreset = 'all' | 'today' | 'last7days' | 'last4hours' | 'last1hour';
+  const [deleteReportsPreset, setDeleteReportsPreset] = useState<DeleteReportsPreset | null>(null);
   
   // File input ref
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -80,29 +85,6 @@ const DataManagementPage: React.FC = () => {
     const timestamp = localStorage.getItem(BACKUP_TIMESTAMP_KEY);
     return timestamp ? new Date(parseInt(timestamp)) : null;
   };
-
-  // Check if there are any changes after backup by comparing timestamps
-  const hasChangesAfterBackup = useCallback(() => {
-    if (!hasBackup()) return false;
-    
-    const backupTimestamp = getBackupTimestamp();
-    if (!backupTimestamp) return false;
-
-    try {
-      const backupTime = backupTimestamp.getTime();
-      const lastChangeTime = getLastChangeTimestamp();
-      
-      // If no change timestamp exists, assume no changes (first time)
-      if (!lastChangeTime) return false;
-      
-      // If last change is after backup, there are changes
-      return lastChangeTime > backupTime;
-    } catch (error) {
-      console.error('Error checking changes:', error);
-      // If we can't check, assume there might be changes for safety
-      return true;
-    }
-  }, []);
 
   // Backup all data
   const handleBackup = useCallback(() => {
@@ -151,11 +133,12 @@ const DataManagementPage: React.FC = () => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      showSuccessDialog('Backup thành công', 'File backup đã được tải xuống và lưu an toàn.');
+      showSuccessDialog(t('messages.backupSuccess'));
       setBackupDialogOpen(false);
     } catch (error) {
       console.error('Backup error:', error);
-      setAlert({ type: 'error', message: 'Lỗi khi backup: ' + (error instanceof Error ? error.message : 'Unknown error') });
+      const errorMessage = error instanceof Error ? error.message : t('messages.unknownError');
+      setAlert({ type: 'error', message: t('messages.backupError', { error: errorMessage }) });
     } finally {
       setLoading(false);
     }
@@ -163,8 +146,14 @@ const DataManagementPage: React.FC = () => {
 
   // Delete result data by date range or all
   const handleDeleteResults = useCallback(() => {
-    if (!deleteAllResults && (!startDate || !endDate)) {
-      setAlert({ type: 'error', message: 'Vui lòng chọn khoảng thời gian hoặc chọn "Xóa toàn bộ"' });
+    const isAll = deleteReportsPreset === 'all';
+
+    if (!isAll && (!startDate || !endDate)) {
+      setAlert({ type: 'error', message: t('alerts.selectRange') });
+      return;
+    }
+    if (!isAll && startDate && endDate && startDate.getTime() > endDate.getTime()) {
+      setAlert({ type: 'error', message: t('alerts.selectRange') });
       return;
     }
 
@@ -172,42 +161,49 @@ const DataManagementPage: React.FC = () => {
       setLoading(true);
       const mistakesStats = loadMistakesStats();
 
-      if (deleteAllResults) {
+      if (isAll) {
         // Delete all mistakes stats
-        trackedRemoveItem('wordly_mistakes_stats');
-        const totalCount = Object.keys(mistakesStats).length;
-        showSuccessDialog('Đã xóa báo cáo lỗi', `Đã xóa toàn bộ ${totalCount} bản ghi lỗi.`);
+        localStorage.removeItem('wordly_mistakes_stats');
+        showSuccessDialog(t('messages.deleteReportsSuccess'));
       } else {
         // Delete by date range
         const startTimestamp = startDate!.getTime();
-        const endTimestamp = endDate!.getTime() + 86400000; // End of day
+        const endTimestamp = endDate!.getTime();
 
         let deletedCount = 0;
         const updatedStats: typeof mistakesStats = {};
 
         Object.entries(mistakesStats).forEach(([key, record]) => {
-          if (record.lastMistakeTime >= startTimestamp && record.lastMistakeTime < endTimestamp) {
+          if (record.lastMistakeTime >= startTimestamp && record.lastMistakeTime <= endTimestamp) {
             deletedCount++;
           } else {
             updatedStats[key] = record;
           }
         });
 
-        trackedSetItem('wordly_mistakes_stats', JSON.stringify(updatedStats));
-        showSuccessDialog('Đã xóa báo cáo lỗi', `Đã xóa ${deletedCount} bản ghi lỗi trong khoảng thời gian đã chọn.`);
+        localStorage.setItem('wordly_mistakes_stats', JSON.stringify(updatedStats));
+        showSuccessDialog(t('messages.deleteReportsRangeSuccess', { count: deletedCount }));
       }
       
       setDeleteResultDialogOpen(false);
       setStartDate(null);
       setEndDate(null);
-      setDeleteAllResults(false);
+      setDeleteReportsPreset(null);
     } catch (error) {
       console.error('Delete results error:', error);
-      setAlert({ type: 'error', message: 'Lỗi khi xóa: ' + (error instanceof Error ? error.message : 'Unknown error') });
+      const errorMessage = error instanceof Error ? error.message : t('messages.unknownError');
+      setAlert({ type: 'error', message: t('messages.deleteReportsError', { error: errorMessage }) });
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate, deleteAllResults, showSuccessDialog]);
+  }, [startDate, endDate, deleteReportsPreset, showSuccessDialog]);
+
+  const closeDeleteReportsDialog = () => {
+    setDeleteResultDialogOpen(false);
+    setStartDate(null);
+    setEndDate(null);
+    setDeleteReportsPreset(null);
+  };
 
   // Delete all vocab files and folders
   const handleDeleteVocab = useCallback(() => {
@@ -220,19 +216,20 @@ const DataManagementPage: React.FC = () => {
       
       // Delete all vocab files
       vocabIndex.forEach((fileName) => {
-        trackedRemoveItem(`wordly_vocab_file:${fileName}`);
+        localStorage.removeItem(`wordly_vocab_file:${fileName}`);
       });
 
       // Delete indexes and counts
-      trackedRemoveItem('wordly_vocab_index');
-      trackedRemoveItem('wordly_vocab_counts');
-      trackedRemoveItem('wordly_tree');
+      localStorage.removeItem('wordly_vocab_index');
+      localStorage.removeItem('wordly_vocab_counts');
+      localStorage.removeItem('wordly_tree');
       
-      showSuccessDialog('Đã xóa từ vựng', `Đã xóa ${vocabIndex.length} file từ vựng và toàn bộ cấu trúc thư mục.`);
+      showSuccessDialog(t('messages.deleteVocabSuccess', { count: vocabIndex.length }));
       setDeleteVocabDialogOpen(false);
     } catch (error) {
       console.error('Delete vocab error:', error);
-      setAlert({ type: 'error', message: 'Lỗi khi xóa: ' + (error instanceof Error ? error.message : 'Unknown error') });
+      const errorMessage = error instanceof Error ? error.message : t('messages.unknownError');
+      setAlert({ type: 'error', message: t('messages.deleteVocabError', { error: errorMessage }) });
     } finally {
       setLoading(false);
     }
@@ -259,7 +256,7 @@ const DataManagementPage: React.FC = () => {
       let deletedCount = 0;
       allKeys.forEach((key) => {
         if (key.startsWith('wordly_') && key !== BACKUP_TIMESTAMP_KEY) {
-          trackedRemoveItem(key);
+          localStorage.removeItem(key);
           deletedCount++;
         }
       });
@@ -269,7 +266,7 @@ const DataManagementPage: React.FC = () => {
         localStorage.setItem(BACKUP_TIMESTAMP_KEY, backupTimestamp);
       }
       
-      showSuccessDialog('Đã xóa dữ liệu', `Đã xóa ${deletedCount} mục dữ liệu. Backup timestamp vẫn được giữ lại.`);
+      showSuccessDialog(t('messages.deleteAllSuccess', { count: deletedCount }));
       setDeleteAllDialogOpen(false);
       
       // Reload page to reflect changes
@@ -278,7 +275,8 @@ const DataManagementPage: React.FC = () => {
       }, 1500);
     } catch (error) {
       console.error('Delete all data error:', error);
-      setAlert({ type: 'error', message: 'Lỗi khi xóa: ' + (error instanceof Error ? error.message : 'Unknown error') });
+      const errorMessage = error instanceof Error ? error.message : t('messages.unknownError');
+      setAlert({ type: 'error', message: t('messages.deleteAllError', { error: errorMessage }) });
     } finally {
       setLoading(false);
     }
@@ -296,52 +294,49 @@ const DataManagementPage: React.FC = () => {
         const content = e.target?.result as string;
         const backupData: BackupData = JSON.parse(content);
 
-        // Restore vocab files (using trackedSetItem to update timestamp)
+        // Restore vocab files
         Object.entries(backupData.vocabFiles || {}).forEach(([fileName, data]) => {
-          trackedSetItem(`wordly_vocab_file:${fileName}`, JSON.stringify(data));
+          localStorage.setItem(`wordly_vocab_file:${fileName}`, JSON.stringify(data));
         });
 
         // Restore indexes and counts
         if (backupData.vocabIndex) {
-          trackedSetItem('wordly_vocab_index', JSON.stringify(backupData.vocabIndex));
+          localStorage.setItem('wordly_vocab_index', JSON.stringify(backupData.vocabIndex));
         }
         if (backupData.vocabCounts) {
-          trackedSetItem('wordly_vocab_counts', JSON.stringify(backupData.vocabCounts));
+          localStorage.setItem('wordly_vocab_counts', JSON.stringify(backupData.vocabCounts));
         }
         if (backupData.vocabTree) {
-          trackedSetItem('wordly_tree', JSON.stringify(backupData.vocabTree));
+          localStorage.setItem('wordly_tree', JSON.stringify(backupData.vocabTree));
         }
 
         // Restore mistakes stats
         if (backupData.mistakesStats) {
-          trackedSetItem('wordly_mistakes_stats', JSON.stringify(backupData.mistakesStats));
+          localStorage.setItem('wordly_mistakes_stats', JSON.stringify(backupData.mistakesStats));
         }
 
         // Restore training sessions
         if (backupData.trainingSessions) {
           if (backupData.trainingSessions.reading) {
-            trackedSetItem('wordly_train_session', backupData.trainingSessions.reading);
+            localStorage.setItem('wordly_train_session', backupData.trainingSessions.reading);
           }
           if (backupData.trainingSessions.listening) {
-            trackedSetItem('wordly_train_listen_session', backupData.trainingSessions.listening);
+            localStorage.setItem('wordly_train_listen_session', backupData.trainingSessions.listening);
           }
           if (backupData.trainingSessions.readWrite) {
-            trackedSetItem('wordly_train_rw_session', backupData.trainingSessions.readWrite);
+            localStorage.setItem('wordly_train_rw_session', backupData.trainingSessions.readWrite);
           }
           if (backupData.trainingSessions.listenWrite) {
-            trackedSetItem('wordly_train_lw_session', backupData.trainingSessions.listenWrite);
+            localStorage.setItem('wordly_train_lw_session', backupData.trainingSessions.listenWrite);
           }
         }
 
         // Update backup timestamp to match imported data
         if (backupData.timestamp) {
           localStorage.setItem(BACKUP_TIMESTAMP_KEY, backupData.timestamp.toString());
-          updateLastChangeTimestamp(backupData.timestamp);
-        } else {
-          updateLastChangeTimestamp();
         }
 
-        showSuccessDialog('Khôi phục thành công', 'Dữ liệu đã được khôi phục từ file backup.');
+        showSuccessDialog(t('messages.restoreSuccess'));
         setImportDialogOpen(false);
         
         // Reload page to reflect changes
@@ -350,7 +345,8 @@ const DataManagementPage: React.FC = () => {
         }, 1500);
       } catch (error) {
         console.error('Import error:', error);
-        setAlert({ type: 'error', message: 'Lỗi khi import: File không hợp lệ hoặc đã bị hỏng.' });
+        const errorMessage = error instanceof Error ? error.message : t('messages.unknownError');
+        setAlert({ type: 'error', message: t('messages.restoreError', { error: errorMessage }) });
       } finally {
         setLoading(false);
         if (fileInputRef.current) {
@@ -362,6 +358,7 @@ const DataManagementPage: React.FC = () => {
   }, [showSuccessDialog]);
 
   const backupTimestamp = getBackupTimestamp();
+  const backupExists = Boolean(backupTimestamp);
   const tree = loadTreeFromStorage();
   const vocabCounts = loadVocabCounts();
   
@@ -369,10 +366,113 @@ const DataManagementPage: React.FC = () => {
   const allFileNames = tree ? getAllFileNames(tree) : [];
   const totalVocabFiles = allFileNames.length;
   
-  // Calculate total words from wordly_vocab_counts (FAST - không cần load từng file)
+  // Calculate total words from wordly_vocab_counts quickly without loading each file
   const totalVocabWords = allFileNames.reduce((sum, fileName) => sum + (vocabCounts[fileName] || 0), 0);
   
-  const hasChanges = hasChangesAfterBackup();
+  const isDark = theme.palette.mode === 'dark';
+  const dateLocale = i18n.language || undefined;
+  const formatDateTime = (value: Date) => value.toLocaleString(dateLocale);
+  const formatDate = (value: Date) => value.toLocaleDateString(dateLocale);
+  const storageUsageKb = JSON.stringify(localStorage).length / 1024;
+
+  const startOfDay = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate(), 0, 0, 0, 0);
+  const endOfDay = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate(), 23, 59, 59, 999);
+
+  const formatDateInputValue = (value: Date | null) => {
+    if (!value) return '';
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const parseDateInputValue = (value: string) => {
+    if (!value) return null;
+    const [year, month, day] = value.split('-').map((part) => Number(part));
+    if (!year || !month || !day) return null;
+    return new Date(year, month - 1, day);
+  };
+
+  const applyDeleteReportsPreset = (preset: DeleteReportsPreset) => {
+    const nextPreset = deleteReportsPreset === preset ? null : preset;
+    setDeleteReportsPreset(nextPreset);
+
+    if (!nextPreset) return;
+    if (nextPreset === 'all') {
+      setStartDate(null);
+      setEndDate(null);
+      return;
+    }
+
+    const now = new Date();
+    const rangeEnd = now;
+
+    let rangeStart = now;
+    if (nextPreset === 'today') {
+      rangeStart = startOfDay(now);
+    }
+    if (nextPreset === 'last7days') {
+      rangeStart = startOfDay(new Date(now.getTime() - 6 * 86400000));
+    }
+    if (nextPreset === 'last4hours') {
+      rangeStart = new Date(now.getTime() - 4 * 3600000);
+    }
+    if (nextPreset === 'last1hour') {
+      rangeStart = new Date(now.getTime() - 3600000);
+    }
+
+    setStartDate(rangeStart);
+    setEndDate(rangeEnd);
+  };
+
+  const surfaceSx = {
+    borderRadius: { xs: 2, sm: 2.5 },
+    border: '1px solid',
+    borderColor: alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
+    boxShadow: 'none',
+    bgcolor: 'background.paper',
+  } as const;
+
+  const iconBadgeSx = (color: string) =>
+    ({
+      width: 44,
+      height: 44,
+      borderRadius: 999,
+      display: 'grid',
+      placeItems: 'center',
+      flexShrink: 0,
+      border: '1px solid',
+      borderColor: alpha(color, isDark ? 0.55 : 0.35),
+      bgcolor: alpha(color, isDark ? 0.16 : 0.1),
+      color,
+    }) as const;
+
+  const dialogBackdropSx = {
+    backgroundColor: alpha(theme.palette.common.black, isDark ? 0.72 : 0.58),
+    backdropFilter: 'blur(6px)',
+  } as const;
+
+  const dialogPaperSx = {
+    ...surfaceSx,
+    overflow: 'hidden',
+  } as const;
+
+  const dialogTitleSx = {
+    px: 3,
+    py: 2.25,
+    borderBottom: '1px solid',
+    borderColor: alpha(theme.palette.divider, isDark ? 0.2 : 0.65),
+    backgroundColor: alpha(theme.palette.background.paper, isDark ? 0.2 : 0.75),
+  } as const;
+
+  const dialogContentSx = { px: 3, py: 2.5 } as const;
+  const dialogActionsSx = { px: 3, pb: 2.5 } as const;
+
+  const deleteReportsIsAll = deleteReportsPreset === 'all';
+  const deleteReportsInvalidRange = Boolean(startDate && endDate && startDate.getTime() > endDate.getTime());
+  const deleteReportsHasRange = Boolean(startDate && endDate);
+  const deleteReportsCanDelete = deleteReportsIsAll || (deleteReportsHasRange && !deleteReportsInvalidRange);
+  const deleteReportsShowWarning = deleteReportsIsAll || deleteReportsHasRange;
 
   return (
     <Box
@@ -385,41 +485,94 @@ const DataManagementPage: React.FC = () => {
       >
         <Container maxWidth="lg">
           {/* Header */}
-          <Box sx={{ mb: { xs: 3, sm: 4 } }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-              <Database
-                size={40}
-                style={{ color: 'inherit' }}
-              />
-              <Typography
-                variant="h4"
-                fontWeight={700}
-                sx={{
-                  fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
-                }}
-              >
-                Quản lý Dữ liệu
-              </Typography>
-            </Box>
-            <Typography
-              variant="body1"
-              color="text.secondary"
+          <Paper
+            sx={{
+              ...surfaceSx,
+              p: { xs: 2.25, sm: 3 },
+              mb: { xs: 2.5, sm: 3.5 },
+            }}
+          >
+            <Box
               sx={{
-                fontSize: { xs: '0.875rem', sm: '1rem' },
+                display: 'flex',
+                alignItems: { xs: 'flex-start', sm: 'center' },
+                justifyContent: 'space-between',
+                gap: 2,
+                flexWrap: 'wrap',
               }}
             >
-              Backup, khôi phục và quản lý dữ liệu ứng dụng
-            </Typography>
-          </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0, flex: '1 1 320px' }}>
+                <Box sx={iconBadgeSx(theme.palette.primary.main)}>
+                  <Database size={22} />
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography
+                    variant="h4"
+                    fontWeight={900}
+                    sx={{
+                      fontSize: { xs: '1.6rem', sm: '2.1rem', md: '2.4rem' },
+                      letterSpacing: '-0.03em',
+                      lineHeight: 1.1,
+                    }}
+                    noWrap
+                  >
+                    {t('title')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.4 }}>
+                    {t('backup.subtitle')}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1}
+                sx={{
+                  alignItems: { xs: 'stretch', sm: 'center' },
+                  width: { xs: '100%', sm: 'auto' },
+                }}
+              >
+                <Button
+                  variant="contained"
+                  startIcon={<Upload size={18} />}
+                  onClick={() => setBackupDialogOpen(true)}
+                  sx={{ borderRadius: 2, py: 1.05, fontWeight: 900 }}
+                >
+                  {t('buttons.startBackup')}
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<RotateCcw size={18} />}
+                  onClick={() => setImportDialogOpen(true)}
+                  sx={{
+                    borderRadius: 2,
+                    py: 1.05,
+                    fontWeight: 900,
+                    borderColor: alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
+                  }}
+                >
+                  {t('buttons.startRestore')}
+                </Button>
+              </Stack>
+            </Box>
+          </Paper>
 
           {/* Alert */}
           {alert && (
             <Alert
               severity={alert.type}
+              variant="outlined"
               onClose={() => setAlert(null)}
-              sx={{ mb: 3 }}
+              sx={{
+                mb: { xs: 2.5, sm: 3 },
+                borderRadius: { xs: 2, sm: 2.5 },
+                borderColor: alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
+                backgroundColor: alpha(theme.palette.background.paper, isDark ? 0.5 : 0.7),
+              }}
             >
-              {alert.message}
+              <Typography variant="body2" fontWeight={700}>
+                {alert.message}
+              </Typography>
             </Alert>
           )}
 
@@ -430,639 +583,697 @@ const DataManagementPage: React.FC = () => {
               onClose={() => setSuccessDialog(null)}
               maxWidth="xs"
               fullWidth
+              BackdropProps={{
+                sx: {
+                  backgroundColor: alpha(theme.palette.common.black, isDark ? 0.72 : 0.58),
+                  backdropFilter: 'blur(6px)',
+                },
+              }}
               PaperProps={{
                 sx: {
-                  textAlign: 'center',
-                  p: 3,
-                  borderRadius: 3,
+                  ...surfaceSx,
+                  overflow: 'hidden',
                 },
               }}
             >
-              <DialogContent>
+              <DialogTitle sx={{ p: 0 }}>
                 <Box
                   sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 2,
+                    px: 3,
+                    py: 2.5,
+                    borderBottom: '1px solid',
+                    borderColor: alpha(theme.palette.divider, isDark ? 0.2 : 0.65),
+                    bgcolor: alpha(theme.palette.success.main, isDark ? 0.08 : 0.06),
+                    position: 'relative',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 4,
+                      bgcolor: alpha(theme.palette.success.main, isDark ? 0.7 : 0.55),
+                    },
                   }}
                 >
-                  <Box
-                    sx={{
-                      width: 72,
-                      height: 72,
-                      borderRadius: '50%',
-                      bgcolor: 'success.light',
-                      color: 'success.dark',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <CheckCircle size={36} />
-                  </Box>
-                  <Typography variant="h6" fontWeight={700}>
-                    {successDialog.title}
-                  </Typography>
-                  {successDialog.description && (
-                    <Typography variant="body1" color="text.secondary">
-                      {successDialog.description}
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <Box sx={iconBadgeSx(theme.palette.success.main)}>
+                      <CheckCircle size={22} />
+                    </Box>
+                    <Typography variant="h6" fontWeight={900} sx={{ letterSpacing: '-0.01em' }} noWrap>
+                      {successDialog.title}
                     </Typography>
-                  )}
+                  </Box>
                 </Box>
+              </DialogTitle>
+              <DialogContent sx={{ pt: 2.5 }}>
+                {successDialog.description && (
+                  <Typography variant="body2" color="text.secondary">
+                    {successDialog.description}
+                  </Typography>
+                )}
               </DialogContent>
-              <DialogActions sx={{ px: 3, pb: 2 }}>
-                <Button variant="contained" fullWidth onClick={() => setSuccessDialog(null)}>
-                  Đóng
+              <DialogActions sx={{ px: 3, pb: 2.5, pt: 0 }}>
+                <Button
+                  variant="contained"
+                  fullWidth
+                  onClick={() => setSuccessDialog(null)}
+                  sx={{ borderRadius: 2, py: 1.1, fontWeight: 800 }}
+                >
+                  {t('buttons.close')}
                 </Button>
               </DialogActions>
             </Dialog>
           )}
 
-          {/* Statistics Cards */}
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
-              gap: 2,
-              mb: 4,
-            }}
-          >
-            <Card>
-              <CardContent>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Tổng số file từ vựng
-                </Typography>
-                <Typography variant="h4" fontWeight={700}>
-                  {totalVocabFiles}
-                </Typography>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Tổng số từ vựng
-                </Typography>
-                <Typography variant="h4" fontWeight={700}>
-                  {totalVocabWords}
-                </Typography>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Trạng thái Backup
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                  {hasBackup() ? (
-                    <>
-                      <CheckCircle size={20} color="green" />
-                      <Typography variant="body2">
-                        {backupTimestamp?.toLocaleDateString('vi-VN')}
-                      </Typography>
-                    </>
-                  ) : (
-                    <>
-                      
-                      <Typography variant="body2">Chưa có backup</Typography>
-                    </>
-                  )}
-                </Box>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Dung lượng sử dụng
-                </Typography>
-                <Typography variant="h4" fontWeight={700}>
-                  {((JSON.stringify(localStorage).length / 1024).toFixed(2))} KB
-                </Typography>
-              </CardContent>
-            </Card>
-          </Box>
-
-          {/* Action Cards */}
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
-              gap: 3,
-              mb: 3,
-            }}
-          >
-            {/* Backup Card */}
-            <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <CardContent sx={{ flex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <Upload size={32} color="currentColor" style={{ color: 'inherit' }} />
-                  <Box>
-                    <Typography variant="h6" fontWeight={600}>
-                      Backup Dữ liệu
+          {/* Overview + Actions (compact layout) */}
+          <Paper sx={{ ...surfaceSx, overflow: 'hidden', mb: { xs: 2.5, sm: 3 } }}>
+            <Box sx={{ px: { xs: 2, sm: 2.5 }, py: { xs: 2, sm: 2.25 } }}>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+                  gap: { xs: 1.5, sm: 2 },
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box sx={iconBadgeSx(theme.palette.info.main)}>
+                    <Folder size={20} />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ letterSpacing: 0.3, textTransform: 'uppercase' }}>
+                      {t('stats.vocabFiles')}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Sao lưu toàn bộ dữ liệu vào file
+                    <Typography variant="h5" fontWeight={950} sx={{ mt: 0.35, lineHeight: 1.05 }}>
+                      {totalVocabFiles}
                     </Typography>
                   </Box>
                 </Box>
-                {hasBackup() && backupTimestamp && (
-                  <Alert severity="info" sx={{ mb: 2 }}>
-                    Backup gần nhất: {backupTimestamp.toLocaleString('vi-VN')}
-                  </Alert>
-                )}
-              </CardContent>
-              <CardActions sx={{ px: 2, pb: 2, mt: 'auto' }}>
-                <Button
-                  variant="contained"
-                  startIcon={<Upload size={20} />}
-                  onClick={() => setBackupDialogOpen(true)}
-                  fullWidth
-                >
-                  Tạo Backup
-                </Button>
-              </CardActions>
-            </Card>
 
-            {/* Import Card */}
-            <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <CardContent sx={{ flex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <RotateCcw size={32} color="currentColor" style={{ color: 'inherit' }} />
-                  <Box>
-                    <Typography variant="h6" fontWeight={600}>
-                      Khôi phục Dữ liệu
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box sx={iconBadgeSx(theme.palette.secondary.main)}>
+                    <BookOpen size={20} />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ letterSpacing: 0.3, textTransform: 'uppercase' }}>
+                      {t('stats.vocabWords')}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Import dữ liệu từ file backup
+                    <Typography variant="h5" fontWeight={950} sx={{ mt: 0.35, lineHeight: 1.05 }}>
+                      {totalVocabWords}
                     </Typography>
                   </Box>
                 </Box>
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  Dữ liệu hiện tại sẽ bị ghi đè
-                </Alert>
-              </CardContent>
-              <CardActions sx={{ px: 2, pb: 2, mt: 'auto' }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<RotateCcw size={20} />}
-                  onClick={() => {
-                    setImportDialogOpen(true);
-                    setTimeout(() => fileInputRef.current?.click(), 100);
-                  }}
-                  fullWidth
-                >
-                  Import từ File
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".json"
-                  style={{ display: 'none' }}
-                  onChange={handleImport}
-                />
-              </CardActions>
-            </Card>
 
-            {/* Delete Results Card */}
-            <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <CardContent sx={{ flex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <Trash2 size={32} color="currentColor" style={{ color: 'inherit' }} />
-                  <Box>
-                    <Typography variant="h6" fontWeight={600}>
-                      Xóa Báo cáo Lỗi
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box sx={iconBadgeSx(backupExists ? theme.palette.success.main : theme.palette.warning.main)}>
+                    {backupExists ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ letterSpacing: 0.3, textTransform: 'uppercase' }}>
+                      {t('stats.lastBackup')}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Xóa dữ liệu báo cáo theo khoảng thời gian hoặc toàn bộ
+                    <Typography variant="body1" fontWeight={900} sx={{ mt: 0.6, lineHeight: 1.25, wordBreak: 'break-word' }}>
+                      {backupExists && backupTimestamp ? formatDateTime(backupTimestamp) : t('stats.noBackup')}
                     </Typography>
                   </Box>
                 </Box>
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  Hành động này không thể hoàn tác
-                </Alert>
-              </CardContent>
-              <CardActions sx={{ px: 2, pb: 2, mt: 'auto' }}>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<Trash2 size={20} />}
-                  onClick={() => setDeleteResultDialogOpen(true)}
-                  fullWidth
-                >
-                  Xóa Báo cáo
-                </Button>
-              </CardActions>
-            </Card>
 
-            {/* Delete Vocab Card */}
-            <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <CardContent sx={{ flex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <Trash2 size={32} color="currentColor" style={{ color: 'inherit' }} />
-                  <Box>
-                    <Typography variant="h6" fontWeight={600}>
-                      Xóa Từ vựng
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box sx={iconBadgeSx(theme.palette.primary.main)}>
+                    <HardDrive size={20} />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ letterSpacing: 0.3, textTransform: 'uppercase' }}>
+                      {t('stats.storageUsage')}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Xóa toàn bộ file và thư mục từ vựng
+                    <Typography variant="h5" fontWeight={950} sx={{ mt: 0.35, lineHeight: 1.05 }}>
+                      {storageUsageKb.toFixed(2)} KB
                     </Typography>
                   </Box>
-                </Box>
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {!hasBackup() && (
-                    <Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        
-                        <Typography variant="body1" fontWeight={600}>
-                          Cảnh báo: Chưa có backup!
-                        </Typography>
-                      </Box>
-                      <Typography variant="body2">
-                        Hãy tạo backup trước khi xóa từ vựng. Backup data và timestamp sẽ được giữ lại để có thể khôi phục sau này.
-                      </Typography>
-                    </Box>
-                  )}
-                  {hasBackup() && hasChanges && (
-                    <Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        
-                        <Typography variant="body1" fontWeight={600}>
-                          Cảnh báo: Có thay đổi sau backup!
-                        </Typography>
-                      </Box>
-                      <Typography variant="body2">
-                        Đã phát hiện thay đổi dữ liệu sau thời điểm backup. Vui lòng tạo backup mới trước khi xóa để đảm bảo không mất dữ liệu mới nhất.
-                      </Typography>
-                      {backupTimestamp && (
-                        <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
-                          Backup hiện tại: {backupTimestamp.toLocaleString('vi-VN')}
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
-                  {hasBackup() && !hasChanges && (
-                    <Box>
-                      <Typography variant="body2" fontWeight={600} gutterBottom>
-                        Hành động này sẽ xóa:
-                      </Typography>
-                      <Typography variant="body2" component="div">
-                        <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
-                          <li>Tất cả file từ vựng ({totalVocabFiles} files)</li>
-                          <li>Cấu trúc thư mục</li>
-                          <li>Vocab index và counts</li>
-                        </ul>
-                      </Typography>
-                      <Typography variant="body2" fontWeight={600} color="success.main" sx={{ mt: 1 }}>
-                        ✓ Backup data và timestamp sẽ được giữ lại
-                      </Typography>
-                      {backupTimestamp && (
-                        <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
-                          Backup: {backupTimestamp.toLocaleString('vi-VN')}
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
-                </Alert>
-              </CardContent>
-              <CardActions sx={{ px: 2, pb: 2, mt: 'auto' }}>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<Trash2 size={20} />}
-                  onClick={() => {
-                    if (!hasBackup()) {
-                      setAlert({ type: 'error', message: 'Vui lòng tạo backup trước khi xóa dữ liệu!' });
-                      return;
-                    }
-                    if (hasChanges) {
-                      setAlert({ type: 'error', message: 'Có thay đổi sau backup! Vui lòng tạo backup mới trước khi xóa.' });
-                      return;
-                    }
-                    setDeleteVocabDialogOpen(true);
-                  }}
-                  fullWidth
-                  disabled={!hasBackup() || hasChanges}
-                >
-                  Xóa Từ vựng
-                </Button>
-              </CardActions>
-            </Card>
-          </Box>
-
-          {/* Delete All Data Card - Full Width */}
-          <Card sx={{ border: `2px solid ${theme.palette.error.main}40`, display: 'flex', flexDirection: 'column' }}>
-            <CardContent sx={{ flex: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                <Trash2 size={40} color="currentColor" style={{ color: 'inherit' }} />
-                <Box>
-                  <Typography variant="h6" fontWeight={700} color="error">
-                    Xóa Toàn bộ Dữ liệu
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Xóa tất cả dữ liệu
-                  </Typography>
                 </Box>
               </Box>
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {!hasBackup() && (
-                  <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      
-                      <Typography variant="body1" fontWeight={600}>
-                        Cảnh báo: Chưa có backup!
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2">
-                      Hãy tạo backup trước khi xóa toàn bộ dữ liệu. Backup data và timestamp sẽ được giữ lại để có thể khôi phục sau này.
-                    </Typography>
-                  </Box>
-                )}
-                {hasBackup() && hasChanges && (
-                  <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      
-                      <Typography variant="body1" fontWeight={600}>
-                        Cảnh báo: Có thay đổi sau backup!
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2">
-                      Đã phát hiện thay đổi dữ liệu sau thời điểm backup. Vui lòng tạo backup mới trước khi xóa để đảm bảo không mất dữ liệu mới nhất.
-                    </Typography>
-                    {backupTimestamp && (
-                      <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
-                        Backup hiện tại: {backupTimestamp.toLocaleString('vi-VN')}
-                      </Typography>
-                    )}
-                  </Box>
-                )}
-                {hasBackup() && !hasChanges && (
-                  <Box>
-                    <Typography variant="body1" fontWeight={600} gutterBottom>
-                      Hành động này sẽ xóa:
-                    </Typography>
-                    <Typography variant="body2" component="div">
-                      <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
-                        <li>Tất cả file từ vựng</li>
-                        <li>Tất cả báo cáo lỗi</li>
-                        <li>Tất cả session training</li>
-                        <li>Tất cả cấu trúc thư mục</li>
-                      </ul>
-                    </Typography>
-                    <Typography variant="body2" fontWeight={600} color="success.main" sx={{ mt: 1 }}>
-                      ✓ Backup data và timestamp sẽ được giữ lại
-                    </Typography>
-                    {backupTimestamp && (
-                      <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
-                        Backup: {backupTimestamp.toLocaleString('vi-VN')}
-                      </Typography>
-                    )}
-                  </Box>
-                )}
-              </Alert>
-            </CardContent>
-            <CardActions sx={{ px: 2, pb: 2, mt: 'auto' }}>
-              <Button
-                variant="contained"
-                color="error"
-                startIcon={<Trash2 size={20} />}
-                onClick={() => {
-                  if (!hasBackup()) {
-                    setAlert({ type: 'error', message: 'Vui lòng tạo backup trước khi xóa toàn bộ dữ liệu!' });
-                    return;
-                  }
-                  if (hasChanges) {
-                    setAlert({ type: 'error', message: 'Có thay đổi sau backup! Vui lòng tạo backup mới trước khi xóa.' });
-                    return;
-                  }
-                  setDeleteAllDialogOpen(true);
+            </Box>
+
+            <Divider sx={{ borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.65) }} />
+
+            <Box>
+              <Box
+                sx={{
+                  px: { xs: 2, sm: 2.5 },
+                  py: { xs: 1.75, sm: 2 },
+                  display: 'grid',
+                  gridTemplateColumns: { xs: 'auto 1fr', sm: 'auto 1fr auto' },
+                  columnGap: 2,
+                  rowGap: 1.25,
+                  alignItems: { sm: 'center' },
                 }}
-                fullWidth
-                disabled={!hasBackup() || hasChanges}
-                size="large"
               >
-                Xóa Toàn bộ Dữ liệu
-              </Button>
-            </CardActions>
-          </Card>
+                <Box sx={iconBadgeSx(theme.palette.primary.main)}>
+                  <Upload size={20} />
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="subtitle1" fontWeight={950} sx={{ lineHeight: 1.2 }}>
+                    {t('backup.title')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                    {t('backup.description')}
+                  </Typography>
+                </Box>
+                <Box sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' }, justifySelf: { sm: 'end' } }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<Upload size={18} />}
+                    onClick={() => setBackupDialogOpen(true)}
+                    sx={{ borderRadius: 2, py: 1.05, fontWeight: 900, width: { xs: '100%', sm: 'auto' } }}
+                  >
+                    {t('buttons.startBackup')}
+                  </Button>
+                </Box>
+              </Box>
+
+              <Divider sx={{ borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.65) }} />
+
+              <Box
+                sx={{
+                  px: { xs: 2, sm: 2.5 },
+                  py: { xs: 1.75, sm: 2 },
+                  display: 'grid',
+                  gridTemplateColumns: { xs: 'auto 1fr', sm: 'auto 1fr auto' },
+                  columnGap: 2,
+                  rowGap: 1.25,
+                  alignItems: { sm: 'center' },
+                }}
+              >
+                <Box sx={iconBadgeSx(theme.palette.warning.main)}>
+                  <RotateCcw size={20} />
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="subtitle1" fontWeight={950} sx={{ lineHeight: 1.2 }}>
+                    {t('restore.title')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                    {t('restore.description')}
+                  </Typography>
+                </Box>
+                <Box sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' }, justifySelf: { sm: 'end' } }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<RotateCcw size={18} />}
+                    onClick={() => setImportDialogOpen(true)}
+                    sx={{
+                      borderRadius: 2,
+                      py: 1.05,
+                      fontWeight: 900,
+                      borderColor: alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
+                      width: { xs: '100%', sm: 'auto' },
+                    }}
+                  >
+                    {t('buttons.startRestore')}
+                  </Button>
+                </Box>
+              </Box>
+
+              <Divider sx={{ borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.65) }} />
+
+              {/* Delete section (collapsible) */}
+              <Accordion
+                disableGutters
+                elevation={0}
+                square
+                expanded={deleteSectionExpanded}
+                onChange={(_, expanded) => setDeleteSectionExpanded(expanded)}
+                sx={{
+                  bgcolor: 'transparent',
+                  '&::before': { display: 'none' },
+                }}
+              >
+                <AccordionSummary
+                  expandIcon={<ChevronDown size={18} />}
+                  sx={{
+                    px: { xs: 2, sm: 2.5 },
+                    py: { xs: 1.5, sm: 1.75 },
+                    minHeight: 'unset',
+                    bgcolor: alpha(theme.palette.error.main, isDark ? 0.06 : 0.04),
+                    borderLeft: '3px solid',
+                    borderLeftColor: alpha(theme.palette.error.main, isDark ? 0.7 : 0.55),
+                    '& .MuiAccordionSummary-content': { m: 0, alignItems: 'center' },
+                    '& .MuiAccordionSummary-expandIconWrapper': { color: 'text.secondary' },
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
+                    <Box sx={iconBadgeSx(theme.palette.error.main)}>
+                      <Trash2 size={20} />
+                    </Box>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="subtitle1" fontWeight={950} sx={{ lineHeight: 1.2 }}>
+                        {t('delete.title')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                        {t('delete.description')}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </AccordionSummary>
+
+                <AccordionDetails sx={{ p: 0 }}>
+                  <Divider sx={{ borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.65) }} />
+
+                  <Box
+                    sx={{
+                      px: { xs: 2, sm: 2.5 },
+                      py: { xs: 1.75, sm: 2 },
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', sm: '1fr auto' },
+                      columnGap: 2,
+                      rowGap: 1.25,
+                      alignItems: { sm: 'center' },
+                    }}
+                  >
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="subtitle1" fontWeight={950} sx={{ lineHeight: 1.2 }}>
+                        {t('delete.deleteReports')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                        {t('delete.deleteReportsDescription')}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' }, justifySelf: { sm: 'end' } }}>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={() => setDeleteResultDialogOpen(true)}
+                        sx={{
+                          borderRadius: 2,
+                          py: 1.05,
+                          fontWeight: 900,
+                          width: { xs: '100%', sm: 'auto' },
+                          borderColor: alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
+                        }}
+                      >
+                        {t('buttons.startDeleteReports')}
+                      </Button>
+                    </Box>
+                  </Box>
+
+                  <Divider sx={{ borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.65) }} />
+
+                  <Box
+                    sx={{
+                      px: { xs: 2, sm: 2.5 },
+                      py: { xs: 1.75, sm: 2 },
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', sm: '1fr auto' },
+                      columnGap: 2,
+                      rowGap: 1.25,
+                      alignItems: { sm: 'center' },
+                    }}
+                  >
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="subtitle1" fontWeight={950} sx={{ lineHeight: 1.2 }}>
+                        {t('delete.deleteVocab')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                        {t('delete.deleteVocabDescription')}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' }, justifySelf: { sm: 'end' } }}>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={() => setDeleteVocabDialogOpen(true)}
+                        sx={{
+                          borderRadius: 2,
+                          py: 1.05,
+                          fontWeight: 900,
+                          width: { xs: '100%', sm: 'auto' },
+                          borderColor: alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
+                        }}
+                      >
+                        {t('buttons.startDeleteVocab')}
+                      </Button>
+                    </Box>
+                  </Box>
+
+                  <Divider sx={{ borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.65) }} />
+
+                  <Box
+                    sx={{
+                      px: { xs: 2, sm: 2.5 },
+                      py: { xs: 1.75, sm: 2 },
+                      backgroundColor: alpha(theme.palette.error.main, isDark ? 0.1 : 0.05),
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', sm: '1fr auto' },
+                      columnGap: 2,
+                      rowGap: 1.25,
+                      alignItems: { sm: 'center' },
+                      borderLeft: '3px solid',
+                      borderLeftColor: alpha(theme.palette.error.main, isDark ? 0.7 : 0.55),
+                    }}
+                  >
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography
+                        variant="subtitle1"
+                        fontWeight={950}
+                        sx={{ lineHeight: 1.2, color: 'error.main' }}
+                      >
+                        {t('delete.deleteAll')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                        {t('delete.deleteAllDescription')}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' }, justifySelf: { sm: 'end' } }}>
+                      <Button
+                        variant="contained"
+                        color="error"
+                        onClick={() => setDeleteAllDialogOpen(true)}
+                        sx={{ borderRadius: 2, py: 1.05, fontWeight: 950, width: { xs: '100%', sm: 'auto' } }}
+                      >
+                        {t('buttons.startDeleteAll')}
+                      </Button>
+                    </Box>
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
+            </Box>
+          </Paper>
 
           {/* Loading Overlay */}
           {loading && (
-            <Box
+            <Backdrop
+              open
               sx={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                bgcolor: 'rgba(0, 0, 0, 0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 9999,
+                zIndex: (muiTheme) => muiTheme.zIndex.modal + 1,
+                backgroundColor: alpha(theme.palette.common.black, isDark ? 0.72 : 0.58),
+                backdropFilter: 'blur(6px)',
               }}
             >
-              <Paper sx={{ p: 4, minWidth: 300 }}>
-                <Typography variant="h6" gutterBottom>
-                  Đang xử lý...
+              <Paper sx={{ ...surfaceSx, p: 3, minWidth: { xs: 280, sm: 360 } }}>
+                <Typography variant="h6" fontWeight={900}>
+                  {t('messages.processing')}
                 </Typography>
-                <LinearProgress sx={{ mt: 2 }} />
+                <LinearProgress sx={{ mt: 2, borderRadius: 999 }} />
               </Paper>
-            </Box>
+            </Backdrop>
           )}
 
           {/* Backup Dialog */}
-          <Dialog open={backupDialogOpen} onClose={() => setBackupDialogOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle>Xác nhận Backup</DialogTitle>
-            <DialogContent>
-              <Typography>
-                Bạn có chắc chắn muốn tạo backup toàn bộ dữ liệu? File backup sẽ được tải xuống tự động.
-              </Typography>
+          <Dialog
+            open={backupDialogOpen}
+            onClose={() => setBackupDialogOpen(false)}
+            maxWidth="sm"
+            fullWidth
+            BackdropProps={{ sx: dialogBackdropSx }}
+            PaperProps={{ sx: dialogPaperSx }}
+          >
+            <DialogTitle sx={dialogTitleSx}>{t('dialogs.backupConfirmTitle')}</DialogTitle>
+            <DialogContent sx={dialogContentSx}>
+              <Typography>{t('dialogs.backupConfirmMessage')}</Typography>
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setBackupDialogOpen(false)}>Hủy</Button>
+            <DialogActions sx={dialogActionsSx}>
+              <Button onClick={() => setBackupDialogOpen(false)}>{t('buttons.cancel')}</Button>
               <Button variant="contained" onClick={handleBackup}>
-                Xác nhận
+                {t('buttons.confirm')}
               </Button>
             </DialogActions>
           </Dialog>
 
           {/* Delete Results Dialog */}
-          <Dialog open={deleteResultDialogOpen} onClose={() => setDeleteResultDialogOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle>Xóa Báo cáo Lỗi</DialogTitle>
-            <DialogContent>
-              <Stack spacing={3} sx={{ mt: 1 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={deleteAllResults}
+          <Dialog
+            open={deleteResultDialogOpen}
+            onClose={closeDeleteReportsDialog}
+            maxWidth="sm"
+            fullWidth
+            BackdropProps={{ sx: dialogBackdropSx }}
+            PaperProps={{ sx: dialogPaperSx }}
+          >
+            <DialogTitle sx={dialogTitleSx}>{t('dialogs.deleteReportsTitle')}</DialogTitle>
+            <DialogContent sx={dialogContentSx}>
+              <Stack spacing={2.5}>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={900} sx={{ mb: 1 }}>
+                    {t('dialogs.deleteReportsQuick')}
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+                      gap: 1,
+                      '& .MuiFormControlLabel-root': { m: 0 },
+                      '& .MuiCheckbox-root': { py: 0.5 },
+                    }}
+                  >
+                    <FormControlLabel
+                      control={<Checkbox checked={deleteReportsPreset === 'all'} onChange={() => applyDeleteReportsPreset('all')} />}
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Trash2 size={18} />
+                          <Typography variant="body2" fontWeight={800}>
+                            {t('dialogs.deleteReportsAll')}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                    <FormControlLabel
+                      control={<Checkbox checked={deleteReportsPreset === 'today'} onChange={() => applyDeleteReportsPreset('today')} />}
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CalendarDays size={18} />
+                          <Typography variant="body2" fontWeight={800}>
+                            {t('dialogs.deleteReportsToday')}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                    <FormControlLabel
+                      control={<Checkbox checked={deleteReportsPreset === 'last7days'} onChange={() => applyDeleteReportsPreset('last7days')} />}
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CalendarRange size={18} />
+                          <Typography variant="body2" fontWeight={800}>
+                            {t('dialogs.deleteReportsLast7Days')}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                    <FormControlLabel
+                      control={<Checkbox checked={deleteReportsPreset === 'last4hours'} onChange={() => applyDeleteReportsPreset('last4hours')} />}
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Clock size={18} />
+                          <Typography variant="body2" fontWeight={800}>
+                            {t('dialogs.deleteReportsLast4Hours')}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                    <FormControlLabel
+                      control={<Checkbox checked={deleteReportsPreset === 'last1hour'} onChange={() => applyDeleteReportsPreset('last1hour')} />}
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Clock size={18} />
+                          <Typography variant="body2" fontWeight={800}>
+                            {t('dialogs.deleteReportsLast1Hour')}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </Box>
+                </Box>
+
+                <Divider sx={{ borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.65) }} />
+
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={900} sx={{ mb: 1 }}>
+                    {t('dialogs.deleteReportsRange')}
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', sm: '1fr auto 1fr' },
+                      gap: 1.25,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <TextField
+                      label={t('dialogs.fromDate')}
+                      type="date"
+                      value={formatDateInputValue(startDate)}
                       onChange={(e) => {
-                        setDeleteAllResults(e.target.checked);
-                        if (e.target.checked) {
-                          setStartDate(null);
-                          setEndDate(null);
-                        }
+                        setDeleteReportsPreset(null);
+                        const parsed = parseDateInputValue(e.target.value);
+                        setStartDate(parsed ? startOfDay(parsed) : null);
                       }}
-                    />
-                  }
-                  label={
-                    <Typography variant="body1" fontWeight={600}>
-                      Xóa toàn bộ báo cáo lỗi
-                    </Typography>
-                  }
-                />
-                
-                {!deleteAllResults && (
-                  <>
-                    <TextField
-                      label="Từ ngày"
-                      type="date"
-                      value={startDate ? startDate.toISOString().split('T')[0] : ''}
-                      onChange={(e) => setStartDate(e.target.value ? new Date(e.target.value) : null)}
                       fullWidth
-                      InputLabelProps={{
-                        shrink: true,
-                      }}
+                      error={deleteReportsInvalidRange}
+                      InputLabelProps={{ shrink: true }}
                     />
+                    <Box
+                      sx={{
+                        display: { xs: 'none', sm: 'grid' },
+                        placeItems: 'center',
+                        color: 'text.secondary',
+                      }}
+                    >
+                      <ArrowRight size={18} />
+                    </Box>
                     <TextField
-                      label="Đến ngày"
+                      label={t('dialogs.toDate')}
                       type="date"
-                      value={endDate ? endDate.toISOString().split('T')[0] : ''}
-                      onChange={(e) => setEndDate(e.target.value ? new Date(e.target.value) : null)}
-                      fullWidth
-                      InputLabelProps={{
-                        shrink: true,
+                      value={formatDateInputValue(endDate)}
+                      onChange={(e) => {
+                        setDeleteReportsPreset(null);
+                        const parsed = parseDateInputValue(e.target.value);
+                        setEndDate(parsed ? endOfDay(parsed) : null);
                       }}
+                      fullWidth
+                      error={deleteReportsInvalidRange}
+                      InputLabelProps={{ shrink: true }}
                     />
-                  </>
-                )}
-                
-                <Alert severity={deleteAllResults ? 'error' : 'warning'}>
-                  {deleteAllResults ? (
-                    <Typography variant="body2">
-                      <strong>Cảnh báo:</strong> Tất cả báo cáo lỗi sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.
-                    </Typography>
-                  ) : (
-                    <Typography variant="body2">
-                      Tất cả báo cáo lỗi trong khoảng thời gian này sẽ bị xóa vĩnh viễn.
+                  </Box>
+
+                  {startDate && endDate && (
+                    <Typography variant="body2" color="text.secondary" fontWeight={700} sx={{ mt: 1 }}>
+                      {t('dialogs.deleteReportsRangeApplied', { from: formatDateTime(startDate), to: formatDateTime(endDate) })}
                     </Typography>
                   )}
-                </Alert>
+                </Box>
+
+                {deleteReportsShowWarning && (
+                  <Alert
+                    severity={deleteReportsIsAll ? 'error' : 'warning'}
+                    variant="outlined"
+                    sx={{
+                      borderRadius: 2,
+                      borderColor: alpha(
+                        deleteReportsIsAll ? theme.palette.error.main : theme.palette.warning.main,
+                        isDark ? 0.35 : 0.25,
+                      ),
+                      backgroundColor: alpha(
+                        deleteReportsIsAll ? theme.palette.error.main : theme.palette.warning.main,
+                        isDark ? 0.08 : 0.06,
+                      ),
+                    }}
+                  >
+                    <Typography variant="body2">
+                      {deleteReportsIsAll ? t('alerts.irreversible') : t('alerts.deleteRangeConfirm')}
+                    </Typography>
+                  </Alert>
+                )}
               </Stack>
             </DialogContent>
-            <DialogActions>
-              <Button 
-                onClick={() => {
-                  setDeleteResultDialogOpen(false);
-                  setStartDate(null);
-                  setEndDate(null);
-                  setDeleteAllResults(false);
-                }}
-              >
-                Hủy
+            <DialogActions sx={dialogActionsSx}>
+              <Button onClick={closeDeleteReportsDialog}>
+                {t('dialogs.deleteReportsCancel')}
               </Button>
-              <Button 
-                variant="contained" 
-                color="error" 
-                onClick={handleDeleteResults} 
-                disabled={!deleteAllResults && (!startDate || !endDate)}
+              <Button
+                variant="contained"
+                color="error"
+                onClick={handleDeleteResults}
+                disabled={!deleteReportsCanDelete}
+                sx={{ borderRadius: 2, fontWeight: 900 }}
               >
-                {deleteAllResults ? 'Xóa Toàn bộ' : 'Xóa'}
+                {t('dialogs.deleteReportsCta')}
               </Button>
             </DialogActions>
           </Dialog>
 
           {/* Delete Vocab Dialog */}
-          <Dialog open={deleteVocabDialogOpen} onClose={() => setDeleteVocabDialogOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle sx={{ color: 'error.main' }}>Xác nhận Xóa Từ vựng</DialogTitle>
-            <DialogContent>
-              {!hasBackup() ? (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    
-                    <Typography variant="body1" fontWeight={600}>
-                      Chưa có backup!
+          <Dialog
+            open={deleteVocabDialogOpen}
+            onClose={() => setDeleteVocabDialogOpen(false)}
+            maxWidth="sm"
+            fullWidth
+            BackdropProps={{ sx: dialogBackdropSx }}
+            PaperProps={{ sx: dialogPaperSx }}
+          >
+            <DialogTitle sx={{ ...dialogTitleSx, color: 'error.main' }}>{t('dialogs.deleteVocabTitle')}</DialogTitle>
+            <DialogContent sx={dialogContentSx}>
+              <Stack spacing={2}>
+                {!backupExists && (
+                  <Alert
+                    severity="warning"
+                    variant="outlined"
+                    sx={{
+                      borderRadius: 2,
+                      borderColor: alpha(theme.palette.warning.main, isDark ? 0.35 : 0.25),
+                      backgroundColor: alpha(theme.palette.warning.main, isDark ? 0.08 : 0.06),
+                    }}
+                  >
+                    <Typography variant="body1" fontWeight={700}>
+                      {t('alerts.noBackup')}
                     </Typography>
-                  </Box>
-                  <Typography variant="body2">
-                    Bạn phải tạo backup trước khi xóa từ vựng. Vui lòng quay lại và tạo backup trước.
-                  </Typography>
-                </Alert>
-              ) : hasChanges ? (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    
-                    <Typography variant="body1" fontWeight={600}>
-                      Có thay đổi sau backup!
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" component="div">
-                    Đã phát hiện thay đổi dữ liệu sau thời điểm backup. Vui lòng tạo backup mới trước khi xóa để đảm bảo không mất dữ liệu mới nhất.
-                    {backupTimestamp && (
-                      <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
-                        Backup hiện tại: {backupTimestamp.toLocaleString('vi-VN')}
-                      </Typography>
-                    )}
-                  </Typography>
-                </Alert>
-              ) : (
-                <>
-                  <Alert severity="error" sx={{ mb: 2 }}>
-                    <Typography variant="body1" fontWeight={600} gutterBottom>
-                      Cảnh báo!
-                    </Typography>
-                    <Typography variant="body2" component="div">
-                      Bạn sắp xóa toàn bộ {totalVocabFiles} file từ vựng và cấu trúc thư mục.
-                      <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
-                        <li>Tất cả file từ vựng ({totalVocabFiles} files)</li>
-                        <li>Cấu trúc thư mục</li>
-                        <li>Vocab index và counts</li>
-                      </ul>
-                    </Typography>
-                    <Typography variant="body2" fontWeight={600} color="success.main" sx={{ mt: 1 }}>
-                      ✓ Backup data và timestamp sẽ được giữ lại
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 2, fontWeight: 600 }}>
-                      Hành động này không thể hoàn tác!
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      {t('backup.description')}
                     </Typography>
                   </Alert>
-                  <Alert severity="info">
-                    Backup đã được kiểm tra và không có thay đổi sau thời điểm backup. Có thể khôi phục sau khi xóa.
-                    {backupTimestamp && (
-                      <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
-                        Backup: {backupTimestamp.toLocaleString('vi-VN')}
-                      </Typography>
-                    )}
-                  </Alert>
-                </>
-              )}
+                )}
+
+                <Alert
+                  severity="error"
+                  variant="outlined"
+                  sx={{
+                    borderRadius: 2,
+                    borderColor: alpha(theme.palette.error.main, isDark ? 0.35 : 0.25),
+                    backgroundColor: alpha(theme.palette.error.main, isDark ? 0.08 : 0.06),
+                  }}
+                >
+                  <Typography variant="body2">{t('delete.deleteVocabDescription')}</Typography>
+                  <Typography variant="body2" sx={{ mt: 1, fontWeight: 700 }}>
+                    {t('alerts.irreversible')}
+                  </Typography>
+                  {backupTimestamp && (
+                    <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
+                      {t('stats.lastBackup')}: {formatDateTime(backupTimestamp)}
+                    </Typography>
+                  )}
+                </Alert>
+              </Stack>
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setDeleteVocabDialogOpen(false)}>Hủy</Button>
-              <Button 
-                variant="contained" 
-                color="error" 
+            <DialogActions sx={dialogActionsSx}>
+              <Button onClick={() => setDeleteVocabDialogOpen(false)}>{t('dialogs.deleteVocabCancel')}</Button>
+              <Button
+                variant="contained"
+                color="error"
                 onClick={handleDeleteVocab}
-                disabled={!hasBackup() || hasChanges}
+                disabled={loading}
+                sx={{ borderRadius: 2, fontWeight: 900 }}
               >
-                Xác nhận Xóa
+                {t('dialogs.deleteVocabCta')}
               </Button>
             </DialogActions>
           </Dialog>
 
           {/* Import Dialog */}
-          <Dialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle>Import Dữ liệu</DialogTitle>
-            <DialogContent>
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                Dữ liệu hiện tại sẽ bị ghi đè bởi dữ liệu từ file backup.
+          <Dialog
+            open={importDialogOpen}
+            onClose={() => setImportDialogOpen(false)}
+            maxWidth="sm"
+            fullWidth
+            BackdropProps={{ sx: dialogBackdropSx }}
+            PaperProps={{ sx: dialogPaperSx }}
+          >
+            <DialogTitle sx={dialogTitleSx}>{t('dialogs.restoreTitle')}</DialogTitle>
+            <DialogContent sx={dialogContentSx}>
+              <Alert
+                severity="warning"
+                variant="outlined"
+                sx={{
+                  borderRadius: 2,
+                  borderColor: alpha(theme.palette.warning.main, isDark ? 0.35 : 0.25),
+                  backgroundColor: alpha(theme.palette.warning.main, isDark ? 0.08 : 0.06),
+                }}
+              >
+                <Typography variant="body2">{t('dialogs.restoreWarning')}</Typography>
               </Alert>
               <Button
                 variant="outlined"
                 component="label"
                 fullWidth
-                startIcon={<RotateCcw size={20} />}
+                startIcon={<RotateCcw size={18} />}
+                sx={{ mt: 2, borderRadius: 2, py: 1.1, fontWeight: 900 }}
               >
-                Chọn File Backup
+                {t('restore.fileLabel')}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1072,94 +1283,102 @@ const DataManagementPage: React.FC = () => {
                 />
               </Button>
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setImportDialogOpen(false)}>Đóng</Button>
+            <DialogActions sx={dialogActionsSx}>
+              <Button onClick={() => setImportDialogOpen(false)} sx={{ borderRadius: 2 }}>
+                {t('dialogs.restoreClose')}
+              </Button>
             </DialogActions>
           </Dialog>
 
           {/* Delete All Data Dialog */}
-          <Dialog open={deleteAllDialogOpen} onClose={() => setDeleteAllDialogOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle sx={{ color: 'error.main' }}>Xác nhận Xóa Toàn bộ Dữ liệu</DialogTitle>
-            <DialogContent>
-              {!hasBackup() ? (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    
-                    <Typography variant="body1" fontWeight={600}>
-                      Chưa có backup!
+          <Dialog
+            open={deleteAllDialogOpen}
+            onClose={() => setDeleteAllDialogOpen(false)}
+            maxWidth="sm"
+            fullWidth
+            BackdropProps={{ sx: dialogBackdropSx }}
+            PaperProps={{ sx: dialogPaperSx }}
+          >
+            <DialogTitle sx={{ ...dialogTitleSx, color: 'error.main' }}>{t('dialogs.deleteAllTitle')}</DialogTitle>
+            <DialogContent sx={dialogContentSx}>
+              <Stack spacing={2}>
+                {!backupExists && (
+                  <Alert
+                    severity="warning"
+                    variant="outlined"
+                    sx={{
+                      borderRadius: 2,
+                      borderColor: alpha(theme.palette.warning.main, isDark ? 0.35 : 0.25),
+                      backgroundColor: alpha(theme.palette.warning.main, isDark ? 0.08 : 0.06),
+                    }}
+                  >
+                    <Typography variant="body1" fontWeight={700}>
+                      {t('alerts.noBackup')}
                     </Typography>
-                  </Box>
-                  <Typography variant="body2">
-                    Bạn phải tạo backup trước khi xóa toàn bộ dữ liệu. Vui lòng quay lại và tạo backup trước.
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      {t('backup.description')}
+                    </Typography>
+                  </Alert>
+                )}
+
+                <Alert
+                  severity="error"
+                  variant="outlined"
+                  sx={{
+                    borderRadius: 2,
+                    borderColor: alpha(theme.palette.error.main, isDark ? 0.35 : 0.25),
+                    backgroundColor: alpha(theme.palette.error.main, isDark ? 0.08 : 0.06),
+                  }}
+                >
+                  <Typography variant="body1" fontWeight={700} gutterBottom>
+                    {t('dialogs.deleteAllWarning')}
                   </Typography>
-                </Alert>
-              ) : hasChanges ? (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    
-                    <Typography variant="body1" fontWeight={600}>
-                      Có thay đổi sau backup!
-                    </Typography>
-                  </Box>
                   <Typography variant="body2" component="div">
-                    Đã phát hiện thay đổi dữ liệu sau thời điểm backup. Vui lòng tạo backup mới trước khi xóa để đảm bảo không mất dữ liệu mới nhất.
-                    {backupTimestamp && (
-                      <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
-                        Backup hiện tại: {backupTimestamp.toLocaleString('vi-VN')}
-                      </Typography>
-                    )}
+                    {t('dialogs.deleteAllList')}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 1, fontWeight: 700 }}>
+                    {t('alerts.irreversible')}
                   </Typography>
                 </Alert>
-              ) : (
-                <>
-                  <Alert severity="error" sx={{ mb: 2 }}>
-                    <Typography variant="body1" fontWeight={600} gutterBottom>
-                      Cảnh báo nguy hiểm!
-                    </Typography>
-                    <Typography variant="body2" component="div">
-                      Bạn sắp xóa <strong>TOÀN BỘ</strong> dữ liệu trong ứng dụng, bao gồm:
-                      <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
-                        <li>Tất cả file từ vựng ({totalVocabFiles} files)</li>
-                        <li>Tất cả báo cáo lỗi</li>
-                        <li>Tất cả session training</li>
-                        <li>Tất cả cấu trúc thư mục</li>
-                      </ul>
-                    </Typography>
-                    <Typography variant="body2" fontWeight={600} color="success.main" sx={{ mt: 1 }}>
-                      ✓ Backup data và timestamp sẽ được giữ lại
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 2, fontWeight: 600 }}>
-                      Hành động này không thể hoàn tác!
-                    </Typography>
-                  </Alert>
-                  <Alert severity="info">
-                    Backup đã được kiểm tra và không có thay đổi sau thời điểm backup. Có thể khôi phục sau khi xóa.
+
+                {backupExists && (
+                  <Alert
+                    severity="info"
+                    variant="outlined"
+                    sx={{
+                      borderRadius: 2,
+                      borderColor: alpha(theme.palette.info.main, isDark ? 0.3 : 0.25),
+                      backgroundColor: alpha(theme.palette.info.main, isDark ? 0.06 : 0.05),
+                    }}
+                  >
+                    <Typography variant="body2">{t('delete.keepBackupNote')}</Typography>
                     {backupTimestamp && (
                       <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
-                        Backup: {backupTimestamp.toLocaleString('vi-VN')}
+                        {t('stats.lastBackup')}: {formatDateTime(backupTimestamp)}
                       </Typography>
                     )}
                   </Alert>
-                </>
-              )}
+                )}
+              </Stack>
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setDeleteAllDialogOpen(false)}>Hủy</Button>
-              <Button 
-                variant="contained" 
-                color="error" 
+            <DialogActions sx={dialogActionsSx}>
+              <Button onClick={() => setDeleteAllDialogOpen(false)} sx={{ borderRadius: 2 }}>
+                {t('dialogs.deleteAllCancel')}
+              </Button>
+              <Button
+                variant="contained"
+                color="error"
                 onClick={handleDeleteAllData}
-                disabled={!hasBackup() || hasChanges}
+                disabled={loading}
+                sx={{ borderRadius: 2, fontWeight: 900 }}
               >
-                Xác nhận Xóa Toàn bộ
+                {t('dialogs.deleteAllCta')}
               </Button>
             </DialogActions>
           </Dialog>
         </Container>
       </Box>
-  );
+    );
 };
 
 export default DataManagementPage;
-
-

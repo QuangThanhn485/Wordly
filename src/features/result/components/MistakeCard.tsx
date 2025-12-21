@@ -13,6 +13,7 @@ import { AlertCircle, Clock, Folder } from 'lucide-react';
 import { type ProcessedMistake } from '../utils/dataTransform';
 import { getTrainingModeLabel, formatTimeAgo, getMistakeSeverity } from '../utils/dataTransform';
 import { getDisplayFileName } from '@/utils/fileUtils';
+import { useTranslation } from 'react-i18next';
 
 interface MistakeCardProps {
   mistake: ProcessedMistake;
@@ -20,6 +21,7 @@ interface MistakeCardProps {
 
 export const MistakeCard: React.FC<MistakeCardProps> = ({ mistake }) => {
   const theme = useTheme();
+  const { t } = useTranslation('result');
   const severity = getMistakeSeverity(mistake.totalMistakes);
   const displayFileName = getDisplayFileName(mistake.fileName);
 
@@ -62,7 +64,7 @@ export const MistakeCard: React.FC<MistakeCardProps> = ({ mistake }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Chip
             icon={<AlertCircle size={16} />}
-            label={`${mistake.totalMistakes} ${mistake.totalMistakes === 1 ? 'loi' : 'loi'}`}
+            label={t('group.mistakesLabel', { count: mistake.totalMistakes })}
             size="small"
             sx={{
               bgcolor: colors.bg,
@@ -147,8 +149,6 @@ export const MistakeCard: React.FC<MistakeCardProps> = ({ mistake }) => {
     </Card>
   );
 };
-
-
 
 
 
