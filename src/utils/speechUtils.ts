@@ -106,6 +106,78 @@ export const speakEnglish = (
   }
 };
 
+export const speakEnglishAsync = (
+  text: string,
+  options: SpeechOptions = {}
+): Promise<void> =>
+  new Promise((resolve) => {
+    if (!text || typeof text !== 'string' || typeof window === 'undefined') {
+      resolve();
+      return;
+    }
+
+    const synth = window.speechSynthesis;
+    if (!synth) {
+      resolve();
+      return;
+    }
+
+    let hasStarted = false;
+    let hasResolved = false;
+    let fallbackTimer: number | undefined;
+
+    const finish = () => {
+      if (hasResolved) return;
+      hasResolved = true;
+      if (fallbackTimer !== undefined) {
+        window.clearTimeout(fallbackTimer);
+      }
+      resolve();
+    };
+
+    const speakNow = () => {
+      if (hasStarted) return;
+      hasStarted = true;
+
+      const voices = synth.getVoices();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = options.lang || 'en-US';
+      utterance.rate = options.rate ?? 1.0;
+      utterance.pitch = options.pitch ?? 1.0;
+      utterance.volume = options.volume ?? 1.0;
+
+      if (options.voiceName) {
+        const voice = voices.find((v) => v.name === options.voiceName);
+        if (voice) utterance.voice = voice;
+      }
+      if (!utterance.voice) {
+        const bestVoice = getBestEnglishVoice();
+        if (bestVoice) utterance.voice = bestVoice;
+      }
+
+      utterance.onend = finish;
+      utterance.onerror = finish;
+
+      fallbackTimer = window.setTimeout(
+        finish,
+        Math.min(Math.max(text.length * 90, 1200), 6000) + 1200
+      );
+
+      try {
+        synth.cancel();
+      } catch {}
+
+      synth.speak(utterance);
+    };
+
+    if (synth.getVoices().length === 0) {
+      synth.addEventListener('voiceschanged', speakNow, { once: true });
+      window.setTimeout(speakNow, 150);
+    } else {
+      speakNow();
+    }
+  });
+
 /**
  * Get list of available English voices
  */

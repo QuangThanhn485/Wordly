@@ -134,5 +134,10 @@
     "totalCount_other": "Total: {{count}} words",
     "totalWords": "Total Words",
     "close": "Close"
+  },
+  "settings": {
+    "title": "Settings",
+    "openAriaLabel": "Open settings",
+    "removeCorrectCards": "Remove correctly answered cards from the screen"
   }
 }
