@@ -133,5 +133,10 @@
     "totalCount": "Tổng: {{count}} từ",
     "totalWords": "Tổng số từ",
     "close": "Đóng"
+  },
+  "settings": {
+    "title": "C\u00e0i \u0111\u1eb7t",
+    "openAriaLabel": "M\u1edf c\u00e0i \u0111\u1eb7t",
+    "removeCorrectCards": "Lo\u1ea1i b\u1ecf card \u0111\u00e3 tr\u1ea3 l\u1eddi \u0111\u00fang ra kh\u1ecfi m\u00e0n h\u00ecnh"
   }
 }

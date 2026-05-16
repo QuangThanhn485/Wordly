@@ -23,7 +23,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTrainWords } from '@/features/train/train-listen';
 import { getNextTrainingMode } from '@/features/train/utils/trainingModes';
 import { WordCard } from '@/features/train/train-listen';
-import { VocabularyQuickView } from '@/features/train/components';
+import { FlashcardsSettingsPanel, VocabularyQuickView, useFlashcardsSettings } from '@/features/train/components';
 import { 
   saveTrainingSession, 
   loadTrainingSession, 
@@ -33,7 +33,7 @@ import {
 } from '@/features/train/train-listen/sessionStorage';
 import { recordMistakes } from '@/features/train/train-listen/mistakesStorage';
 import { CompletionModal, type SessionMistake } from '@/features/train/train-listen-write/components/CompletionModal';
-import { speakEnglish, getBestEnglishVoice, type SpeechOptions } from '@/utils/speechUtils';
+import { speakEnglish, speakEnglishAsync, type SpeechOptions } from '@/utils/speechUtils';
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
@@ -68,6 +68,17 @@ const GRID_PADDING_TOP = {
   md: '10px'
 };
 
+const CARD_FLIP_FEEDBACK_MS = 620;
+const CARD_EXIT_ANIMATION_MS = 320;
+
+const getHiddenCorrectCardsFromFlipped = (flipped: Record<number, boolean>) => {
+  const hidden: Record<number, boolean> = {};
+  Object.entries(flipped).forEach(([idx, isFlipped]) => {
+    if (isFlipped) hidden[Number(idx)] = true;
+  });
+  return hidden;
+};
+
 const FlashcardsListeningPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -81,6 +92,12 @@ const FlashcardsListeningPage = () => {
   const recordFileName = sourceFileName || currentFileName;
   const skipMistakeLogging = trainingSource === 'top-mistakes';
   const [sessionRestored, setSessionRestored] = useState(false);
+  const { settings, setRemoveCorrectCards } = useFlashcardsSettings();
+  const removeCorrectCardsRef = useRef(settings.removeCorrectCards);
+
+  useEffect(() => {
+    removeCorrectCardsRef.current = settings.removeCorrectCards;
+  }, [settings.removeCorrectCards]);
 
   useEffect(() => {
     if (sessionRestored) return;
@@ -141,6 +158,8 @@ const FlashcardsListeningPage = () => {
   const total = items.length;
 
   const [flipped, setFlipped] = useState<Record<number, boolean>>({});
+  const [removingCorrectCards, setRemovingCorrectCards] = useState<Record<number, boolean>>({});
+  const [hiddenCorrectCards, setHiddenCorrectCards] = useState<Record<number, boolean>>({});
   const [wrongIdx, setWrongIdx] = useState<number | null>(null);
   const [wrongTick, setWrongTick] = useState(0);
   const [targetIdx, setTargetIdx] = useState<number>(() => pickRandomIndex(total, new Set()));
@@ -152,6 +171,7 @@ const FlashcardsListeningPage = () => {
   
   const [wordMistakes, setWordMistakes] = useState<Map<string, number>>(new Map());
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [pendingCorrectFeedbackCount, setPendingCorrectFeedbackCount] = useState(0);
 
   const prevFileNameRef = useRef<string | null>(null);
   const prevTrainingSourceRef = useRef<string | null>(null);
@@ -168,12 +188,15 @@ const FlashcardsListeningPage = () => {
     if (fileChanged || trainingSourceChanged) {
       clearTrainingSession();
       setFlipped({});
+      setRemovingCorrectCards({});
+      setHiddenCorrectCards({});
       setWrongIdx(null);
       setWrongTick(0);
       setScore(0);
       setMistakes(0);
       setWordMistakes(new Map());
       setShowCompletionModal(false);
+      setPendingCorrectFeedbackCount(0);
       setHasStarted(false);
       setShowHintModal(false);
       setTargetIdx(pickRandomIndex(items.length, new Set()));
@@ -184,7 +207,13 @@ const FlashcardsListeningPage = () => {
     const session = loadTrainingSession();
     if (isSessionForFile(session, currentFileName, trainingSource)) {
       if (session && session.targetIdx >= 0 && session.targetIdx < items.length) {
-        setFlipped(session.flipped || {});
+        const restoredFlipped = session.flipped || {};
+        setFlipped(restoredFlipped);
+        setRemovingCorrectCards({});
+        setHiddenCorrectCards(
+          removeCorrectCardsRef.current ? getHiddenCorrectCardsFromFlipped(restoredFlipped) : {}
+        );
+        setPendingCorrectFeedbackCount(0);
         setScore(session.score || 0);
         setMistakes(session.mistakes || 0);
         setTargetIdx(session.targetIdx >= 0 ? session.targetIdx : pickRandomIndex(items.length, new Set()));
@@ -196,11 +225,14 @@ const FlashcardsListeningPage = () => {
     }
     
     setFlipped({});
+    setRemovingCorrectCards({});
+    setHiddenCorrectCards({});
     setWrongIdx(null);
     setWrongTick(0);
     setScore(0);
     setMistakes(0);
     setWordMistakes(new Map());
+    setPendingCorrectFeedbackCount(0);
     setHasStarted(false);
     setShowHintModal(false);
     setTargetIdx(pickRandomIndex(items.length, new Set()));
@@ -239,47 +271,11 @@ const FlashcardsListeningPage = () => {
   }, []);
 
   const speakEnglishAwaitable = useCallback(
-    (text: string, options: SpeechOptions = {}) =>
-      new Promise<void>((resolve) => {
-        if (!text || typeof window === 'undefined') return resolve();
-        const synth = window.speechSynthesis;
-        if (!synth) return resolve();
-
-        let hasSpoken = false;
-        const speakNow = () => {
-          if (hasSpoken) return;
-          hasSpoken = true;
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = options.lang || 'en-US';
-          utterance.rate = options.rate ?? 1.0;
-          utterance.pitch = options.pitch ?? 1.0;
-          utterance.volume = options.volume ?? 1.0;
-
-          if (options.voiceName) {
-            const voice = synth.getVoices().find((v) => v.name === options.voiceName);
-            if (voice) utterance.voice = voice;
-          }
-          if (!utterance.voice) {
-            const bestVoice = getBestEnglishVoice();
-            if (bestVoice) utterance.voice = bestVoice;
-          }
-
-          utterance.onend = () => resolve();
-          utterance.onerror = () => resolve();
-          synth.speak(utterance);
-        };
-
-        if (synth.getVoices().length === 0) {
-          synth.addEventListener('voiceschanged', speakNow, { once: true });
-          setTimeout(speakNow, 150);
-        } else {
-          speakNow();
-        }
-      }),
+    (text: string, options: SpeechOptions = {}) => speakEnglishAsync(text, options),
     []
   );
 
-  const wait = useCallback((ms: number) => new Promise<void>((res) => setTimeout(res, ms)), []);
+  const wait = useCallback((ms: number) => new Promise<void>((res) => window.setTimeout(res, ms)), []);
 
   const speakResultThenNext = useCallback(
     async (current: string, next?: string) => {
@@ -296,6 +292,46 @@ const FlashcardsListeningPage = () => {
       }
     },
     [speakEnglishAwaitable, wait]
+  );
+
+  const playCorrectFeedback = useCallback(
+    async (idx: number, current: string, next: string | undefined, shouldRemoveAfterFeedback: boolean) => {
+      setPendingCorrectFeedbackCount((count) => count + 1);
+
+      try {
+        await Promise.all([
+          wait(CARD_FLIP_FEEDBACK_MS),
+          speakResultThenNext(current, next),
+        ]);
+
+        if (!shouldRemoveAfterFeedback || !removeCorrectCardsRef.current) return;
+
+        setRemovingCorrectCards((prev) => ({ ...prev, [idx]: true }));
+        await wait(CARD_EXIT_ANIMATION_MS);
+
+        if (!removeCorrectCardsRef.current) return;
+
+        setHiddenCorrectCards((prev) => ({ ...prev, [idx]: true }));
+        setRemovingCorrectCards((prev) => {
+          const nextState = { ...prev };
+          delete nextState[idx];
+          return nextState;
+        });
+      } finally {
+        setPendingCorrectFeedbackCount((count) => Math.max(0, count - 1));
+      }
+    },
+    [speakResultThenNext, wait]
+  );
+
+  const handleRemoveCorrectCardsChange = useCallback(
+    (checked: boolean) => {
+      removeCorrectCardsRef.current = checked;
+      setRemoveCorrectCards(checked);
+      setRemovingCorrectCards({});
+      setHiddenCorrectCards(checked ? getHiddenCorrectCardsFromFlipped(flipped) : {});
+    },
+    [flipped, setRemoveCorrectCards]
   );
 
   const handleLanguageToggle = () => {
@@ -393,7 +429,7 @@ const FlashcardsListeningPage = () => {
           newTargetIdx >= 0 && newTargetIdx < items.length && items[newTargetIdx]
             ? items[newTargetIdx].en
             : undefined;
-        void speakResultThenNext(currentEnglish, nextEnglish);
+        void playCorrectFeedback(idx, currentEnglish, nextEnglish, removeCorrectCardsRef.current);
       } else {
         setWrongIdx(idx);
         setWrongTick((t) => t + 1);
@@ -414,7 +450,7 @@ const FlashcardsListeningPage = () => {
         }
       }
     },
-    [items, targetIdx, flipped, language, isLoading, hasStarted, playErrorTone, speakResultThenNext]
+    [items, targetIdx, flipped, language, isLoading, hasStarted, playErrorTone, playCorrectFeedback]
   );
 
   const allFlipped = useMemo(() => {
@@ -445,16 +481,34 @@ const FlashcardsListeningPage = () => {
   }, [wordMistakes, items]);
   
   useEffect(() => {
-    if (allFlipped && !isLoading && items.length > 0 && hasStarted) {
+    if (
+      allFlipped &&
+      pendingCorrectFeedbackCount === 0 &&
+      !isLoading &&
+      items.length > 0 &&
+      hasStarted
+    ) {
       if (!skipMistakeLogging && sessionMistakes.length > 0 && recordFileName) {
         recordMistakes(sessionMistakes, recordFileName, 'flashcards-listening');
       }
       setShowCompletionModal(true);
     }
-  }, [allFlipped, isLoading, items.length, hasStarted, sessionMistakes, currentFileName]);
+  }, [
+    allFlipped,
+    pendingCorrectFeedbackCount,
+    isLoading,
+    items.length,
+    hasStarted,
+    sessionMistakes,
+    skipMistakeLogging,
+    recordFileName,
+  ]);
   
   const handleRestart = useCallback(() => {
     setFlipped({});
+    setRemovingCorrectCards({});
+    setHiddenCorrectCards({});
+    setPendingCorrectFeedbackCount(0);
     setWrongIdx(null);
     setWrongTick(0);
     setScore(0);
@@ -770,25 +824,38 @@ const FlashcardsListeningPage = () => {
             pt: GRID_PADDING_TOP,
           }}
         >
-          {items.map((it, idx) => (
-            <Box 
-              key={`${it.en}-${idx}`}
-              sx={{
-                pointerEvents: isLoading || items.length === 0 || !hasStarted ? 'none' : 'auto',
-                opacity: isLoading || items.length === 0 ? 0.6 : 1,
-              }}
-            >
-              <WordCard
-                en={it.en}
-                vi={it.vi}
-                showLang={language}
-                flipped={!!flipped[idx]}
-                onAttempt={() => handleAttempt(idx)}
-                shouldShake={wrongIdx === idx}
-                shakeKey={wrongTick}
-              />
-            </Box>
-          ))}
+          {items.map((it, idx) => {
+            if (hiddenCorrectCards[idx]) return null;
+
+            const isRemoving = !!removingCorrectCards[idx];
+
+            return (
+              <Box
+                key={`${it.en}-${idx}`}
+                sx={{
+                  pointerEvents:
+                    isLoading || items.length === 0 || !hasStarted || isRemoving ? 'none' : 'auto',
+                  opacity: isRemoving ? 0 : isLoading || items.length === 0 ? 0.6 : 1,
+                  transform: isRemoving ? 'scale(0.92) translateY(-8px)' : 'scale(1) translateY(0)',
+                  transformOrigin: 'center',
+                  maxHeight: isRemoving ? 0 : { xs: 180, sm: 232, md: 260 },
+                  overflow: 'hidden',
+                  transition:
+                    'opacity 280ms ease, transform 280ms ease, max-height 320ms ease',
+                }}
+              >
+                <WordCard
+                  en={it.en}
+                  vi={it.vi}
+                  showLang={language}
+                  flipped={!!flipped[idx]}
+                  onAttempt={() => handleAttempt(idx)}
+                  shouldShake={wrongIdx === idx}
+                  shakeKey={wrongTick}
+                />
+              </Box>
+            );
+          })}
         </Box>
         )}
       </Box>
@@ -883,6 +950,11 @@ const FlashcardsListeningPage = () => {
       <VocabularyQuickView
         vocabularyList={items}
         currentFileName={sourceFileName || currentFileName}
+      />
+
+      <FlashcardsSettingsPanel
+        removeCorrectCards={settings.removeCorrectCards}
+        onRemoveCorrectCardsChange={handleRemoveCorrectCardsChange}
       />
     </Box>
   );

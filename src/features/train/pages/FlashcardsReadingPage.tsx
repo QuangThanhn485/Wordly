@@ -15,7 +15,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTrainWords } from '@/features/train/train-start';
 import { getNextTrainingMode } from '@/features/train/utils/trainingModes';
 import { WordCard } from '@/features/train/train-start';
-import { VocabularyQuickView } from '@/features/train/components';
+import { FlashcardsSettingsPanel, VocabularyQuickView, useFlashcardsSettings } from '@/features/train/components';
 import { 
   saveTrainingSession, 
   loadTrainingSession, 
@@ -25,7 +25,7 @@ import {
 } from '@/features/train/train-start/sessionStorage';
 import { recordMistakes } from '@/features/train/train-start/mistakesStorage';
 import { CompletionModal, type SessionMistake } from '@/features/train/train-read-write/components/CompletionModal';
-import { speakEnglish } from '@/utils/speechUtils';
+import { speakEnglishAsync } from '@/utils/speechUtils';
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
@@ -63,6 +63,17 @@ const GRID_PADDING_TOP = {
   md: '10px'  // Desktop: chỉ cần gap nhỏ
 };
 
+const CARD_FLIP_FEEDBACK_MS = 620;
+const CARD_EXIT_ANIMATION_MS = 320;
+
+const getHiddenCorrectCardsFromFlipped = (flipped: Record<number, boolean>) => {
+  const hidden: Record<number, boolean> = {};
+  Object.entries(flipped).forEach(([idx, isFlipped]) => {
+    if (isFlipped) hidden[Number(idx)] = true;
+  });
+  return hidden;
+};
+
 const FlashcardsReadingPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -76,6 +87,12 @@ const FlashcardsReadingPage = () => {
   const recordFileName = sourceFileName || currentFileName;
   const skipMistakeLogging = trainingSource === 'top-mistakes';
   const [sessionRestored, setSessionRestored] = useState(false); // Track if we've attempted to restore session
+  const { settings, setRemoveCorrectCards } = useFlashcardsSettings();
+  const removeCorrectCardsRef = useRef(settings.removeCorrectCards);
+
+  useEffect(() => {
+    removeCorrectCardsRef.current = settings.removeCorrectCards;
+  }, [settings.removeCorrectCards]);
 
   // Check for saved session on mount - if no file in URL but session exists, restore it
   // BUT if URL has a different file, that takes priority (user selected a new file)
@@ -128,6 +145,8 @@ const FlashcardsReadingPage = () => {
 
   // Initialize state with defaults first
   const [flipped, setFlipped] = useState<Record<number, boolean>>({});
+  const [removingCorrectCards, setRemovingCorrectCards] = useState<Record<number, boolean>>({});
+  const [hiddenCorrectCards, setHiddenCorrectCards] = useState<Record<number, boolean>>({});
   const [wrongIdx, setWrongIdx] = useState<number | null>(null);
   const [wrongTick, setWrongTick] = useState(0);
   const [showMeaningIdx, setShowMeaningIdx] = useState(-1); // Track which card shows meaning
@@ -142,10 +161,12 @@ const FlashcardsReadingPage = () => {
   
   // Completion modal state
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [pendingCorrectFeedbackCount, setPendingCorrectFeedbackCount] = useState(0);
 
   // Track previous file name to detect file changes
   const prevFileNameRef = useRef<string | null>(null);
   const prevTrainingSourceRef = useRef<string | null>(null);
+  const cardRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   // Load saved session when items are ready
   useEffect(() => {
@@ -163,12 +184,15 @@ const FlashcardsReadingPage = () => {
       clearTrainingSession();
       // Reset state for new file
       setFlipped({});
+      setRemovingCorrectCards({});
+      setHiddenCorrectCards({});
       setWrongIdx(null);
       setWrongTick(0);
       setScore(0);
       setMistakes(0);
       setWordMistakes(new Map());
       setShowCompletionModal(false);
+      setPendingCorrectFeedbackCount(0);
       setTargetIdx(pickRandomIndex(items.length, new Set()));
       setLanguage('vi');
       return;
@@ -180,7 +204,13 @@ const FlashcardsReadingPage = () => {
       // Validate session data matches current items
       if (session && session.targetIdx >= 0 && session.targetIdx < items.length) {
         // Restore session state
-        setFlipped(session.flipped || {});
+        const restoredFlipped = session.flipped || {};
+        setFlipped(restoredFlipped);
+        setRemovingCorrectCards({});
+        setHiddenCorrectCards(
+          removeCorrectCardsRef.current ? getHiddenCorrectCardsFromFlipped(restoredFlipped) : {}
+        );
+        setPendingCorrectFeedbackCount(0);
         setScore(session.score || 0);
         setMistakes(session.mistakes || 0);
         setTargetIdx(session.targetIdx >= 0 ? session.targetIdx : pickRandomIndex(items.length, new Set()));
@@ -191,10 +221,13 @@ const FlashcardsReadingPage = () => {
     
     // No valid session - start fresh
     setFlipped({});
+    setRemovingCorrectCards({});
+    setHiddenCorrectCards({});
     setWrongIdx(null);
     setWrongTick(0);
     setScore(0);
     setMistakes(0);
+    setPendingCorrectFeedbackCount(0);
     setTargetIdx(pickRandomIndex(items.length, new Set()));
     setLanguage('vi');
   }, [currentFileName, isLoading, items.length, sessionRestored, trainingSource]);
@@ -230,13 +263,64 @@ const FlashcardsReadingPage = () => {
     osc.stop(ctx.currentTime + 0.26);
   }, []);
 
-  // Use enhanced speech utility for better pronunciation
-  // Direct use of speakEnglish utility - no wrapper needed
+  const wait = useCallback((ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms)), []);
+
+  const playCorrectFeedback = useCallback(
+    async (idx: number, word: string, shouldRemoveAfterFeedback: boolean) => {
+      setPendingCorrectFeedbackCount((count) => count + 1);
+
+      try {
+        await Promise.all([
+          wait(CARD_FLIP_FEEDBACK_MS),
+          speakEnglishAsync(word, { lang: 'en-US' }),
+        ]);
+
+        if (!shouldRemoveAfterFeedback || !removeCorrectCardsRef.current) return;
+
+        setRemovingCorrectCards((prev) => ({ ...prev, [idx]: true }));
+        await wait(CARD_EXIT_ANIMATION_MS);
+
+        if (!removeCorrectCardsRef.current) return;
+
+        setHiddenCorrectCards((prev) => ({ ...prev, [idx]: true }));
+        setRemovingCorrectCards((prev) => {
+          const next = { ...prev };
+          delete next[idx];
+          return next;
+        });
+      } finally {
+        setPendingCorrectFeedbackCount((count) => Math.max(0, count - 1));
+      }
+    },
+    [wait]
+  );
+
+  const handleRemoveCorrectCardsChange = useCallback(
+    (checked: boolean) => {
+      removeCorrectCardsRef.current = checked;
+      setRemoveCorrectCards(checked);
+      setRemovingCorrectCards({});
+      setHiddenCorrectCards(checked ? getHiddenCorrectCardsFromFlipped(flipped) : {});
+    },
+    [flipped, setRemoveCorrectCards]
+  );
 
   const handleLanguageToggle = () => {
     setLanguage((prev) => (prev === 'vi' ? 'en' : 'vi'));
       // Note: Session will be auto-saved via useEffect
   };
+
+  const scrollToCard = useCallback((idx: number) => {
+    const cardElement = cardRefs.current[idx];
+    if (!cardElement) return;
+
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    cardElement.scrollIntoView({
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+      block: 'center',
+      inline: 'nearest',
+    });
+  }, []);
 
   // Handle show hint (Ctrl+X) - show meaning on correct answer card for 3 seconds
   const handleShowHint = useCallback(() => {
@@ -245,10 +329,11 @@ const FlashcardsReadingPage = () => {
     if (flipped[targetIdx]) return; // Don't show hint on already flipped card
     
     setShowHintIdx(targetIdx);
+    window.requestAnimationFrame(() => scrollToCard(targetIdx));
     setTimeout(() => {
       setShowHintIdx(-1);
     }, 3000);
-  }, [isLoading, items.length, targetIdx, flipped]);
+  }, [isLoading, items.length, targetIdx, flipped, scrollToCard]);
 
   // Save session to localStorage whenever relevant state changes
   useEffect(() => {
@@ -302,15 +387,16 @@ const FlashcardsReadingPage = () => {
         : normalize(items[idx].vi) === normalize(items[targetIdx].vi); // EN-VI: match Vietnamese
       
       if (isCorrect) {
+        const currentEnglish = items[targetIdx].en;
         setFlipped((f) => ({ ...f, [idx]: true }));
         setScore((v) => v + 1);
-        speakEnglish(items[targetIdx].en, { lang: 'en-US' }); // Always speak the English word of the target
         const exclude = new Set<number>();
         Object.keys(flipped).forEach((k) => {
           if (flipped[+k]) exclude.add(+k);
         });
         exclude.add(idx);
         setTargetIdx(pickRandomIndex(items.length, exclude));
+        void playCorrectFeedback(idx, currentEnglish, removeCorrectCardsRef.current);
       } else {
         setWrongIdx(idx);
         setWrongTick((t) => t + 1);
@@ -338,7 +424,7 @@ const FlashcardsReadingPage = () => {
         }
       }
     },
-    [items, targetIdx, flipped, language, isLoading, playErrorTone]
+    [items, targetIdx, flipped, language, isLoading, playErrorTone, playCorrectFeedback]
   );
 
   // Check if all cards are flipped (100% completion)
@@ -350,10 +436,10 @@ const FlashcardsReadingPage = () => {
   
   // Show completion modal when 100% completed
   useEffect(() => {
-    if (allFlipped && !isLoading && items.length > 0) {
+    if (allFlipped && pendingCorrectFeedbackCount === 0 && !isLoading && items.length > 0) {
       setShowCompletionModal(true);
     }
-  }, [allFlipped, isLoading, items.length]);
+  }, [allFlipped, pendingCorrectFeedbackCount, isLoading, items.length]);
 
   // Handle keyboard shortcut Ctrl+X for hint
   useEffect(() => {
@@ -399,6 +485,9 @@ const FlashcardsReadingPage = () => {
   
   const handleRestart = useCallback(() => {
     setFlipped({});
+    setRemovingCorrectCards({});
+    setHiddenCorrectCards({});
+    setPendingCorrectFeedbackCount(0);
     setWrongIdx(null);
     setWrongTick(0);
     setScore(0);
@@ -638,27 +727,41 @@ const FlashcardsReadingPage = () => {
             pt: GRID_PADDING_TOP, // Padding để tránh sticky bar che mất card đầu tiên
           }}
         >
-          {items.map((it, idx) => (
-            <Box 
-              key={`${it.en}-${idx}`}
-              sx={{
-                // Disable interaction when loading or items not ready
-                pointerEvents: isLoading || items.length === 0 ? 'none' : 'auto',
-                opacity: isLoading || items.length === 0 ? 0.6 : 1,
-              }}
-            >
-              <WordCard
-                en={it.en}
-                vi={it.vi}
-                showLang={language}
-                flipped={!!flipped[idx]}
-                onAttempt={() => handleAttempt(idx)}
-                shouldShake={wrongIdx === idx}
-                shakeKey={wrongTick}
-                showMeaning={showMeaningIdx === idx || showHintIdx === idx}
-              />
-            </Box>
-          ))}
+          {items.map((it, idx) => {
+            if (hiddenCorrectCards[idx]) return null;
+
+            const isRemoving = !!removingCorrectCards[idx];
+
+            return (
+              <Box
+                key={`${it.en}-${idx}`}
+                ref={(element: HTMLDivElement | null) => {
+                  cardRefs.current[idx] = element;
+                }}
+                sx={{
+                  pointerEvents: isLoading || items.length === 0 || isRemoving ? 'none' : 'auto',
+                  opacity: isRemoving ? 0 : isLoading || items.length === 0 ? 0.6 : 1,
+                  transform: isRemoving ? 'scale(0.92) translateY(-8px)' : 'scale(1) translateY(0)',
+                  transformOrigin: 'center',
+                  maxHeight: isRemoving ? 0 : { xs: 180, sm: 232, md: 260 },
+                  overflow: 'hidden',
+                  transition:
+                    'opacity 280ms ease, transform 280ms ease, max-height 320ms ease',
+                }}
+              >
+                <WordCard
+                  en={it.en}
+                  vi={it.vi}
+                  showLang={language}
+                  flipped={!!flipped[idx]}
+                  onAttempt={() => handleAttempt(idx)}
+                  shouldShake={wrongIdx === idx}
+                  shakeKey={wrongTick}
+                  showMeaning={showMeaningIdx === idx || showHintIdx === idx}
+                />
+              </Box>
+            );
+          })}
         </Box>
         )}
       </Box>
@@ -677,6 +780,11 @@ const FlashcardsReadingPage = () => {
       <VocabularyQuickView
         vocabularyList={items}
         currentFileName={sourceFileName || currentFileName}
+      />
+
+      <FlashcardsSettingsPanel
+        removeCorrectCards={settings.removeCorrectCards}
+        onRemoveCorrectCardsChange={handleRemoveCorrectCardsChange}
       />
     </Box>
   );
