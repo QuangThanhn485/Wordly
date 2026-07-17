@@ -10,6 +10,18 @@ type UpstreamConfig = {
   cacheControl: string;
 };
 
+type FunctionRequest = {
+  method?: string;
+  url?: string;
+  headers: Record<string, string | string[] | undefined>;
+};
+
+type FunctionResponse = {
+  status: (statusCode: number) => FunctionResponse;
+  setHeader: (name: string, value: string) => void;
+  send: (body: string) => unknown;
+};
+
 const errorResponse = (message: string, status: number) =>
   Response.json(
     { error: message },
@@ -97,7 +109,7 @@ const fetchUpstream = async (url: URL): Promise<unknown> => {
   throw lastError ?? new Error('Dictionary upstream did not respond');
 };
 
-export async function GET(request: Request): Promise<Response> {
+const handleDictionaryRequest = async (request: Request): Promise<Response> => {
   const config = buildUpstreamConfig(new URL(request.url));
   if (!config) {
     return errorResponse('Invalid dictionary request.', 400);
@@ -116,4 +128,35 @@ export async function GET(request: Request): Promise<Response> {
     console.error('Dictionary upstream request failed:', error);
     return errorResponse('Dictionary service is temporarily unavailable.', 502);
   }
+};
+
+const firstHeaderValue = (value: string | string[] | undefined): string | undefined =>
+  Array.isArray(value) ? value[0] : value;
+
+const toWebRequest = (request: FunctionRequest): Request => {
+  const protocol = firstHeaderValue(request.headers['x-forwarded-proto']) ?? 'https';
+  const host =
+    firstHeaderValue(request.headers['x-forwarded-host']) ??
+    firstHeaderValue(request.headers.host) ??
+    'localhost';
+  const url = new URL(request.url ?? '/', `${protocol}://${host}`);
+  return new Request(url, { method: 'GET' });
+};
+
+export default async function handler(
+  request: FunctionRequest,
+  response: FunctionResponse,
+): Promise<unknown> {
+  if (request.method !== 'GET') {
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('Allow', 'GET');
+    return response.status(405).send(JSON.stringify({ error: 'Method not allowed.' }));
+  }
+
+  const webResponse = await handleDictionaryRequest(toWebRequest(request));
+  webResponse.headers.forEach((value, name) => {
+    response.setHeader(name, value);
+  });
+
+  return response.status(webResponse.status).send(await webResponse.text());
 }
