@@ -21,6 +21,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { VocabItem } from '../../types';
 import { WORD_TYPES } from '../../constants/wordTypes';
+import { fetchLabanAutocomplete } from '../../utils/dictionaryProxy';
 
 interface VocabFormDialogProps {
   open: boolean;
@@ -122,43 +123,11 @@ export const VocabFormDialog: React.FC<VocabFormDialogProps> = React.memo(
       const timer = setTimeout(async () => {
         try {
           setLoadingSuggest(true);
-          const apiType = inputLang === 'en' ? 1 : 2;
-          const baseUrl = `https://dict.laban.vn/ajax/autocomplete?type=${apiType}&site=dictionary&query=${encodeURIComponent(
+          const json = await fetchLabanAutocomplete<any>(
             term,
-          )}`;
-
-          // Bypass CORS ở môi trường production – chỉ áp dụng cho API này
-          const isProd = process.env.NODE_ENV === 'production';
-          let res: Response | null = null;
-
-          if (isProd) {
-            const proxyUrls = [
-              // allorigins – trả về nội dung raw
-              `https://api.allorigins.win/raw?url=${encodeURIComponent(baseUrl)}`,
-              // proxy phụ: cors.isomorphic-git – dạng ghép URL thẳng
-              `https://cors.isomorphic-git.org/${baseUrl}`,
-            ];
-
-            for (const proxyUrl of proxyUrls) {
-              try {
-                const r = await fetch(proxyUrl, { signal: controller.signal });
-                if (r.ok) {
-                  res = r;
-                  break;
-                }
-              } catch {
-                // thử tiếp proxy khác
-              }
-            }
-
-            if (!res) {
-              throw new Error('All proxies for Laban autocomplete failed');
-            }
-          } else {
-            res = await fetch(baseUrl, { signal: controller.signal, mode: 'cors' });
-          }
-          if (!res.ok) throw new Error(`Suggest failed ${res.status}`);
-          const json = await res.json();
+            inputLang,
+            controller.signal,
+          );
 
           const parsed: SuggestOption[] =
             json?.suggestions?.map((s: any) => {
