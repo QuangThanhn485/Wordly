@@ -1,4 +1,5 @@
 import type { VocabItem } from '../types';
+import { buildTracauRequestUrls } from './dictionaryProxy';
 
 export type TracauSentence = {
   _id: string;
@@ -21,29 +22,9 @@ export type TracauResponse = {
   tratu?: TracauEntry[];
 };
 
-const TRACAU_BASE_URL = 'https://api.tracau.vn/WBBcwnwQpV89';
-
-const buildProxyList = (url: string): string[] => {
-  const proxies: string[] = [];
-  // In development, try direct first
-  if (process.env.NODE_ENV !== 'production') {
-    proxies.push(url);
-  }
-  // Always proxy via allorigins (production relies on this)
-  proxies.push(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
-  return proxies;
-};
-
-const buildTracauUrl = (word: string) => {
-  const encoded = encodeURIComponent(word.trim());
-  return `${TRACAU_BASE_URL}/s/${encoded}/vi`;
-};
-
 export const fetchTracauDetail = async (word: string): Promise<TracauResponse> => {
-  const url = buildTracauUrl(word);
-
   let lastError: unknown = null;
-  for (const targetUrl of buildProxyList(url)) {
+  for (const targetUrl of buildTracauRequestUrls(word)) {
     try {
       const res = await fetch(targetUrl, {
         method: 'GET',

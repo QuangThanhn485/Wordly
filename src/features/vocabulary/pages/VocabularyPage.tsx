@@ -124,6 +124,153 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   '&:last-child td, &:last-child th': { border: 0 },
 }));
 
+type VocabTableRowProps = {
+  item: VocabItem;
+  originalIndex: number;
+  selected: boolean;
+  compact: boolean;
+  getSpeakAriaLabel: (word: string) => string;
+  getMenuAriaLabel: (word: string) => string;
+  onToggleSelection: (word: string) => void;
+  onOpenDetail: (item: VocabItem) => void;
+  onOpenMenu: (event: React.MouseEvent<HTMLElement>, item: VocabItem, index: number) => void;
+};
+
+const VocabTableRow = React.memo(function VocabTableRow({
+  item,
+  originalIndex,
+  selected,
+  compact,
+  getSpeakAriaLabel,
+  getMenuAriaLabel,
+  onToggleSelection,
+  onOpenDetail,
+  onOpenMenu,
+}: VocabTableRowProps) {
+  return (
+    <StyledTableRow hover>
+      <StyledTableCell padding="checkbox">
+        <Checkbox
+          checked={selected}
+          onChange={() => onToggleSelection(item.word)}
+          size={compact ? 'small' : 'medium'}
+        />
+      </StyledTableCell>
+      <StyledTableCell
+        sx={{ fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}
+        onClick={() => onOpenDetail(item)}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <IconButton
+            size="small"
+            onClick={(event) => {
+              event.stopPropagation();
+              speak(item.word);
+            }}
+            sx={{
+              p: 0.5,
+              minWidth: 'auto',
+              '&:hover': {
+                backgroundColor: 'primary.light',
+                color: 'primary.main',
+                borderRadius: 1,
+              },
+            }}
+            aria-label={getSpeakAriaLabel(item.word)}
+          >
+            <VolumeUpIcon size={18} style={{ color: 'inherit' }} />
+          </IconButton>
+          <Box component="span">{item.word}</Box>
+        </Box>
+      </StyledTableCell>
+      <StyledTableCell
+        sx={{ wordBreak: 'break-word', cursor: 'pointer' }}
+        onClick={() => onOpenDetail(item)}
+      >
+        {item.vnMeaning}
+      </StyledTableCell>
+      <StyledTableCell sx={{ cursor: 'pointer' }} onClick={() => onOpenDetail(item)}>
+        <Box
+          component="span"
+          sx={{
+            px: 1,
+            py: 0.5,
+            bgcolor: 'grey.100',
+            borderRadius: 1,
+            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            color: 'grey.800',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {item.type}
+        </Box>
+      </StyledTableCell>
+      <StyledTableCell
+        sx={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
+        onClick={() => onOpenDetail(item)}
+      >
+        / {item.pronunciation} /
+      </StyledTableCell>
+      <StyledTableCell align="center">
+        <IconButton
+          size={compact ? 'small' : 'medium'}
+          onClick={(event) => onOpenMenu(event, item, originalIndex)}
+          sx={{ '&:hover': { backgroundColor: 'primary.light', color: 'primary.main' } }}
+          aria-label={getMenuAriaLabel(item.word)}
+        >
+          <MoreVertIcon fontSize={compact ? 'small' : 'medium'} />
+        </IconButton>
+      </StyledTableCell>
+    </StyledTableRow>
+  );
+});
+
+type SortedVocabEntry = {
+  item: VocabItem;
+  originalIndex: number;
+};
+
+type VocabTableBodyProps = {
+  entries: SortedVocabEntry[];
+  selectedVocabs: Set<string>;
+  compact: boolean;
+  getSpeakAriaLabel: (word: string) => string;
+  getMenuAriaLabel: (word: string) => string;
+  onToggleSelection: (word: string) => void;
+  onOpenDetail: (item: VocabItem) => void;
+  onOpenMenu: (event: React.MouseEvent<HTMLElement>, item: VocabItem, index: number) => void;
+};
+
+const VocabTableBody = React.memo(function VocabTableBody({
+  entries,
+  selectedVocabs,
+  compact,
+  getSpeakAriaLabel,
+  getMenuAriaLabel,
+  onToggleSelection,
+  onOpenDetail,
+  onOpenMenu,
+}: VocabTableBodyProps) {
+  return (
+    <TableBody>
+      {entries.map(({ item, originalIndex }) => (
+        <VocabTableRow
+          key={`${item.word}:${originalIndex}`}
+          item={item}
+          originalIndex={originalIndex}
+          selected={selectedVocabs.has(item.word)}
+          compact={compact}
+          getSpeakAriaLabel={getSpeakAriaLabel}
+          getMenuAriaLabel={getMenuAriaLabel}
+          onToggleSelection={onToggleSelection}
+          onOpenDetail={onOpenDetail}
+          onOpenMenu={onOpenMenu}
+        />
+      ))}
+    </TableBody>
+  );
+});
+
 // ===== Helper: localStorage for viewMode =====
 const STORAGE_KEY_VIEW_MODE = 'vocabulary_view_mode';
 
@@ -148,6 +295,14 @@ const saveViewModeToStorage = (mode: 'tree' | 'grid') => {
 const VocabularyPage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation('vocabulary');
+  const getSpeakAriaLabel = useCallback(
+    (word: string) => t('actions.speakWord', { word }),
+    [t],
+  );
+  const getMenuAriaLabel = useCallback(
+    (word: string) => t('actions.rowMenuFor', { word }),
+    [t],
+  );
   
   // Lazy load vocabMap - start empty, load files on-demand
   const [vocabMap, setVocabMap] = useState<Record<string, VocabItem[]>>({});
@@ -193,7 +348,7 @@ const VocabularyPage: React.FC = () => {
           const nextVocab = next[fileName];
           
           // File is new or changed
-          if (!prevVocab || JSON.stringify(prevVocab) !== JSON.stringify(nextVocab)) {
+          if (prevVocab !== nextVocab) {
             changedFiles.add(fileName);
           }
         }
@@ -359,11 +514,15 @@ const VocabularyPage: React.FC = () => {
   const [selectedVocabs, setSelectedVocabs] = useState<Set<string>>(new Set());
 
   // ===== Row menu state =====
-  const [rowMenuAnchor, setRowMenuAnchor] = useState<{ anchorEl: HTMLElement; word: string; index: number } | null>(null);
+  const [rowMenuAnchor, setRowMenuAnchor] = useState<{
+    anchorEl: HTMLElement;
+    item: VocabItem;
+    index: number;
+  } | null>(null);
   
-  const handleRowMenuOpen = useCallback((e: React.MouseEvent<HTMLElement>, word: string, index: number) => {
+  const handleRowMenuOpen = useCallback((e: React.MouseEvent<HTMLElement>, item: VocabItem, index: number) => {
     e.stopPropagation();
-    setRowMenuAnchor({ anchorEl: e.currentTarget, word, index });
+    setRowMenuAnchor({ anchorEl: e.currentTarget, item, index });
   }, []);
   
   const handleRowMenuClose = useCallback(() => {
@@ -565,14 +724,13 @@ const VocabularyPage: React.FC = () => {
     }
   }, [selectedFile, vocabMap]);
 
-  // Sort vocabulary list alphabetically by word (Vietnamese-aware)
-  const sortedVocabList = useMemo(() => {
+  // Keep the original index while sorting so rendering remains O(n log n).
+  const sortedVocabEntries = useMemo(() => {
     if (!selectedFile) return [];
     const vocabList = vocabMap[selectedFile.name] || [];
-    // Create a copy to avoid mutating the original array
-    return [...vocabList].sort((a, b) => {
-      const wordA = a.word.toLowerCase().trim();
-      const wordB = b.word.toLowerCase().trim();
+    return vocabList.map((item, originalIndex) => ({ item, originalIndex })).sort((a, b) => {
+      const wordA = a.item.word.toLowerCase().trim();
+      const wordB = b.item.word.toLowerCase().trim();
       return wordA.localeCompare(wordB, 'vi'); // Use Vietnamese locale for proper sorting
     });
   }, [selectedFile, vocabMap]);
@@ -1619,8 +1777,8 @@ const VocabularyPage: React.FC = () => {
                     <TableRow>
                       <StyledTableCell padding="checkbox">
                         <Checkbox
-                          indeterminate={selectedVocabs.size > 0 && selectedVocabs.size < sortedVocabList.length}
-                          checked={sortedVocabList.length > 0 && selectedVocabs.size === sortedVocabList.length}
+                          indeterminate={selectedVocabs.size > 0 && selectedVocabs.size < sortedVocabEntries.length}
+                          checked={sortedVocabEntries.length > 0 && selectedVocabs.size === sortedVocabEntries.length}
                           onChange={handleSelectAllVocabs}
                           size={isSmDown ? 'small' : 'medium'}
                         />
@@ -1632,130 +1790,53 @@ const VocabularyPage: React.FC = () => {
                       <StyledTableCell align="center">{t('table.actions')}</StyledTableCell>
                     </TableRow>
                   </TableHead>
-                  <TableBody>
-                    {sortedVocabList.map((item, index) => {
-                      // Find original index for editing (needed for updateVocabMap)
-                      const originalList = vocabMap[selectedFile.name] || [];
-                      const originalIndex = originalList.findIndex(v => v.word === item.word);
-                      const itemIndex = originalIndex >= 0 ? originalIndex : index;
-                      
-                      return (
-                      <StyledTableRow key={item.word} hover>
-                        <StyledTableCell padding="checkbox">
-                          <Checkbox
-                            checked={selectedVocabs.has(item.word)}
-                            onChange={() => handleToggleVocabSelection(item.word)}
-                            size={isSmDown ? 'small' : 'medium'}
-                          />
-                        </StyledTableCell>
-                        <StyledTableCell 
-                          sx={{ fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}
-                          onClick={() => openVocabDetail(item)}
-                        >
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <IconButton
-                              size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                speak(item.word);
-                              }}
-                              sx={{
-                                p: 0.5,
-                                minWidth: 'auto',
-                                '&:hover': { 
-                              backgroundColor: 'primary.light', 
-                              color: 'primary.main',
-                              borderRadius: 1,
-                            },
-                          }}
-                              aria-label={t('actions.speakWord', { word: item.word })}
-                            >
-                              <VolumeUpIcon 
-                                size={18}
-                                style={{ color: 'inherit' }}
-                              />
-                            </IconButton>
-                            <Box component="span">{item.word}</Box>
-                          </Box>
-                        </StyledTableCell>
-                        <StyledTableCell 
-                          sx={{ wordBreak: 'break-word', cursor: 'pointer' }}
-                          onClick={() => openVocabDetail(item)}
-                        >
-                          {item.vnMeaning}
-                        </StyledTableCell>
-                        <StyledTableCell 
-                          sx={{ cursor: 'pointer' }}
-                          onClick={() => openVocabDetail(item)}
-                        >
-                          <Box
-                            component="span"
-                            sx={{
-                              px: 1,
-                              py: 0.5,
-                              bgcolor: 'grey.100',
-                              borderRadius: 1,
-                              fontSize: { xs: '0.75rem', sm: '0.875rem' }, // Mobile: 12px, Desktop: 14px
-                              color: 'grey.800',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {item.type}
-                          </Box>
-                        </StyledTableCell>
-                        <StyledTableCell 
-                          sx={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
-                          onClick={() => openVocabDetail(item)}
-                        >
-                          / {item.pronunciation} /
-                        </StyledTableCell>
-                        <StyledTableCell align="center">
-                              <IconButton
-                                size={isSmDown ? 'small' : 'medium'}
-                            onClick={(e) => handleRowMenuOpen(e, item.word, itemIndex)}
-                                sx={{ '&:hover': { backgroundColor: 'primary.light', color: 'primary.main' } }}
-                            aria-label={t('actions.rowMenuFor', { word: item.word })}
-                              >
-                            <MoreVertIcon fontSize={isSmDown ? 'small' : 'medium'} />
-                              </IconButton>
-                          <Menu
-                            anchorEl={rowMenuAnchor?.anchorEl}
-                            open={rowMenuAnchor !== null && rowMenuAnchor.word === item.word}
-                            onClose={handleRowMenuClose}
-                            anchorOrigin={{
-                              vertical: 'bottom',
-                              horizontal: 'right',
-                            }}
-                            transformOrigin={{
-                              vertical: 'top',
-                              horizontal: 'right',
-                            }}
-                          >
-                            <MenuItem onClick={() => {
-                              handleRowMenuClose();
-                              openEditVocabForm(item, itemIndex);
-                            }}>
-                              <ListItemIcon>
-                                <EditIcon fontSize="small" />
-                              </ListItemIcon>
-                              <ListItemText>{t('actions.editWord')}</ListItemText>
-                            </MenuItem>
-                            <MenuItem onClick={handleRowMenuClose} disabled>
-                              <ListItemText>{t('contextMenu.futureItem', { index: 1 })}</ListItemText>
-                            </MenuItem>
-                            <MenuItem onClick={handleRowMenuClose} disabled>
-                              <ListItemText>{t('contextMenu.futureItem', { index: 2 })}</ListItemText>
-                            </MenuItem>
-                            <MenuItem onClick={handleRowMenuClose} disabled>
-                              <ListItemText>{t('contextMenu.futureItem', { index: 3 })}</ListItemText>
-                            </MenuItem>
-                          </Menu>
-                        </StyledTableCell>
-                      </StyledTableRow>
-                      );
-                    })}
-                  </TableBody>
+                  <VocabTableBody
+                    entries={sortedVocabEntries}
+                    selectedVocabs={selectedVocabs}
+                    compact={isSmDown}
+                    getSpeakAriaLabel={getSpeakAriaLabel}
+                    getMenuAriaLabel={getMenuAriaLabel}
+                    onToggleSelection={handleToggleVocabSelection}
+                    onOpenDetail={openVocabDetail}
+                    onOpenMenu={handleRowMenuOpen}
+                  />
                 </Table>
+                <Menu
+                  anchorEl={rowMenuAnchor?.anchorEl}
+                  open={rowMenuAnchor !== null}
+                  onClose={handleRowMenuClose}
+                  anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
+                  }}
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                >
+                  <MenuItem
+                    onClick={() => {
+                      if (!rowMenuAnchor) return;
+                      const { item, index } = rowMenuAnchor;
+                      handleRowMenuClose();
+                      openEditVocabForm(item, index);
+                    }}
+                  >
+                    <ListItemIcon>
+                      <EditIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>{t('actions.editWord')}</ListItemText>
+                  </MenuItem>
+                  <MenuItem onClick={handleRowMenuClose} disabled>
+                    <ListItemText>{t('contextMenu.futureItem', { index: 1 })}</ListItemText>
+                  </MenuItem>
+                  <MenuItem onClick={handleRowMenuClose} disabled>
+                    <ListItemText>{t('contextMenu.futureItem', { index: 2 })}</ListItemText>
+                  </MenuItem>
+                  <MenuItem onClick={handleRowMenuClose} disabled>
+                    <ListItemText>{t('contextMenu.futureItem', { index: 3 })}</ListItemText>
+                  </MenuItem>
+                </Menu>
               </TableContainer>
             </Paper>
           ) : (
