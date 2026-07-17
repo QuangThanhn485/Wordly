@@ -10,28 +10,25 @@ type UpstreamConfig = {
   cacheControl: string;
 };
 
-type FunctionRequest = {
-  method?: string;
-  url?: string;
-  headers: Record<string, string | string[] | undefined>;
-};
-
-type FunctionResponse = {
-  status: (statusCode: number) => FunctionResponse;
-  setHeader: (name: string, value: string) => void;
-  send: (body: string) => unknown;
-};
+const jsonResponse = (
+  payload: unknown,
+  status: number,
+  cacheControl: string,
+  extraHeaders: Record<string, string> = {},
+) =>
+  new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      'Cache-Control': cacheControl,
+      'Content-Type': 'application/json; charset=utf-8',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Wordly-Dictionary-Proxy': '1',
+      ...extraHeaders,
+    },
+  });
 
 const errorResponse = (message: string, status: number) =>
-  Response.json(
-    { error: message },
-    {
-      status,
-      headers: {
-        'Cache-Control': 'no-store',
-      },
-    },
-  );
+  jsonResponse({ error: message }, status, 'no-store');
 
 const readQuery = (url: URL, key: string): string | null => {
   const value = url.searchParams.get(key)?.trim();
@@ -109,54 +106,41 @@ const fetchUpstream = async (url: URL): Promise<unknown> => {
   throw lastError ?? new Error('Dictionary upstream did not respond');
 };
 
-const handleDictionaryRequest = async (request: Request): Promise<Response> => {
-  const config = buildUpstreamConfig(new URL(request.url));
+const handleDictionaryRequest = async (requestUrl: URL): Promise<Response> => {
+  if (requestUrl.searchParams.get('source') === 'health') {
+    return jsonResponse({ ok: true, service: 'dictionary-proxy' }, 200, 'no-store');
+  }
+
+  const config = buildUpstreamConfig(requestUrl);
   if (!config) {
     return errorResponse('Invalid dictionary request.', 400);
   }
 
   try {
     const payload = await fetchUpstream(config.url);
-    return Response.json(payload, {
-      headers: {
-        'Cache-Control': config.cacheControl,
-        'Content-Type': 'application/json; charset=utf-8',
-        'X-Content-Type-Options': 'nosniff',
-      },
-    });
+    return jsonResponse(payload, 200, config.cacheControl);
   } catch (error) {
     console.error('Dictionary upstream request failed:', error);
     return errorResponse('Dictionary service is temporarily unavailable.', 502);
   }
 };
 
-const firstHeaderValue = (value: string | string[] | undefined): string | undefined =>
-  Array.isArray(value) ? value[0] : value;
+export default {
+  async fetch(request: Request): Promise<Response> {
+    try {
+      if (request.method !== 'GET') {
+        return jsonResponse(
+          { error: 'Method not allowed.' },
+          405,
+          'no-store',
+          { Allow: 'GET' },
+        );
+      }
 
-const toWebRequest = (request: FunctionRequest): Request => {
-  const protocol = firstHeaderValue(request.headers['x-forwarded-proto']) ?? 'https';
-  const host =
-    firstHeaderValue(request.headers['x-forwarded-host']) ??
-    firstHeaderValue(request.headers.host) ??
-    'localhost';
-  const url = new URL(request.url ?? '/', `${protocol}://${host}`);
-  return new Request(url, { method: 'GET' });
+      return await handleDictionaryRequest(new URL(request.url));
+    } catch (error) {
+      console.error('Unhandled dictionary function error:', error);
+      return errorResponse('Dictionary function failed.', 500);
+    }
+  },
 };
-
-export default async function handler(
-  request: FunctionRequest,
-  response: FunctionResponse,
-): Promise<unknown> {
-  if (request.method !== 'GET') {
-    response.setHeader('Cache-Control', 'no-store');
-    response.setHeader('Allow', 'GET');
-    return response.status(405).send(JSON.stringify({ error: 'Method not allowed.' }));
-  }
-
-  const webResponse = await handleDictionaryRequest(toWebRequest(request));
-  webResponse.headers.forEach((value, name) => {
-    response.setHeader(name, value);
-  });
-
-  return response.status(webResponse.status).send(await webResponse.text());
-}
