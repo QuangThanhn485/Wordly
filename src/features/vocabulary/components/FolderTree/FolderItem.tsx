@@ -125,7 +125,12 @@ export const TopicTreeItem = memo(function TopicTreeItem({
             enterNextDelay={650}
             disableInteractive
           >
-            <Typography variant="body2" noWrap sx={{ minWidth: 0, fontWeight: selected ? 600 : 400 }}>
+            <Typography
+              data-vocabulary-tree-label
+              variant="body2"
+              noWrap
+              sx={{ minWidth: 0, fontWeight: selected ? 600 : 400 }}
+            >
               {node.label}
             </Typography>
           </Tooltip>
@@ -268,7 +273,12 @@ const FolderItemComponent = function FolderItem({
               enterNextDelay={650}
               disableInteractive
             >
-              <Typography variant="body2" noWrap sx={{ minWidth: 0, fontWeight: 600 }}>
+              <Typography
+                data-vocabulary-tree-label
+                variant="body2"
+                noWrap
+                sx={{ minWidth: 0, fontWeight: 600 }}
+              >
                 {node.label}
               </Typography>
             </Tooltip>

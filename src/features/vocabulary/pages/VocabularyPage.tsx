@@ -648,6 +648,9 @@ const VocabularyPage: React.FC = () => {
     width: number;
   } | null>(null);
   const pageRootRef = useRef<HTMLDivElement | null>(null);
+  const treeViewportRef = useRef<HTMLDivElement | null>(null);
+  const sidebarResizeActiveRef = useRef(false);
+  const sidebarManualResizeVersionRef = useRef(0);
 
   // ===== Context menu state =====
   const [menu, setMenu] = useState<
@@ -787,6 +790,8 @@ const VocabularyPage: React.FC = () => {
     (event: React.PointerEvent<HTMLElement>) => {
       if (event.button !== 0) return;
       event.preventDefault();
+      sidebarManualResizeVersionRef.current += 1;
+      sidebarResizeActiveRef.current = true;
       setSidebarResizeStart({
         pointerX: event.clientX,
         width: sidebarWidth,
@@ -799,15 +804,22 @@ const VocabularyPage: React.FC = () => {
     (event: React.KeyboardEvent<HTMLElement>) => {
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
         event.preventDefault();
+        sidebarManualResizeVersionRef.current += 1;
         const direction = event.key === 'ArrowLeft' ? -1 : 1;
         setSidebarWidth((current) => clampSidebarWidth(current + direction * 16));
       } else if (event.key === 'Home') {
         event.preventDefault();
+        sidebarManualResizeVersionRef.current += 1;
         setSidebarWidth(clampSidebarWidth(getDefaultSidebarWidth()));
       }
     },
     [clampSidebarWidth],
   );
+
+  const resetSidebarWidth = useCallback(() => {
+    sidebarManualResizeVersionRef.current += 1;
+    setSidebarWidth(clampSidebarWidth(getDefaultSidebarWidth()));
+  }, [clampSidebarWidth]);
 
   React.useEffect(() => {
     if (!sidebarResizeStart) return;
@@ -816,7 +828,10 @@ const VocabularyPage: React.FC = () => {
       const nextWidth = sidebarResizeStart.width + event.clientX - sidebarResizeStart.pointerX;
       setSidebarWidth(clampSidebarWidth(nextWidth));
     };
-    const stopResize = () => setSidebarResizeStart(null);
+    const stopResize = () => {
+      sidebarResizeActiveRef.current = false;
+      setSidebarResizeStart(null);
+    };
 
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', stopResize, { once: true });
@@ -879,6 +894,96 @@ const VocabularyPage: React.FC = () => {
       return next;
     });
   }, []);
+
+  const fitSidebarToVisibleTree = useCallback(() => {
+    if (
+      isMdDown ||
+      !sidebarOpen ||
+      viewMode !== 'tree' ||
+      sidebarResizeActiveRef.current
+    ) {
+      return;
+    }
+
+    const viewport = treeViewportRef.current;
+    if (!viewport) return;
+
+    const viewportRect = viewport.getBoundingClientRect();
+    if (viewportRect.width <= 0) return;
+
+    let requiredWidth = MIN_SIDEBAR_WIDTH;
+    const labels = viewport.querySelectorAll<HTMLElement>(
+      '[data-vocabulary-tree-label]',
+    );
+
+    const textMeasure = document.createElement('span');
+    Object.assign(textMeasure.style, {
+      position: 'fixed',
+      left: '-10000px',
+      top: '0',
+      width: 'max-content',
+      maxWidth: 'none',
+      whiteSpace: 'pre',
+      visibility: 'hidden',
+      pointerEvents: 'none',
+    });
+    document.body.appendChild(textMeasure);
+
+    try {
+      labels.forEach((label) => {
+        const labelRect = label.getBoundingClientRect();
+        if (labelRect.width <= 0) return;
+
+        const labelStyle = window.getComputedStyle(label);
+        textMeasure.style.fontFamily = labelStyle.fontFamily;
+        textMeasure.style.fontSize = labelStyle.fontSize;
+        textMeasure.style.fontStyle = labelStyle.fontStyle;
+        textMeasure.style.fontWeight = labelStyle.fontWeight;
+        textMeasure.style.fontVariant = labelStyle.fontVariant;
+        textMeasure.style.letterSpacing = labelStyle.letterSpacing;
+        textMeasure.style.textTransform = labelStyle.textTransform;
+        textMeasure.textContent = label.textContent || '';
+
+        const textWidth = textMeasure.getBoundingClientRect().width;
+        const leftSpace = Math.max(0, labelRect.left - viewportRect.left);
+        const rightSpace = Math.max(0, viewportRect.right - labelRect.right);
+        requiredWidth = Math.max(
+          requiredWidth,
+          Math.ceil(leftSpace + textWidth + rightSpace + 4),
+        );
+      });
+    } finally {
+      textMeasure.remove();
+    }
+
+    const nextWidth = clampSidebarWidth(requiredWidth);
+    setSidebarWidth((current) => (
+      Math.abs(current - nextWidth) < 1 ? current : nextWidth
+    ));
+  }, [clampSidebarWidth, isMdDown, sidebarOpen, viewMode]);
+
+  React.useLayoutEffect(() => {
+    const manualResizeVersion = sidebarManualResizeVersionRef.current;
+    const fitUnlessManuallyResized = () => {
+      if (
+        sidebarManualResizeVersionRef.current !== manualResizeVersion
+      ) {
+        return;
+      }
+      fitSidebarToVisibleTree();
+    };
+
+    const frameId = window.requestAnimationFrame(fitUnlessManuallyResized);
+    const transitionTimer = window.setTimeout(
+      fitUnlessManuallyResized,
+      220,
+    );
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(transitionTimer);
+    };
+  }, [fitSidebarToVisibleTree, openFolders, tree.id]);
 
   const collapseAll = useCallback(() => {
     setOpenFolders(new Set<string>());
@@ -1711,15 +1816,18 @@ const VocabularyPage: React.FC = () => {
               </Box>
             </Box>
 
-            <Box sx={{ 
-              flex: '1 1 auto',
-              minHeight: 0,
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              px: 0.5,
-              py: 1,
-              scrollbarGutter: 'stable',
-            }}>
+            <Box
+              ref={treeViewportRef}
+              sx={{
+                flex: '1 1 auto',
+                minHeight: 0,
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                px: 0.5,
+                py: 1,
+                scrollbarGutter: 'stable',
+              }}
+            >
               <List disablePadding>
                 <FolderItem
                   node={tree}
@@ -1749,7 +1857,7 @@ const VocabularyPage: React.FC = () => {
             aria-valuenow={sidebarWidth}
             tabIndex={0}
             onPointerDown={startSidebarResize}
-            onDoubleClick={() => setSidebarWidth(clampSidebarWidth(getDefaultSidebarWidth()))}
+            onDoubleClick={resetSidebarWidth}
             onKeyDown={handleSidebarResizeKeyDown}
             sx={{
               position: 'relative',
