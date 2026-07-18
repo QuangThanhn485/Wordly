@@ -29,7 +29,7 @@ import { loadTrainingSession as loadReadingSession } from '@/features/train/trai
 import {
   CompletionModal,
   type SessionMistake,
-} from '@/features/train/train-listen-write/components/CompletionModal';
+} from '@/features/train/train-read-write/components/CompletionModal';
 import { speakEnglish } from '@/utils/speechUtils';
 import {
   createTrainingSearchParams,

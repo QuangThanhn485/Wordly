@@ -44,7 +44,7 @@ import {
 } from '@/features/train/train-listen/sessionStorage';
 import { recordMistakes } from '@/features/train/train-listen/mistakesStorage';
 import { loadTrainingSession as loadReadingSession } from '@/features/train/train-start/sessionStorage';
-import { CompletionModal, type SessionMistake } from '@/features/train/train-listen-write/components/CompletionModal';
+import { CompletionModal, type SessionMistake } from '@/features/train/train-read-write/components/CompletionModal';
 import { speakEnglish, speakEnglishAsync, type SpeechOptions } from '@/utils/speechUtils';
 import {
   createTrainingSearchParams,

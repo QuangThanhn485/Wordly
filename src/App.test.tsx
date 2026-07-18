@@ -1,22 +1,20 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { Provider } from 'react-redux';
+import { render, screen, waitFor } from '@testing-library/react';
 import App from './App';
-import { store } from './app/store';
 import { CustomThemeProvider } from './contexts/ThemeContext';
 import { __resetDatabaseForTests } from './data';
 
-test('renders the Wordly application shell', () => {
+test('renders the Wordly application shell', async () => {
   localStorage.clear();
   __resetDatabaseForTests();
 
   render(
-    <Provider store={store}>
-      <CustomThemeProvider>
-        <App />
-      </CustomThemeProvider>
-    </Provider>,
+    <CustomThemeProvider>
+      <App />
+    </CustomThemeProvider>,
   );
 
-  expect(screen.getAllByText('Wordly').length).toBeGreaterThan(0);
+  await waitFor(() => {
+    expect(screen.getAllByText('Wordly').length).toBeGreaterThan(1);
+  });
 });
