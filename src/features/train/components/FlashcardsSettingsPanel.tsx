@@ -143,6 +143,7 @@ type FlashcardsSettingsPanelProps = {
   onAnswerReviewDurationChange?: (value: number) => void;
   disableAutoAdvance?: boolean;
   onDisableAutoAdvanceChange?: (checked: boolean) => void;
+  disabled?: boolean;
   triggerVariant?: 'edge' | 'inline';
 };
 
@@ -153,6 +154,7 @@ export const FlashcardsSettingsPanel: React.FC<FlashcardsSettingsPanelProps> = (
   onAnswerReviewDurationChange,
   disableAutoAdvance,
   onDisableAutoAdvanceChange,
+  disabled = false,
   triggerVariant = 'edge',
 }) => {
   const [open, setOpen] = useState(false);
@@ -212,53 +214,59 @@ export const FlashcardsSettingsPanel: React.FC<FlashcardsSettingsPanelProps> = (
     <>
       {triggerVariant === 'inline' ? (
         <Tooltip title={t('settings.title')}>
-          <IconButton
-            color="default"
-            size="small"
-            aria-label={t('settings.openAriaLabel')}
-            onClick={() => setOpen((value) => !value)}
-            sx={{
-              color: 'text.secondary',
-              border: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'background.paper',
-              '&:hover': {
-                color: 'primary.main',
+          <span>
+            <IconButton
+              color="default"
+              size="small"
+              disabled={disabled}
+              aria-label={t('settings.openAriaLabel')}
+              onClick={() => setOpen((value) => !value)}
+              sx={{
+                color: 'text.secondary',
+                border: '1px solid',
                 borderColor: 'divider',
-                bgcolor: 'action.hover',
-              },
-            }}
-          >
-            <Settings size={17} />
-          </IconButton>
+                bgcolor: 'background.paper',
+                '&:hover': {
+                  color: 'primary.main',
+                  borderColor: 'divider',
+                  bgcolor: 'action.hover',
+                },
+              }}
+            >
+              <Settings size={17} />
+            </IconButton>
+          </span>
         </Tooltip>
       ) : (
         <Tooltip title={t('settings.title')} placement="left">
-          <Fab
-            color="default"
-            aria-label={t('settings.openAriaLabel')}
-            onClick={() => setOpen((value) => !value)}
-            sx={{
-              position: 'fixed',
-              right: 0,
-              top: { xs: 248, sm: 248 },
-              zIndex: (theme) => theme.zIndex.speedDial,
-              width: 56,
-              height: 56,
-              borderRadius: '24px 0 0 24px',
-              boxShadow: 'none',
-              border: '1px solid',
-              borderColor: alpha(theme.palette.primary.main, isDark ? 0.55 : 0.35),
-              bgcolor: alpha(theme.palette.background.paper, isDark ? 0.92 : 0.98),
-              color: theme.palette.primary.main,
-              backdropFilter: 'blur(8px)',
-              '&:hover': {
-                bgcolor: alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08),
-              },
-            }}
-          >
-            <Settings size={24} />
-          </Fab>
+          <span>
+            <Fab
+              color="default"
+              disabled={disabled}
+              aria-label={t('settings.openAriaLabel')}
+              onClick={() => setOpen((value) => !value)}
+              sx={{
+                position: 'fixed',
+                right: 0,
+                top: { xs: 248, sm: 248 },
+                zIndex: (theme) => theme.zIndex.speedDial,
+                width: 56,
+                height: 56,
+                borderRadius: '24px 0 0 24px',
+                boxShadow: 'none',
+                border: '1px solid',
+                borderColor: alpha(theme.palette.primary.main, isDark ? 0.55 : 0.35),
+                bgcolor: alpha(theme.palette.background.paper, isDark ? 0.92 : 0.98),
+                color: theme.palette.primary.main,
+                backdropFilter: 'blur(8px)',
+                '&:hover': {
+                  bgcolor: alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08),
+                },
+              }}
+            >
+              <Settings size={24} />
+            </Fab>
+          </span>
         </Tooltip>
       )}
 
@@ -298,11 +306,13 @@ export const FlashcardsSettingsPanel: React.FC<FlashcardsSettingsPanelProps> = (
               {showRemoveCorrectCards && (
                 <ListItem disablePadding>
                   <ListItemButton
+                    disabled={disabled}
                     onClick={handleToggleRemoveCorrectCards}
                     sx={{ py: 1.75, px: 2, display: 'flex', gap: 1.25 }}
                   >
                     <Checkbox
                       checked={removeCorrectCards}
+                      disabled={disabled}
                       onChange={(event) =>
                         onRemoveCorrectCardsChange?.(event.target.checked)
                       }

@@ -80,6 +80,7 @@ function shuffleArray<T>(array: T[]): T[] {
 
 const CARD_FLIP_FEEDBACK_MS = 620;
 const CARD_EXIT_ANIMATION_MS = 320;
+const CARD_LAYOUT_SETTLE_MS = 180;
 
 const getHiddenCorrectCardsFromFlipped = (flipped: Record<number, boolean>) => {
   const hidden: Record<number, boolean> = {};
@@ -173,9 +174,17 @@ const FlashcardsListeningPage = () => {
   const [wordMistakes, setWordMistakes] = useState<Map<string, number>>(new Map());
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [pendingCorrectFeedbackCount, setPendingCorrectFeedbackCount] = useState(0);
+  const [feedbackTargetIdx, setFeedbackTargetIdx] = useState(-1);
 
   const prevTopicIdRef = useRef<string | null>(null);
   const prevTrainingSourceRef = useRef<string | null>(null);
+  const interactionLockedRef = useRef(false);
+  const feedbackRunIdRef = useRef(0);
+
+  const presentedTargetIdx =
+    pendingCorrectFeedbackCount > 0 && feedbackTargetIdx >= 0
+      ? feedbackTargetIdx
+      : targetIdx;
 
   useEffect(() => {
     if (isLoading || items.length === 0 || !currentTopicId || !sessionRestored) return;
@@ -199,6 +208,9 @@ const FlashcardsListeningPage = () => {
       setWordMistakes(new Map());
       setShowCompletionModal(false);
       setPendingCorrectFeedbackCount(0);
+      setFeedbackTargetIdx(-1);
+      interactionLockedRef.current = false;
+      feedbackRunIdRef.current += 1;
       setHasStarted(false);
       setShowHintModal(false);
       setTargetIdx(pickRandomIndex(items.length, new Set()));
@@ -216,6 +228,9 @@ const FlashcardsListeningPage = () => {
           removeCorrectCardsRef.current ? getHiddenCorrectCardsFromFlipped(restoredFlipped) : {}
         );
         setPendingCorrectFeedbackCount(0);
+        setFeedbackTargetIdx(-1);
+        interactionLockedRef.current = false;
+        feedbackRunIdRef.current += 1;
         setScore(session.score || 0);
         setMistakes(session.mistakes || 0);
         setTargetIdx(session.targetIdx >= 0 ? session.targetIdx : pickRandomIndex(items.length, new Set()));
@@ -235,6 +250,9 @@ const FlashcardsListeningPage = () => {
     setMistakes(0);
     setWordMistakes(new Map());
     setPendingCorrectFeedbackCount(0);
+    setFeedbackTargetIdx(-1);
+    interactionLockedRef.current = false;
+    feedbackRunIdRef.current += 1;
     setHasStarted(false);
     setShowHintModal(false);
     setTargetIdx(pickRandomIndex(items.length, new Set()));
@@ -279,8 +297,8 @@ const FlashcardsListeningPage = () => {
 
   const wait = useCallback((ms: number) => new Promise<void>((res) => window.setTimeout(res, ms)), []);
 
-  const speakResultThenNext = useCallback(
-    async (current: string, next?: string) => {
+  const speakResult = useCallback(
+    async (current: string) => {
       if (!current) return;
       try {
         if (typeof window !== 'undefined') {
@@ -288,46 +306,67 @@ const FlashcardsListeningPage = () => {
         }
       } catch {}
       await speakEnglishAwaitable(current, { lang: 'en-US' });
-      if (next) {
-        await wait(200);
-        await speakEnglishAwaitable(next, { lang: 'en-US' });
-      }
     },
-    [speakEnglishAwaitable, wait]
+    [speakEnglishAwaitable]
   );
 
   const playCorrectFeedback = useCallback(
     async (idx: number, current: string, next: string | undefined, shouldRemoveAfterFeedback: boolean) => {
+      const runId = ++feedbackRunIdRef.current;
       setPendingCorrectFeedbackCount((count) => count + 1);
 
       try {
         await Promise.all([
           wait(CARD_FLIP_FEEDBACK_MS),
-          speakResultThenNext(current, next),
+          speakResult(current),
         ]);
 
-        if (!shouldRemoveAfterFeedback || !removeCorrectCardsRef.current) return;
+        if (feedbackRunIdRef.current !== runId) return;
 
-        setRemovingCorrectCards((prev) => ({ ...prev, [idx]: true }));
-        await wait(CARD_EXIT_ANIMATION_MS);
+        if (shouldRemoveAfterFeedback && removeCorrectCardsRef.current) {
+          setRemovingCorrectCards((prev) => ({ ...prev, [idx]: true }));
+          await wait(CARD_EXIT_ANIMATION_MS);
 
-        if (!removeCorrectCardsRef.current) return;
+          if (feedbackRunIdRef.current !== runId) return;
 
-        setHiddenCorrectCards((prev) => ({ ...prev, [idx]: true }));
-        setRemovingCorrectCards((prev) => {
-          const nextState = { ...prev };
-          delete nextState[idx];
-          return nextState;
-        });
+          if (removeCorrectCardsRef.current) {
+            setHiddenCorrectCards((prev) => ({ ...prev, [idx]: true }));
+            setRemovingCorrectCards((prev) => {
+              const nextState = { ...prev };
+              delete nextState[idx];
+              return nextState;
+            });
+
+            // Delay activation until the grid has completed its final reflow.
+            await wait(CARD_LAYOUT_SETTLE_MS);
+          }
+        }
+
       } finally {
-        setPendingCorrectFeedbackCount((count) => Math.max(0, count - 1));
+        if (feedbackRunIdRef.current === runId) {
+          interactionLockedRef.current = false;
+          setFeedbackTargetIdx(-1);
+          setPendingCorrectFeedbackCount((count) => Math.max(0, count - 1));
+
+          if (next) {
+            window.requestAnimationFrame(() => {
+              if (
+                feedbackRunIdRef.current === runId &&
+                !interactionLockedRef.current
+              ) {
+                speakEnglish(next, { lang: 'en-US' });
+              }
+            });
+          }
+        }
       }
     },
-    [speakResultThenNext, wait]
+    [speakResult, wait]
   );
 
   const handleRemoveCorrectCardsChange = useCallback(
     (checked: boolean) => {
+      if (interactionLockedRef.current) return;
       removeCorrectCardsRef.current = checked;
       setRemoveCorrectCards(checked);
       setRemovingCorrectCards({});
@@ -337,10 +376,12 @@ const FlashcardsListeningPage = () => {
   );
 
   const handleLanguageChange = (mode: 'vi-en' | 'en-vi') => {
+    if (interactionLockedRef.current) return;
     setLanguage(mode === 'vi-en' ? 'vi' : 'en');
   };
 
   const handleStart = useCallback(() => {
+    if (interactionLockedRef.current) return;
     if (isLoading || items.length === 0) return;
     if (targetIdx < 0 || targetIdx >= items.length) return;
     
@@ -353,6 +394,7 @@ const FlashcardsListeningPage = () => {
   }, [items, targetIdx, isLoading]);
 
   const handleReplayAudio = useCallback(() => {
+    if (interactionLockedRef.current) return;
     if (isLoading || items.length === 0) return;
     if (targetIdx < 0 || targetIdx >= items.length) return;
     if (!hasStarted) return;
@@ -364,6 +406,7 @@ const FlashcardsListeningPage = () => {
   }, [hasStarted, items, targetIdx, isLoading]);
 
   const handleShowAnswer = useCallback(() => {
+    if (interactionLockedRef.current) return;
     if (isLoading || items.length === 0) return;
     if (targetIdx < 0 || targetIdx >= items.length) return;
     if (!hasStarted) return;
@@ -403,6 +446,7 @@ const FlashcardsListeningPage = () => {
 
   const handleAttempt = useCallback(
     (idx: number) => {
+      if (interactionLockedRef.current) return;
       if (isLoading || items.length === 0 || !hasStarted) return;
       if (targetIdx < 0 || targetIdx >= items.length) return;
       if (idx < 0 || idx >= items.length) return;
@@ -415,6 +459,8 @@ const FlashcardsListeningPage = () => {
         : normalize(items[idx].vi) === normalize(items[targetIdx].vi);
       
       if (isCorrect) {
+        interactionLockedRef.current = true;
+        setFeedbackTargetIdx(targetIdx);
         setFlipped((f) => ({ ...f, [idx]: true }));
         setScore((v) => v + 1);
         const currentEnglish = items[targetIdx].en;
@@ -509,10 +555,13 @@ const FlashcardsListeningPage = () => {
   ]);
   
   const handleRestart = useCallback(() => {
+    feedbackRunIdRef.current += 1;
+    interactionLockedRef.current = false;
     setFlipped({});
     setRemovingCorrectCards({});
     setHiddenCorrectCards({});
     setPendingCorrectFeedbackCount(0);
+    setFeedbackTargetIdx(-1);
     setWrongIdx(null);
     setWrongTick(0);
     setScore(0);
@@ -553,8 +602,13 @@ const FlashcardsListeningPage = () => {
   const handleCompletionRestart = () => saveMistakesAndAction('restart');
   const handleCompletionNext = () => saveMistakesAndAction('next');
 
-  const target = (items.length > 0 && targetIdx >= 0 && targetIdx < items.length && !isLoading) 
-    ? items[targetIdx] 
+  const target = (
+    items.length > 0 &&
+    presentedTargetIdx >= 0 &&
+    presentedTargetIdx < items.length &&
+    !isLoading
+  )
+    ? items[presentedTargetIdx]
     : null;
 
   useEffect(() => {
@@ -659,6 +713,7 @@ const FlashcardsListeningPage = () => {
                 <FlashcardsSettingsPanel
                   removeCorrectCards={settings.removeCorrectCards}
                   onRemoveCorrectCardsChange={handleRemoveCorrectCardsChange}
+                  disabled={pendingCorrectFeedbackCount > 0}
                   triggerVariant="inline"
                 />
               </>

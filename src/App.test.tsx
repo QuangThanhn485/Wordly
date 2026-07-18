@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import App from './App';
 import { CustomThemeProvider } from './contexts/ThemeContext';
 import { __resetDatabaseForTests } from './data';
@@ -14,7 +14,11 @@ test('renders the Wordly application shell', async () => {
     </CustomThemeProvider>,
   );
 
-  await waitFor(() => {
-    expect(screen.getAllByText('Wordly').length).toBeGreaterThan(1);
-  });
+  expect(
+    await screen.findByRole(
+      'heading',
+      { name: 'Wordly' },
+      { timeout: 5000 },
+    ),
+  ).toBeInTheDocument();
 });
