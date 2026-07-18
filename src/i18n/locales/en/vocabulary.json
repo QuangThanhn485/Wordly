@@ -2,12 +2,13 @@
   "title": "Vocabulary",
   "defaults": {
     "folder": "Folder",
-    "newFolder": "New Folder"
+    "newFolder": "New Folder",
+    "topic": "Topic"
   },
   "sidebar": {
     "title": "Folders",
     "newFolder": "New Folder",
-    "newFile": "New File",
+    "newTopic": "New Topic",
     "emptyFolder": "Empty folder"
   },
   "table": {
@@ -20,9 +21,9 @@
     "wordCount": "{{count}} words",
     "noVocabulary": "No vocabulary yet",
     "addFirst": "Add your first word",
-    "selectFile": "Select a file to view vocabulary",
-    "noFileSelectedTitle": "No file selected",
-    "noFileSelectedDescription": "Please select a file from the left list to view its content"
+    "selectTopic": "Select a topic to view vocabulary",
+    "noTopicSelectedTitle": "No topic selected",
+    "noTopicSelectedDescription": "Select a topic from the vocabulary library to view its content"
   },
   "detail": {
     "wordFallback": "-",
@@ -38,18 +39,18 @@
     "noExamples": "No example sentences for this word."
   },
   "gridModal": {
-    "title": "Choose vocabulary file",
-    "helper": "Tip: click a folder to open, click a file to view vocabulary"
+    "title": "Choose a vocabulary topic",
+    "helper": "Select a folder to open it or select a topic to view vocabulary"
   },
   "grid": {
     "count": "({{count}} words)"
   },
   "dialogs": {
-    "newFile": {
-      "title": "Create new vocabulary file",
-      "label": "File name",
-      "placeholder": "new_vocabulary.txt",
-      "helper": "File will have .txt extension automatically if not provided"
+    "newTopic": {
+      "title": "Create vocabulary topic",
+      "label": "Topic name",
+      "placeholder": "Wild animals",
+      "helper": "Spaces and Unicode characters are supported"
     },
     "newFolder": {
       "title": "Create subfolder",
@@ -64,7 +65,7 @@
       "title": "Confirm Delete",
       "message": "Are you sure you want to delete \"{{name}}\"?",
       "warning": "This action cannot be undone.",
-      "fileCount": "This folder contains {{count}} file(s)"
+      "topicCount": "This folder contains {{count}} topic(s)"
     },
     "vocabForm": {
       "titleAdd": "Add New Word",
@@ -88,20 +89,20 @@
     "rename": "Rename",
     "delete": "Delete",
     "newSubfolder": "New Subfolder",
-    "newFile": "New File",
+    "newTopic": "New Topic",
     "cut": "Cut",
     "copy": "Copy",
     "paste": "Paste",
     "deleteFolder": "Delete folder",
-    "deleteFile": "Delete file",
-    "exportFile": "Export file (.json)",
+    "deleteTopic": "Delete topic",
+    "exportTopic": "Export topic (.json)",
     "exportFolder": "Export folder (.json)",
     "importFolder": "Import folder (.json)",
-    "importFile": "Import file (.json)",
+    "importTopic": "Import topic (.json)",
     "futureItem": "Item {{index}} (Coming soon)"
   },
   "messages": {
-    "fileCreated": "File \"{{name}}\" created",
+    "topicCreated": "Topic \"{{name}}\" created",
     "folderCreated": "Folder created",
     "deleted": "Deleted successfully",
     "renamed": "Renamed successfully",
@@ -119,10 +120,10 @@
     "importInvalidFormat": "Import file has invalid format.",
     "readFileFailed": "Cannot read file. Make sure it is valid JSON.",
     "noVocabToExport": "No vocabulary to export.",
-    "exportFileSuccess": "Exported file \"{{name}}\".",
-    "exportFolderSuccess": "Exported folder \"{{name}}\" ({{count}} files).",
-    "importFileSuccess": "Imported file \"{{name}}\" with {{count}} words.",
-    "importFolderSuccess": "Imported folder \"{{name}}\" ({{fileCount}} files, {{wordCount}} words).",
+    "exportTopicSuccess": "Exported topic \"{{name}}\".",
+    "exportFolderSuccess": "Exported folder \"{{name}}\" ({{count}} topics).",
+    "importTopicSuccess": "Imported topic \"{{name}}\" with {{count}} words.",
+    "importFolderSuccess": "Imported folder \"{{name}}\" ({{topicCount}} topics, {{wordCount}} words).",
     "cutInstruction": "Cut. Choose destination folder and Paste.",
     "cannotDeleteRoot": "Cannot delete root folder!"
   },
@@ -145,8 +146,8 @@
     "backToFolders": "Back to folder list",
     "addWordShort": "Add",
     "rowMenuFor": "Menu for {{word}}",
-    "fileAriaLabel": "File {{name}}",
-    "fileMenuAriaLabel": "File menu for {{name}}",
+    "topicAriaLabel": "Topic {{name}}",
+    "topicMenuAriaLabel": "Topic menu for {{name}}",
     "folderToggleAriaLabel": "Toggle folder {{name}}",
     "folderMenuAriaLabel": "Folder menu for {{name}}",
     "breadcrumbAriaLabel": "Breadcrumb",

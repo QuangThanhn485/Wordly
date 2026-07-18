@@ -28,12 +28,17 @@ import {
   saveTrainingSession, 
   loadTrainingSession, 
   clearTrainingSession,
-  isSessionForFile,
+  isSessionForTopic,
   type TrainingSession 
 } from '@/features/train/train-listen/sessionStorage';
 import { recordMistakes } from '@/features/train/train-listen/mistakesStorage';
 import { CompletionModal, type SessionMistake } from '@/features/train/train-listen-write/components/CompletionModal';
 import { speakEnglish, speakEnglishAsync, type SpeechOptions } from '@/utils/speechUtils';
+import {
+  createTrainingSearchParams,
+  getTrainingTopicParams,
+  normalizeSessionTopicReference,
+} from '@/features/train/utils/topicSession';
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
@@ -86,10 +91,12 @@ const FlashcardsListeningPage = () => {
   const { t } = useTranslation('train');
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const currentFileName = searchParams.get('file');
-  const sourceFileName = searchParams.get('sourceFile');
-  const trainingSource = searchParams.get('trainingSource');
-  const recordFileName = sourceFileName || currentFileName;
+  const {
+    topicId: currentTopicId,
+    sourceTopicId,
+    trainingSource,
+  } = getTrainingTopicParams(searchParams);
+  const recordTopicId = sourceTopicId || currentTopicId;
   const skipMistakeLogging = trainingSource === 'top-mistakes';
   const [sessionRestored, setSessionRestored] = useState(false);
   const { settings, setRemoveCorrectCards } = useFlashcardsSettings();
@@ -104,10 +111,10 @@ const FlashcardsListeningPage = () => {
     
     const savedSession = loadTrainingSession();
     
-    if (currentFileName) {
+    if (currentTopicId) {
       if (
         savedSession &&
-        (savedSession.fileName !== currentFileName ||
+        (savedSession.topicId !== currentTopicId ||
           (trainingSource && savedSession.trainingSource !== trainingSource))
       ) {
         clearTrainingSession();
@@ -116,11 +123,8 @@ const FlashcardsListeningPage = () => {
       return;
     }
     
-    if (savedSession && savedSession.fileName) {
-      const params: Record<string, string> = { file: savedSession.fileName };
-      if (savedSession.sourceFileName) params.sourceFile = savedSession.sourceFileName;
-      if (savedSession.trainingSource) params.trainingSource = savedSession.trainingSource;
-      setSearchParams(params, { replace: true });
+    if (savedSession?.topicId) {
+      setSearchParams(createTrainingSearchParams(savedSession), { replace: true });
       setSessionRestored(true);
       return;
     }
@@ -128,12 +132,9 @@ const FlashcardsListeningPage = () => {
     try {
       const readingSessionStr = localStorage.getItem('wordly_train_session');
       if (readingSessionStr) {
-        const readingSession = JSON.parse(readingSessionStr);
-        if (readingSession && readingSession.fileName) {
-          const params: Record<string, string> = { file: readingSession.fileName };
-          if (readingSession.sourceFileName) params.sourceFile = readingSession.sourceFileName;
-          if (readingSession.trainingSource) params.trainingSource = readingSession.trainingSource;
-          setSearchParams(params, { replace: true });
+        const readingSession = normalizeSessionTopicReference(JSON.parse(readingSessionStr));
+        if (readingSession?.topicId) {
+          setSearchParams(createTrainingSearchParams(readingSession), { replace: true });
           setSessionRestored(true);
           return;
         }
@@ -141,7 +142,7 @@ const FlashcardsListeningPage = () => {
     } catch (err) {}
     
     setSessionRestored(true);
-  }, [currentFileName, sessionRestored, setSearchParams, trainingSource]);
+  }, [currentTopicId, sessionRestored, setSearchParams, trainingSource]);
 
   const { words: rawWords, isLoading } = useTrainWords();
   const baseItems = useMemo(() => adaptWords(rawWords ?? []), [rawWords]);
@@ -173,19 +174,20 @@ const FlashcardsListeningPage = () => {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [pendingCorrectFeedbackCount, setPendingCorrectFeedbackCount] = useState(0);
 
-  const prevFileNameRef = useRef<string | null>(null);
+  const prevTopicIdRef = useRef<string | null>(null);
   const prevTrainingSourceRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (isLoading || items.length === 0 || !currentFileName || !sessionRestored) return;
+    if (isLoading || items.length === 0 || !currentTopicId || !sessionRestored) return;
     
-    const fileChanged = prevFileNameRef.current !== null && prevFileNameRef.current !== currentFileName;
+    const topicChanged =
+      prevTopicIdRef.current !== null && prevTopicIdRef.current !== currentTopicId;
     const trainingSourceChanged =
       prevTrainingSourceRef.current !== null && prevTrainingSourceRef.current !== trainingSource;
-    prevFileNameRef.current = currentFileName;
+    prevTopicIdRef.current = currentTopicId;
     prevTrainingSourceRef.current = trainingSource;
     
-    if (fileChanged || trainingSourceChanged) {
+    if (topicChanged || trainingSourceChanged) {
       clearTrainingSession();
       setFlipped({});
       setRemovingCorrectCards({});
@@ -205,7 +207,7 @@ const FlashcardsListeningPage = () => {
     }
     
     const session = loadTrainingSession();
-    if (isSessionForFile(session, currentFileName, trainingSource)) {
+    if (isSessionForTopic(session, currentTopicId, trainingSource)) {
       if (session && session.targetIdx >= 0 && session.targetIdx < items.length) {
         const restoredFlipped = session.flipped || {};
         setFlipped(restoredFlipped);
@@ -237,7 +239,7 @@ const FlashcardsListeningPage = () => {
     setShowHintModal(false);
     setTargetIdx(pickRandomIndex(items.length, new Set()));
     setLanguage('en');
-  }, [currentFileName, isLoading, items.length, sessionRestored, trainingSource]);
+  }, [currentTopicId, isLoading, items.length, sessionRestored, trainingSource]);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const getAudioCtx = () => {
@@ -370,11 +372,11 @@ const FlashcardsListeningPage = () => {
   }, [hasStarted, items, targetIdx, isLoading]);
 
   useEffect(() => {
-    if (!currentFileName || isLoading || items.length === 0) return;
+    if (!currentTopicId || isLoading || items.length === 0) return;
     
     const session: TrainingSession = {
-      fileName: currentFileName,
-      sourceFileName: sourceFileName || undefined,
+      topicId: currentTopicId,
+      sourceTopicId: sourceTopicId || undefined,
       trainingSource: trainingSource || undefined,
       score,
       mistakes,
@@ -386,8 +388,8 @@ const FlashcardsListeningPage = () => {
     };
     saveTrainingSession(session);
   }, [
-    currentFileName,
-    sourceFileName,
+    currentTopicId,
+    sourceTopicId,
     trainingSource,
     score,
     mistakes,
@@ -488,8 +490,8 @@ const FlashcardsListeningPage = () => {
       items.length > 0 &&
       hasStarted
     ) {
-      if (!skipMistakeLogging && sessionMistakes.length > 0 && recordFileName) {
-        recordMistakes(sessionMistakes, recordFileName, 'flashcards-listening');
+      if (!skipMistakeLogging && sessionMistakes.length > 0 && recordTopicId) {
+        recordMistakes(sessionMistakes, recordTopicId, 'flashcards-listening');
       }
       setShowCompletionModal(true);
     }
@@ -501,7 +503,7 @@ const FlashcardsListeningPage = () => {
     hasStarted,
     sessionMistakes,
     skipMistakeLogging,
-    recordFileName,
+    recordTopicId,
   ]);
   
   const handleRestart = useCallback(() => {
@@ -519,14 +521,14 @@ const FlashcardsListeningPage = () => {
     setShowHintModal(false);
     setTargetIdx(pickRandomIndex(items.length, new Set()));
     setShuffleKey(prev => prev + 1);
-    if (currentFileName) {
+    if (currentTopicId) {
       clearTrainingSession();
     }
-  }, [items.length, currentFileName]);
+  }, [items.length, currentTopicId]);
   
   const saveMistakesAndAction = useCallback((action: 'exit' | 'restart' | 'next') => {
-    if (!skipMistakeLogging && sessionMistakes.length > 0 && recordFileName) {
-      recordMistakes(sessionMistakes, recordFileName, 'flashcards-listening');
+    if (!skipMistakeLogging && sessionMistakes.length > 0 && recordTopicId) {
+      recordMistakes(sessionMistakes, recordTopicId, 'flashcards-listening');
     }
     
     if (action === 'restart') {
@@ -543,7 +545,7 @@ const FlashcardsListeningPage = () => {
       }
       setShowCompletionModal(false);
     }
-  }, [recordFileName, sessionMistakes, handleRestart, navigate, searchParams, skipMistakeLogging]);
+  }, [recordTopicId, sessionMistakes, handleRestart, navigate, searchParams, skipMistakeLogging]);
   
   const handleCompletionExit = () => saveMistakesAndAction('exit');
   const handleCompletionRestart = () => saveMistakesAndAction('restart');
@@ -805,7 +807,7 @@ const FlashcardsListeningPage = () => {
             No vocabulary found
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {currentFileName ? `File "${currentFileName}" is empty or doesn't exist.` : 'Please select a vocabulary file to train.'}
+            {currentTopicId ? t('errors.noWords') : t('errors.selectTopic')}
           </Typography>
         </Box>
       ) : (
@@ -949,7 +951,7 @@ const FlashcardsListeningPage = () => {
 
       <VocabularyQuickView
         vocabularyList={items}
-        currentFileName={sourceFileName || currentFileName}
+        currentTopicId={sourceTopicId || currentTopicId}
       />
 
       <FlashcardsSettingsPanel

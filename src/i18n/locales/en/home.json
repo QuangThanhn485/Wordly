@@ -8,7 +8,7 @@
   "stats": {
     "totalWords": "Total Words",
     "learning": "Learning",
-    "files": "Vocabulary Files",
+    "topics": "Vocabulary Topics",
     "created": "Created",
     "wordsToReview": "Words to Review",
     "mistakeAtLeastOnce": "Made mistake at least once",
@@ -39,7 +39,7 @@
     "title": "Key Features",
     "vocabManagement": {
       "title": "Vocabulary Management",
-      "description": "Organize vocabulary by folders, easy import/export"
+      "description": "Organize vocabulary by folders and topics with easy import/export"
     },
     "progressTracking": {
       "title": "Progress Tracking",

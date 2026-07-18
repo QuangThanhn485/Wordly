@@ -1,4 +1,4 @@
-import type { FolderNode, FileLeaf } from '../types';
+import type { FolderNode, TopicItem } from '../types';
 
 // ===== ID Generator =====
 // Generate truly unique ID using timestamp + random string
@@ -7,9 +7,26 @@ export const genId = () => {
 };
 
 // ===== Clone Node =====
-export const cloneNode = (node: FolderNode | FileLeaf): FolderNode | FileLeaf => {
-  if (node.kind === 'file') return { ...node, id: genId() };
-  return { ...node, id: genId(), children: node.children.map(cloneNode) as any };
+export const cloneNode = (node: FolderNode | TopicItem): FolderNode | TopicItem => {
+  if (node.kind === 'topic') return { ...node, id: genId() };
+  return { ...node, id: genId(), children: node.children.map(cloneNode) };
+};
+
+export const cloneNodeWithTopicMapping = (
+  node: FolderNode | TopicItem,
+): { node: FolderNode | TopicItem; topicIdMapping: Record<string, string> } => {
+  const topicIdMapping: Record<string, string> = {};
+
+  const clone = (current: FolderNode | TopicItem): FolderNode | TopicItem => {
+    const id = genId();
+    if (current.kind === 'topic') {
+      topicIdMapping[current.id] = id;
+      return { ...current, id };
+    }
+    return { ...current, id, children: current.children.map(clone) };
+  };
+
+  return { node: clone(node), topicIdMapping };
 };
 
 // ===== Find Node by Path =====
@@ -17,8 +34,8 @@ export const cloneNode = (node: FolderNode | FileLeaf): FolderNode | FileLeaf =>
 export const findNodeByPath = (
   root: FolderNode,
   path: string[],
-): { node: FolderNode | FileLeaf; parent: FolderNode | null; index: number } | null => {
-  let current: FolderNode | FileLeaf = root;
+): { node: FolderNode | TopicItem; parent: FolderNode | null; index: number } | null => {
+  let current: FolderNode | TopicItem = root;
   let parent: FolderNode | null = null;
   let idx = -1;
   for (let i = 1; i < path.length; i++) {
@@ -40,49 +57,47 @@ export const isDescendant = (ancPath: string[], candPath: string[]): boolean => 
 };
 
 // ===== Ensure unique name =====
-export const ensureUniqueName = (siblings: Array<FolderNode | FileLeaf>, baseName: string, isFolder: boolean): string => {
+export const ensureUniqueName = (
+  siblings: Array<FolderNode | TopicItem>,
+  baseName: string,
+  isFolder: boolean,
+): string => {
   const existingNames = new Set(
-    siblings.map((s) => (s.kind === 'folder' ? s.label.toLowerCase() : s.name.toLowerCase()))
+    siblings.map((s) => s.label.trim().toLocaleLowerCase('vi')),
   );
-  
-  let candidate = baseName;
+
+  const normalizedBaseName = baseName.trim();
+  let candidate = normalizedBaseName;
   let counter = 1;
-  
-  while (existingNames.has(candidate.toLowerCase())) {
-    if (isFolder) {
-      candidate = `${baseName} (${counter})`;
-    } else {
-      // For files, insert counter before extension
-      const dotIndex = baseName.lastIndexOf('.');
-      if (dotIndex > 0) {
-        const nameWithoutExt = baseName.substring(0, dotIndex);
-        const ext = baseName.substring(dotIndex);
-        candidate = `${nameWithoutExt} (${counter})${ext}`;
-      } else {
-        candidate = `${baseName} (${counter})`;
-      }
-    }
+
+  while (existingNames.has(candidate.toLocaleLowerCase('vi'))) {
+    candidate = `${normalizedBaseName} (${counter})`;
     counter++;
   }
-  
+
   return candidate;
 };
 
-// ===== Get all file names in a tree (for deletion) =====
-export const getAllFileNames = (node: FolderNode | FileLeaf): string[] => {
-  if (node.kind === 'file') return [node.name];
-  const files: string[] = [];
+// ===== Get all topic IDs in a tree (for deletion/counting) =====
+export const getAllTopicIds = (node: FolderNode | TopicItem): string[] => {
+  if (node.kind === 'topic') return [node.id];
+  const topicIds: string[] = [];
   for (const child of node.children) {
-    files.push(...getAllFileNames(child));
+    topicIds.push(...getAllTopicIds(child));
   }
-  return files;
+  return topicIds;
+};
+
+export const getAllTopics = (node: FolderNode | TopicItem): TopicItem[] => {
+  if (node.kind === 'topic') return [node];
+  return node.children.flatMap(getAllTopics);
 };
 
 // ===== Remove node at path =====
 export const removeAtPath = (
   root: FolderNode,
   path: string[],
-): { newRoot: FolderNode; removed?: FolderNode | FileLeaf } => {
+): { newRoot: FolderNode; removed?: FolderNode | TopicItem } => {
   const copy = structuredClone(root);
   const located = findNodeByPath(copy, path);
   if (!located || !located.parent) return { newRoot: root };

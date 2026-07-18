@@ -5,12 +5,11 @@ import {
   FolderOpen as FolderOpenIcon,
   ChevronDown as ExpandMoreIcon,
   ChevronUp as ExpandLessIcon,
-  FileText as FileIcon,
+  BookOpen as TopicIcon,
   MoreVertical as MoreIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { FolderNode, FileLeaf } from '../../types';
-import { removeFileExtension } from '@/utils/fileUtils';
+import type { FolderNode, TopicItem } from '../../types';
 
 const MAX_VISIBLE_INDENT_LEVEL = 6;
 const TREE_ROW_HEIGHT = 40;
@@ -19,19 +18,17 @@ const getRowPaddingLeft = (level: number): number => 8 + Math.min(level, MAX_VIS
 
 // ===== Sort Helper =====
 /**
- * Sorts children: folders first (alphabetically), then files (alphabetically)
- * Both sorted by their display name (label for folders, name for files)
+ * Sorts children: folders first, then topics, both Vietnamese-aware.
  */
-const sortChildren = (children: Array<FolderNode | FileLeaf>): Array<FolderNode | FileLeaf> => {
-  // Separate folders and files
+const sortChildren = (children: Array<FolderNode | TopicItem>): Array<FolderNode | TopicItem> => {
   const folders: FolderNode[] = [];
-  const files: FileLeaf[] = [];
+  const topics: TopicItem[] = [];
   
   children.forEach((child) => {
     if (child.kind === 'folder') {
       folders.push(child);
     } else {
-      files.push(child);
+      topics.push(child);
     }
   });
   
@@ -42,19 +39,17 @@ const sortChildren = (children: Array<FolderNode | FileLeaf>): Array<FolderNode 
     return labelA.localeCompare(labelB, 'vi'); // Use Vietnamese locale for proper sorting
   });
   
-  // Sort files by name (remove .txt extension for comparison, case-insensitive)
-  files.sort((a, b) => {
-    const nameA = removeFileExtension(a.name).toLowerCase().trim();
-    const nameB = removeFileExtension(b.name).toLowerCase().trim();
-    return nameA.localeCompare(nameB, 'vi'); // Use Vietnamese locale for proper sorting
+  topics.sort((a, b) => {
+    const labelA = a.label.toLocaleLowerCase('vi').trim();
+    const labelB = b.label.toLocaleLowerCase('vi').trim();
+    return labelA.localeCompare(labelB, 'vi');
   });
   
-  // Return folders first, then files
-  return [...folders, ...files];
+  return [...folders, ...topics];
 };
 
-// ===== File Item Component =====
-export const FileItem = memo(function FileItem({
+// ===== Topic Item Component =====
+export const TopicTreeItem = memo(function TopicTreeItem({
   node,
   onClick,
   level = 0,
@@ -63,7 +58,7 @@ export const FileItem = memo(function FileItem({
   selected = false,
   forceShowMenu = false,
 }: {
-  node: FileLeaf;
+  node: TopicItem;
   onClick: () => void;
   level?: number;
   onContext: (e: React.MouseEvent<HTMLElement>) => void;
@@ -72,8 +67,6 @@ export const FileItem = memo(function FileItem({
   forceShowMenu?: boolean;
 }) {
   const { t } = useTranslation('vocabulary');
-  const displayName = removeFileExtension(node.name);
-
   return (
     <Box
       sx={{
@@ -111,7 +104,7 @@ export const FileItem = memo(function FileItem({
         }}
         onClick={onClick}
         onContextMenu={forceShowMenu ? undefined : onContext}
-        aria-label={t('actions.fileAriaLabel', { name: displayName })}
+        aria-label={t('actions.topicAriaLabel', { name: node.label })}
       >
         <Box
           sx={{
@@ -124,10 +117,10 @@ export const FileItem = memo(function FileItem({
           }}
         >
           <Box aria-hidden sx={{ width: 18, height: 18 }} />
-          <FileIcon size={17} aria-hidden />
-          <Tooltip title={displayName} placement="right" enterDelay={500}>
+          <TopicIcon size={17} aria-hidden />
+          <Tooltip title={node.label} placement="right" enterDelay={500}>
             <Typography variant="body2" noWrap sx={{ minWidth: 0, fontWeight: selected ? 600 : 400 }}>
-              {displayName}
+              {node.label}
             </Typography>
           </Tooltip>
           {vocabCount !== undefined && (
@@ -141,7 +134,7 @@ export const FileItem = memo(function FileItem({
           )}
         </Box>
       </ListItemButton>
-      <Tooltip title={t('actions.fileMenuAriaLabel', { name: displayName })} placement="right">
+      <Tooltip title={t('actions.topicMenuAriaLabel', { name: node.label })} placement="right">
         <IconButton
           className="tree-menu-button"
           size="small"
@@ -158,7 +151,7 @@ export const FileItem = memo(function FileItem({
             pointerEvents: forceShowMenu ? 'auto' : 'none',
             transition: 'opacity 120ms ease',
           }}
-          aria-label={t('actions.fileMenuAriaLabel', { name: displayName })}
+          aria-label={t('actions.topicMenuAriaLabel', { name: node.label })}
         >
           <MoreIcon size={17} />
         </IconButton>
@@ -171,25 +164,25 @@ export const FileItem = memo(function FileItem({
 const FolderItemComponent = function FolderItem({
   node,
   level = 0,
-  onFileClick,
+  onTopicClick,
   onContext,
   path,
   forceShowMenu = false,
   isFolderOpen,
   onToggle,
   vocabCountMap,
-  selectedFileId,
+  selectedTopicId,
 }: {
   node: FolderNode;
   level?: number;
-  onFileClick: (filePath: string[], fileName: string) => void;
-  onContext: (type: 'folder' | 'file', path: string[], event: React.MouseEvent<HTMLElement>) => void;
+  onTopicClick: (topicPath: string[], topicId: string) => void;
+  onContext: (type: 'folder' | 'topic', path: string[], event: React.MouseEvent<HTMLElement>) => void;
   path: string[]; // ids from root to this node
   forceShowMenu?: boolean;
   isFolderOpen?: ((id: string) => boolean) | Set<string>; // Can be function or Set for direct lookup
   onToggle?: (folderId: string, open: boolean) => void;
-  vocabCountMap?: Record<string, number>; // fileName -> count
-  selectedFileId?: string | null; // Currently selected file ID
+  vocabCountMap?: Record<string, number>; // topicId -> count
+  selectedTopicId?: string | null;
 }) {
   const { t } = useTranslation('vocabulary');
 
@@ -305,24 +298,24 @@ const FolderItemComponent = function FolderItem({
                 key={child.id}
                 node={child}
                 level={level + 1}
-                onFileClick={onFileClick}
+                onTopicClick={onTopicClick}
                 onContext={onContext}
                 path={[...path, child.id]}
                 forceShowMenu={forceShowMenu}
                 isFolderOpen={isFolderOpen}
                 onToggle={onToggle}
                 vocabCountMap={vocabCountMap}
-                selectedFileId={selectedFileId}
+                selectedTopicId={selectedTopicId}
               />
             ) : (
-              <FileItem
+              <TopicTreeItem
                 key={child.id}
                 node={child}
                 level={level + 1}
-                onClick={() => onFileClick([...path, child.id], child.name)}
-                onContext={(e) => onContext('file', [...path, child.id], e)}
-                vocabCount={vocabCountMap?.[child.name]}
-                selected={child.id === selectedFileId}
+                onClick={() => onTopicClick([...path, child.id], child.id)}
+                onContext={(e) => onContext('topic', [...path, child.id], e)}
+                vocabCount={vocabCountMap?.[child.id]}
+                selected={child.id === selectedTopicId}
                 forceShowMenu={forceShowMenu}
               />
             ),

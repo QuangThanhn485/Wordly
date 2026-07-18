@@ -124,7 +124,7 @@
   "errors": {
     "noWords": "No words to practice",
     "loadFailed": "Failed to load vocabulary",
-    "selectFile": "Please select a vocabulary file first"
+    "selectTopic": "Please select a vocabulary topic first"
   },
   "quickView": {
     "title": "Vocabulary List",

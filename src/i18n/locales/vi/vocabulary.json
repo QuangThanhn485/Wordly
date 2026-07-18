@@ -2,12 +2,13 @@
   "title": "Từ vựng",
   "defaults": {
     "folder": "Thư mục",
-    "newFolder": "Thư mục mới"
+    "newFolder": "Thư mục mới",
+    "topic": "Chủ đề"
   },
   "sidebar": {
     "title": "Thư mục",
     "newFolder": "Thư mục mới",
-    "newFile": "Tệp mới",
+    "newTopic": "Chủ đề mới",
     "emptyFolder": "Thư mục trống"
   },
   "table": {
@@ -19,9 +20,9 @@
     "actions": "Hành động",
     "noVocabulary": "Chưa có từ vựng",
     "addFirst": "Thêm từ đầu tiên",
-    "selectFile": "Chọn một tệp để xem từ vựng",
-    "noFileSelectedTitle": "Chưa có tệp nào được chọn",
-    "noFileSelectedDescription": "Vui lòng chọn một tệp từ danh sách bên trái để xem nội dung",
+    "selectTopic": "Chọn một chủ đề để xem từ vựng",
+    "noTopicSelectedTitle": "Chưa chọn chủ đề",
+    "noTopicSelectedDescription": "Chọn một chủ đề trong kho từ vựng để xem nội dung",
     "wordCount": "{{count}} từ vựng"
   },
   "detail": {
@@ -38,18 +39,18 @@
     "noExamples": "Chưa có ví dụ câu cho từ này."
   },
   "gridModal": {
-    "title": "Chọn file từ vựng",
-    "helper": "Mẹo: click vào thư mục để mở, click vào file để xem từ vựng"
+    "title": "Chọn chủ đề từ vựng",
+    "helper": "Chọn thư mục để mở hoặc chọn chủ đề để xem từ vựng"
   },
   "grid": {
     "count": "({{count}} từ)"
   },
   "dialogs": {
-    "newFile": {
-      "title": "Tạo file từ vựng mới",
-      "label": "Tên file",
-      "placeholder": "tu_vung_moi.txt",
-      "helper": "File sẽ tự thêm phần mở rộng .txt nếu chưa có"
+    "newTopic": {
+      "title": "Tạo chủ đề từ vựng",
+      "label": "Tên chủ đề",
+      "placeholder": "Động vật hoang dã",
+      "helper": "Có thể dùng tiếng Việt có dấu và khoảng trắng"
     },
     "newFolder": {
       "title": "Tạo thư mục con",
@@ -64,7 +65,7 @@
       "title": "Xác nhận xóa",
       "message": "Bạn có chắc muốn xóa \"{{name}}\"?",
       "warning": "Hành động này không thể hoàn tác.",
-      "fileCount": "Thư mục này chứa {{count}} tệp"
+      "topicCount": "Thư mục này chứa {{count}} chủ đề"
     },
     "vocabForm": {
       "titleAdd": "Thêm từ mới",
@@ -88,20 +89,20 @@
     "rename": "Đổi tên",
     "delete": "Xóa",
     "newSubfolder": "Thư mục con mới",
-    "newFile": "Tệp mới",
+    "newTopic": "Chủ đề mới",
     "cut": "Cắt",
     "copy": "Sao chép",
     "paste": "Dán",
     "deleteFolder": "Xóa thư mục",
-    "deleteFile": "Xóa file",
-    "exportFile": "Export file (.json)",
+    "deleteTopic": "Xóa chủ đề",
+    "exportTopic": "Xuất chủ đề (.json)",
     "exportFolder": "Export thư mục (.json)",
     "importFolder": "Import thư mục (.json)",
-    "importFile": "Import file (.json)",
+    "importTopic": "Nhập chủ đề (.json)",
     "futureItem": "Mục {{index}} (Tính năng tương lai)"
   },
   "messages": {
-    "fileCreated": "Đã tạo file \"{{name}}\"",
+    "topicCreated": "Đã tạo chủ đề \"{{name}}\"",
     "folderCreated": "Đã tạo thư mục con",
     "deleted": "Đã xóa thành công",
     "renamed": "Đã đổi tên thành công",
@@ -118,11 +119,11 @@
     "importInvalidJson": "File import không đúng định dạng JSON.",
     "importInvalidFormat": "File import không đúng định dạng.",
     "readFileFailed": "Không thể đọc file. Đảm bảo file đúng định dạng JSON.",
-    "noVocabToExport": "File không có từ vựng để export.",
-    "exportFileSuccess": "Đã export tệp \"{{name}}\".",
-    "exportFolderSuccess": "Đã export thư mục \"{{name}}\" ({{count}} files).",
-    "importFileSuccess": "Đã nhập tệp \"{{name}}\" với {{count}} từ vựng.",
-    "importFolderSuccess": "Đã nhập thư mục \"{{name}}\" ({{fileCount}} files, {{wordCount}} từ vựng).",
+    "noVocabToExport": "Chủ đề chưa có từ vựng để xuất.",
+    "exportTopicSuccess": "Đã xuất chủ đề \"{{name}}\".",
+    "exportFolderSuccess": "Đã xuất thư mục \"{{name}}\" ({{count}} chủ đề).",
+    "importTopicSuccess": "Đã nhập chủ đề \"{{name}}\" với {{count}} từ vựng.",
+    "importFolderSuccess": "Đã nhập thư mục \"{{name}}\" ({{topicCount}} chủ đề, {{wordCount}} từ vựng).",
     "cutInstruction": "Đã cắt. Hãy chọn thư mục đích và Dán.",
     "cannotDeleteRoot": "Không thể xóa thư mục gốc!"
   },
@@ -145,8 +146,8 @@
     "backToFolders": "Quay lại danh sách thư mục",
     "addWordShort": "Thêm",
     "rowMenuFor": "Menu cho {{word}}",
-    "fileAriaLabel": "Tệp {{name}}",
-    "fileMenuAriaLabel": "Menu tệp {{name}}",
+    "topicAriaLabel": "Chủ đề {{name}}",
+    "topicMenuAriaLabel": "Menu chủ đề {{name}}",
     "folderToggleAriaLabel": "Mở/đóng thư mục {{name}}",
     "folderMenuAriaLabel": "Menu thư mục {{name}}",
     "breadcrumbAriaLabel": "Điều hướng",

@@ -24,16 +24,27 @@ import {
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { AlertTriangle, ArrowRight, BookOpen, CalendarDays, CalendarRange, CheckCircle, ChevronDown, Clock, Database, Folder, HardDrive, RotateCcw, Trash2, Upload } from 'lucide-react';
-import { loadVocabCounts, loadVocabFromStorage, loadTreeFromStorage } from '@/features/vocabulary/utils/storageUtils';
-import { getAllFileNames } from '@/features/vocabulary/utils/treeUtils';
+import {
+  clearVocabularyTopics,
+  loadVocabularyTopicCounts,
+  loadVocabularyTopics,
+  loadTreeFromStorage,
+  VOCAB_TOPIC_COUNTS_KEY,
+  VOCAB_TOPIC_INDEX_KEY,
+  VOCAB_TOPIC_STORAGE_PREFIX,
+} from '@/features/vocabulary/utils/storageUtils';
+import { getAllTopicIds } from '@/features/vocabulary/utils/treeUtils';
+import type { VocabItem } from '@/features/vocabulary/types';
 import { loadMistakesStats } from '@/features/train/train-read-write/mistakesStorage';
 import { useTranslation } from 'react-i18next';
 
 const BACKUP_TIMESTAMP_KEY = 'wordly_backup_timestamp';
 
 interface BackupData {
+  vocabularySchema?: 2;
   timestamp: number;
-  vocabFiles: Record<string, any>;
+  vocabularyTopics?: Record<string, unknown>;
+  vocabFiles?: Record<string, unknown>;
   vocabIndex: string[];
   vocabCounts: Record<string, number>;
   vocabTree: any;
@@ -91,13 +102,12 @@ const DataManagementPage: React.FC = () => {
     try {
       setLoading(true);
       
-      // Collect all vocab files
-      const allVocab = loadVocabFromStorage();
-      const vocabFiles: Record<string, any> = allVocab || {};
+      const allVocab = loadVocabularyTopics();
+      const vocabularyTopics: Record<string, VocabItem[]> = allVocab || {};
       const vocabIndex = allVocab ? Object.keys(allVocab) : [];
 
       // Collect other data
-      const vocabCounts = loadVocabCounts();
+      const vocabCounts = loadVocabularyTopicCounts();
       const vocabTree = localStorage.getItem('wordly_tree');
       const mistakesStats = loadMistakesStats();
       
@@ -110,8 +120,9 @@ const DataManagementPage: React.FC = () => {
       };
 
       const backupData: BackupData = {
+        vocabularySchema: 2,
         timestamp: Date.now(),
-        vocabFiles,
+        vocabularyTopics,
         vocabIndex,
         vocabCounts,
         vocabTree: vocabTree ? JSON.parse(vocabTree) : null,
@@ -210,21 +221,9 @@ const DataManagementPage: React.FC = () => {
     try {
       setLoading(true);
       
-      // Get all vocab files
-      const allVocab = loadVocabFromStorage();
-      const vocabIndex = allVocab ? Object.keys(allVocab) : [];
+      const deletedTopicCount = clearVocabularyTopics();
       
-      // Delete all vocab files
-      vocabIndex.forEach((fileName) => {
-        localStorage.removeItem(`wordly_vocab_file:${fileName}`);
-      });
-
-      // Delete indexes and counts
-      localStorage.removeItem('wordly_vocab_index');
-      localStorage.removeItem('wordly_vocab_counts');
-      localStorage.removeItem('wordly_tree');
-      
-      showSuccessDialog(t('messages.deleteVocabSuccess', { count: vocabIndex.length }));
+      showSuccessDialog(t('messages.deleteVocabSuccess', { count: deletedTopicCount }));
       setDeleteVocabDialogOpen(false);
     } catch (error) {
       console.error('Delete vocab error:', error);
@@ -294,18 +293,43 @@ const DataManagementPage: React.FC = () => {
         const content = e.target?.result as string;
         const backupData: BackupData = JSON.parse(content);
 
-        // Restore vocab files
-        Object.entries(backupData.vocabFiles || {}).forEach(([fileName, data]) => {
-          localStorage.setItem(`wordly_vocab_file:${fileName}`, JSON.stringify(data));
+        const vocabularyData = backupData.vocabularyTopics || backupData.vocabFiles;
+        if (!backupData || typeof backupData !== 'object' || !vocabularyData) {
+          throw new Error('Invalid vocabulary backup');
+        }
+
+        clearVocabularyTopics();
+        const vocabularyEntries = Object.entries(vocabularyData);
+        const isTopicBackup =
+          backupData.vocabularySchema === 2 || Boolean(backupData.vocabularyTopics);
+
+        vocabularyEntries.forEach(([reference, data]) => {
+          const prefix = isTopicBackup
+            ? VOCAB_TOPIC_STORAGE_PREFIX
+            : 'wordly_vocab_file:';
+          localStorage.setItem(`${prefix}${reference}`, JSON.stringify(data));
         });
 
-        // Restore indexes and counts
-        if (backupData.vocabIndex) {
-          localStorage.setItem('wordly_vocab_index', JSON.stringify(backupData.vocabIndex));
+        if (isTopicBackup) {
+          localStorage.setItem(
+            VOCAB_TOPIC_INDEX_KEY,
+            JSON.stringify(backupData.vocabIndex || vocabularyEntries.map(([topicId]) => topicId)),
+          );
+          localStorage.setItem(
+            VOCAB_TOPIC_COUNTS_KEY,
+            JSON.stringify(backupData.vocabCounts || {}),
+          );
+        } else {
+          localStorage.setItem(
+            'wordly_vocab_index',
+            JSON.stringify(backupData.vocabIndex || vocabularyEntries.map(([fileName]) => fileName)),
+          );
+          localStorage.setItem(
+            'wordly_vocab_counts',
+            JSON.stringify(backupData.vocabCounts || {}),
+          );
         }
-        if (backupData.vocabCounts) {
-          localStorage.setItem('wordly_vocab_counts', JSON.stringify(backupData.vocabCounts));
-        }
+
         if (backupData.vocabTree) {
           localStorage.setItem('wordly_tree', JSON.stringify(backupData.vocabTree));
         }
@@ -360,14 +384,15 @@ const DataManagementPage: React.FC = () => {
   const backupTimestamp = getBackupTimestamp();
   const backupExists = Boolean(backupTimestamp);
   const tree = loadTreeFromStorage();
-  const vocabCounts = loadVocabCounts();
+  const vocabCounts = loadVocabularyTopicCounts();
   
-  // Get ALL file names from tree structure (including nested folders)
-  const allFileNames = tree ? getAllFileNames(tree) : [];
-  const totalVocabFiles = allFileNames.length;
+  const allTopicIds = tree ? getAllTopicIds(tree) : [];
+  const totalVocabTopics = allTopicIds.length;
   
-  // Calculate total words from wordly_vocab_counts quickly without loading each file
-  const totalVocabWords = allFileNames.reduce((sum, fileName) => sum + (vocabCounts[fileName] || 0), 0);
+  const totalVocabWords = allTopicIds.reduce(
+    (sum, topicId) => sum + (vocabCounts[topicId] || 0),
+    0,
+  );
   
   const isDark = theme.palette.mode === 'dark';
   const dateLocale = i18n.language || undefined;
@@ -662,10 +687,10 @@ const DataManagementPage: React.FC = () => {
                   </Box>
                   <Box sx={{ minWidth: 0 }}>
                     <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ letterSpacing: 0.3, textTransform: 'uppercase' }}>
-                      {t('stats.vocabFiles')}
+                      {t('stats.vocabTopics')}
                     </Typography>
                     <Typography variant="h5" fontWeight={950} sx={{ mt: 0.35, lineHeight: 1.05 }}>
-                      {totalVocabFiles}
+                      {totalVocabTopics}
                     </Typography>
                   </Box>
                 </Box>

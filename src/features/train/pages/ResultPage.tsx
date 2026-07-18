@@ -18,25 +18,25 @@ import { MistakeCard } from '@/features/result/components/MistakeCard';
 import { FilterBar } from '@/features/result/components/FilterBar';
 import { EmptyState } from '@/features/result/components/EmptyState';
 import { MistakeGroup } from '@/features/result/components/MistakeGroup';
-import { MistakeGroupByFile } from '@/features/result/components/MistakeGroupByFile';
+import { MistakeGroupByTopic } from '@/features/result/components/MistakeGroupByTopic';
 
 const ResultPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { t } = useTranslation('result');
-  const [viewMode, setViewMode] = React.useState<'all' | 'grouped' | 'byFile'>('grouped');
+  const [viewMode, setViewMode] = React.useState<'all' | 'grouped' | 'byTopic'>('grouped');
 
   const {
     mistakes,
     mistakesByMode,
-    mistakesByFile,
+    mistakesByTopic,
     overviewStats,
-    uniqueFiles,
+    uniqueTopics,
     uniqueModes,
     searchQuery,
     setSearchQuery,
-    selectedFiles,
-    setSelectedFiles,
+    selectedTopicIds,
+    setSelectedTopicIds,
     selectedModes,
     setSelectedModes,
     sortBy,
@@ -122,7 +122,7 @@ const ResultPage = () => {
                 }}
               >
                 <Tab label={t('filters.byMode')} value="grouped" />
-                <Tab label={t('filters.byFile')} value="byFile" />
+                <Tab label={t('filters.byTopic')} value="byTopic" />
                 <Tab label={t('filters.all')} value="all" />
               </Tabs>
             </Paper>
@@ -131,13 +131,13 @@ const ResultPage = () => {
             <FilterBar
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
-              selectedFiles={selectedFiles}
-              onFilesChange={setSelectedFiles}
+              selectedTopicIds={selectedTopicIds}
+              onTopicIdsChange={setSelectedTopicIds}
               selectedModes={selectedModes}
               onModesChange={setSelectedModes}
               sortBy={sortBy}
               onSortChange={setSortBy}
-              uniqueFiles={uniqueFiles}
+              uniqueTopics={uniqueTopics}
               uniqueModes={uniqueModes}
               onClearFilters={clearFilters}
             />
@@ -179,12 +179,11 @@ const ResultPage = () => {
                   </Typography>
                 </Paper>
               )
-            ) : viewMode === 'byFile' ? (
-              // Grouped view by file
-              mistakesByFile && mistakesByFile.length > 0 ? (
+            ) : viewMode === 'byTopic' ? (
+              mistakesByTopic && mistakesByTopic.length > 0 ? (
                 <>
-                  {mistakesByFile.map((group) => (
-                    <MistakeGroupByFile key={group.fileName} group={group} />
+                  {mistakesByTopic.map((group) => (
+                    <MistakeGroupByTopic key={group.topicId} group={group} />
                   ))}
                 </>
               ) : (
@@ -219,7 +218,7 @@ const ResultPage = () => {
                 >
                   {mistakes.map((mistake, index) => (
                     <Box
-                      key={`${mistake.fileName}:${mistake.word}:${index}`}
+                      key={`${mistake.topicId}:${mistake.word}:${index}`}
                     >
                       <MistakeCard mistake={mistake} />
                     </Box>

@@ -27,8 +27,8 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { loadVocabCounts, loadTreeFromStorage } from '@/features/vocabulary/utils/storageUtils';
-import { getAllFileNames } from '@/features/vocabulary/utils/treeUtils';
+import { loadVocabularyTopicCounts, loadTreeFromStorage } from '@/features/vocabulary/utils/storageUtils';
+import { getAllTopicIds } from '@/features/vocabulary/utils/treeUtils';
 import { loadMistakesStats } from '@/features/train/train-read-write/mistakesStorage';
 
 interface StatCardProps {
@@ -151,7 +151,7 @@ const Home: React.FC = () => {
 
   const [stats, setStats] = useState({
     totalWords: 0,
-    totalFiles: 0,
+    totalTopics: 0,
     totalMistakes: 0,
     uniqueWords: 0,
   });
@@ -160,38 +160,38 @@ const Home: React.FC = () => {
     // Load statistics from localStorage
     const tree = loadTreeFromStorage();
     const mistakesStats = loadMistakesStats();
-    const vocabCounts = loadVocabCounts(); // Load từ wordly_vocab_counts
+    const vocabCounts = loadVocabularyTopicCounts();
 
     if (!tree) {
-      setStats({ totalWords: 0, totalFiles: 0, totalMistakes: 0, uniqueWords: 0 });
+      setStats({ totalWords: 0, totalTopics: 0, totalMistakes: 0, uniqueWords: 0 });
       return;
     }
 
-    // Get ALL file names from tree structure (including nested folders)
-    const allFileNames = getAllFileNames(tree);
-    const totalFiles = allFileNames.length;
+    // Include topics in every nested folder.
+    const allTopicIds = getAllTopicIds(tree);
+    const totalTopics = allTopicIds.length;
 
-    // Calculate total words from wordly_vocab_counts (FAST - không cần load từng file)
+    // Use cached counts without loading each topic payload.
     let totalWords = 0;
-    allFileNames.forEach((fileName) => {
-      totalWords += vocabCounts[fileName] || 0;
+    allTopicIds.forEach((topicId) => {
+      totalWords += vocabCounts[topicId] || 0;
     });
 
     // Count total mistakes and unique words from mistakes
-    // mistakesStats format: { "file:word:mode": MistakeRecord }
+    // mistakesStats format: { "topicId:word:mode": MistakeRecord }
     let totalMistakes = 0;
     const uniqueWordsSet = new Set<string>();
     
     Object.values(mistakesStats).forEach((record) => {
       totalMistakes += record.mistakeCount; // Sum all mistake counts
-      uniqueWordsSet.add(record.word); // Track unique words (not file:word:mode)
+      uniqueWordsSet.add(record.word);
     });
     
     const uniqueWords = uniqueWordsSet.size;
 
     setStats({
       totalWords,
-      totalFiles,
+      totalTopics,
       totalMistakes,
       uniqueWords,
     });
@@ -305,8 +305,8 @@ const Home: React.FC = () => {
             subtitle={t('stats.learning')}
           />
           <StatCard
-            title={t('stats.files')}
-            value={stats.totalFiles}
+            title={t('stats.topics')}
+            value={stats.totalTopics}
             icon={<Library size={32} />}
             color={theme.palette.info.main}
             subtitle={t('stats.created')}

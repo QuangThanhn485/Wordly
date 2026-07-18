@@ -1,4 +1,4 @@
-import type { FolderNode, FileLeaf } from '../types';
+import type { FolderNode, TopicItem } from '../types';
 
 /**
  * Path Index Cache
@@ -6,7 +6,7 @@ import type { FolderNode, FileLeaf } from '../types';
  */
 export class TreeIndex {
   private idToPath: Map<string, string[]> = new Map();
-  private idToNode: Map<string, FolderNode | FileLeaf> = new Map();
+  private idToNode: Map<string, FolderNode | TopicItem> = new Map();
   private root: FolderNode;
 
   constructor(root: FolderNode) {
@@ -23,7 +23,7 @@ export class TreeIndex {
     this._traverse(this.root, [this.root.id]);
   }
 
-  private _traverse(node: FolderNode | FileLeaf, path: string[]): void {
+  private _traverse(node: FolderNode | TopicItem, path: string[]): void {
     this.idToPath.set(node.id, [...path]);
     this.idToNode.set(node.id, node);
 
@@ -44,14 +44,14 @@ export class TreeIndex {
   /**
    * Get node by ID (O(1))
    */
-  getNode(nodeId: string): FolderNode | FileLeaf | null {
+  getNode(nodeId: string): FolderNode | TopicItem | null {
     return this.idToNode.get(nodeId) || null;
   }
 
   /**
    * Find node by path using index (faster than traversal)
    */
-  findByPath(path: string[]): { node: FolderNode | FileLeaf; parent: FolderNode | null; index: number } | null {
+  findByPath(path: string[]): { node: FolderNode | TopicItem; parent: FolderNode | null; index: number } | null {
     if (path.length === 0) return null;
     
     const targetId = path[path.length - 1];

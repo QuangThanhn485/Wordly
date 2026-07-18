@@ -41,8 +41,22 @@ import { loadTrainingSession } from 'features/train/train-start/sessionStorage';
 import { loadTrainingSession as loadRWTrainingSession } from 'features/train/train-read-write/sessionStorage';
 import { Chip } from '@mui/material';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { getTopicLabel } from '@/features/vocabulary/utils/storageUtils';
 
 const drawerWidth = 240;
+const getSessionTopicLabel = (
+  session: {
+    topicId: string;
+    topicLabel?: string;
+    sourceTopicLabel?: string;
+  } | null,
+): string | null =>
+  session
+    ? session.sourceTopicLabel ||
+      session.topicLabel ||
+      getTopicLabel(session.topicId) ||
+      null
+    : null;
 const collapsedWidth = 72;
 
 const iconStyle = (open: boolean) => ({
@@ -113,32 +127,26 @@ const Navbar: React.FC = () => {
   const [searchParams] = useSearchParams();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
   
-  // Get train file name from localStorage session (persists across page changes/browser closes)
-  const [trainFileName, setTrainFileName] = React.useState<string | null>(() => {
-    // Load on mount
-    const session = loadTrainingSession();
-    return session?.fileName || null;
+  const [trainTopicLabel, setTrainTopicLabel] = React.useState<string | null>(() => {
+    return getSessionTopicLabel(loadTrainingSession());
   });
   
-  // Get read-write file name from localStorage session
-  const [rwFileName, setRWFileName] = React.useState<string | null>(() => {
-    // Load on mount
+  const [rwTopicId, setRwTopicId] = React.useState<string | null>(() => {
     const session = loadRWTrainingSession();
-    return session?.fileName || null;
+    return session?.topicId || null;
   });
   
   // Update train file name when URL params change OR when localStorage session changes
   React.useEffect(() => {
     const session = loadTrainingSession();
-    const fileName = session?.fileName || null;
-    setTrainFileName(fileName);
+    setTrainTopicLabel(getSessionTopicLabel(session));
   }, [searchParams, location.pathname]); // Re-check when URL params change (user navigates)
   
   // Update read-write file name when URL params change OR when localStorage session changes
   React.useEffect(() => {
     const session = loadRWTrainingSession();
-    const fileName = session?.fileName || null;
-    setRWFileName(fileName);
+    const topicId = session?.topicId || null;
+    setRwTopicId(topicId);
   }, [searchParams, location.pathname]); // Re-check when URL params change (user navigates)
   
   // Listen for storage events (when session is saved from other tabs/components)
@@ -146,12 +154,11 @@ const Navbar: React.FC = () => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'wordly_train_session') {
         const session = loadTrainingSession();
-        const fileName = session?.fileName || null;
-        setTrainFileName(fileName);
+        setTrainTopicLabel(getSessionTopicLabel(session));
       } else if (e.key === 'wordly_train_rw_session') {
         const session = loadRWTrainingSession();
-        const fileName = session?.fileName || null;
-        setRWFileName(fileName);
+        const topicId = session?.topicId || null;
+        setRwTopicId(topicId);
       }
     };
     
@@ -164,20 +171,20 @@ const Navbar: React.FC = () => {
   React.useEffect(() => {
     const interval = setInterval(() => {
       const session = loadTrainingSession();
-      const fileName = session?.fileName || null;
-      setTrainFileName((prev) => {
+      const topicLabel = getSessionTopicLabel(session);
+      setTrainTopicLabel((prev) => {
         // Only update if changed to avoid unnecessary re-renders
-        if (prev !== fileName) {
-          return fileName;
+        if (prev !== topicLabel) {
+          return topicLabel;
         }
         return prev;
       });
       
       const rwSession = loadRWTrainingSession();
-      const rwFile = rwSession?.fileName || null;
-      setRWFileName((prev) => {
-        if (prev !== rwFile) {
-          return rwFile;
+      const nextRwTopicId = rwSession?.topicId || null;
+      setRwTopicId((prev) => {
+        if (prev !== nextRwTopicId) {
+          return nextRwTopicId;
         }
         return prev;
       });
@@ -524,9 +531,9 @@ const Navbar: React.FC = () => {
                       >
                         {t('train')}
                       </Typography>
-                      {trainFileName && (
+                      {trainTopicLabel && (
                         <Chip
-                          label={trainFileName.replace(/\.txt$/i, '')}
+                          label={trainTopicLabel}
                           size="small"
                           sx={{
                             height: 20,
@@ -545,7 +552,7 @@ const Navbar: React.FC = () => {
                           }}
                           color="primary"
                           variant="outlined"
-                          title={trainFileName.replace(/\.txt$/i, '')}
+                          title={trainTopicLabel}
                         />
                       )}
                     </Box>
@@ -605,7 +612,7 @@ const Navbar: React.FC = () => {
               </ListItemLink>
 
               <ListItemLink
-                to={rwFileName ? `/train/read-write?file=${encodeURIComponent(rwFileName)}` : '/train/read-write'}
+                to={rwTopicId ? `/train/read-write?topic=${encodeURIComponent(rwTopicId)}` : '/train/read-write'}
                 selected={isActive('/train/read-write')}
                 sx={{
                   ...listItemStyle(open, isActive('/train/read-write'), theme),

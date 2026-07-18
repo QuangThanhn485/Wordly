@@ -1,17 +1,17 @@
 // src/features/train/train-listen-write/api.ts
-import { loadVocabFile } from '@/features/vocabulary/utils/storageUtils';
+import { loadVocabularyTopic } from '@/features/vocabulary/utils/storageUtils';
 
 export type TrainWordItem = {
   en: string; // English word
   vi: string; // Vietnamese meaning
 };
 
-export const getWords = async (fileName?: string): Promise<TrainWordItem[]> => {
+export const getWords = async (topicId?: string): Promise<TrainWordItem[]> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      if (fileName) {
-        // Load from vocabulary file
-        const vocab = loadVocabFile(fileName);
+      if (topicId) {
+        // Load the vocabulary payload for the selected topic.
+        const vocab = loadVocabularyTopic(topicId);
         if (vocab && vocab.length > 0) {
           // Map vocab items to train word items
           const words = vocab.map(item => ({
@@ -22,7 +22,7 @@ export const getWords = async (fileName?: string): Promise<TrainWordItem[]> => {
           return;
         }
       }
-      // Return empty array if no file or file is empty
+      // Return no words when the topic is missing or empty.
       resolve([]);
     }, 100);
   });

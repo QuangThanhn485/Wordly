@@ -7,19 +7,18 @@ import {
   styled,
   alpha,
 } from '@mui/material';
-import { Folder as FolderIcon, FileText as FileIcon } from 'lucide-react';
-import type { FolderNode, FileLeaf } from '../../types';
-import { removeFileExtension } from '@/utils/fileUtils';
+import { Folder as FolderIcon, BookOpen as TopicIcon } from 'lucide-react';
+import type { FolderNode, TopicItem } from '../../types';
 import { useTranslation } from 'react-i18next';
 
 // ===== Types =====
 interface FolderGridViewProps {
-  items: (FolderNode | FileLeaf)[];
+  items: (FolderNode | TopicItem)[];
   onFolderClick: (folder: FolderNode) => void;
-  onFileClick: (file: FileLeaf) => void;
-  onContext: (item: FolderNode | FileLeaf, e: React.MouseEvent) => void;
-  selectedFileName?: string | null;
-  vocabCountMap?: Record<string, number>; // fileName -> count
+  onTopicClick: (topic: TopicItem) => void;
+  onContext: (item: FolderNode | TopicItem, e: React.MouseEvent) => void;
+  selectedTopicId?: string | null;
+  vocabCountMap?: Record<string, number>; // topicId -> count
   onEmptySpaceContextMenu?: (e: React.MouseEvent<HTMLDivElement>) => void; // For empty space right-click
 }
 
@@ -49,22 +48,22 @@ const IconWrapper = styled(Box)(({ theme }) => ({
 export const FolderGridView: React.FC<FolderGridViewProps> = ({
   items,
   onFolderClick,
-  onFileClick,
+  onTopicClick,
   onContext,
-  selectedFileName,
+  selectedTopicId,
   vocabCountMap,
   onEmptySpaceContextMenu,
 }) => {
   const { t } = useTranslation('vocabulary');
-  const handleClick = (item: FolderNode | FileLeaf) => {
+  const handleClick = (item: FolderNode | TopicItem) => {
     if (item.kind === 'folder') {
       onFolderClick(item);
     } else {
-      onFileClick(item);
+      onTopicClick(item);
     }
   };
 
-  const handleContextMenu = (item: FolderNode | FileLeaf, e: React.MouseEvent) => {
+  const handleContextMenu = (item: FolderNode | TopicItem, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation(); // Prevent event from bubbling to parent
     onContext(item, e);
@@ -103,9 +102,7 @@ export const FolderGridView: React.FC<FolderGridViewProps> = ({
           onContextMenu={handleGridContainerContextMenu}
         >
           {items.map((item) => {
-            const isSelected = item.kind === 'file' && item.name === selectedFileName;
-            // Remove .txt extension from file name for display
-            const label = item.kind === 'folder' ? item.label : removeFileExtension(item.name);
+            const isSelected = item.kind === 'topic' && item.id === selectedTopicId;
 
             return (
               <GridCard
@@ -129,7 +126,7 @@ export const FolderGridView: React.FC<FolderGridViewProps> = ({
                     {item.kind === 'folder' ? (
                       <FolderIcon size={64} color="currentColor" style={{ color: 'inherit' }} />
                     ) : (
-                      <FileIcon size={64} color="currentColor" style={{ color: 'inherit' }} />
+                      <TopicIcon size={64} color="currentColor" style={{ color: 'inherit' }} />
                     )}
                   </IconWrapper>
                   <Box sx={{ px: 2, pb: 2 }}>
@@ -146,9 +143,9 @@ export const FolderGridView: React.FC<FolderGridViewProps> = ({
                         WebkitBoxOrient: 'vertical',
                       }}
                     >
-                      {label}
+                      {item.label}
                     </Typography>
-                    {item.kind === 'file' && vocabCountMap?.[item.name] !== undefined && (
+                    {item.kind === 'topic' && vocabCountMap?.[item.id] !== undefined && (
                       <Typography
                         variant="caption"
                         align="center"
@@ -159,7 +156,7 @@ export const FolderGridView: React.FC<FolderGridViewProps> = ({
                           fontWeight: 500,
                         }}
                       >
-                        {t('grid.count', { count: vocabCountMap[item.name] })}
+                        {t('grid.count', { count: vocabCountMap[item.id] })}
                       </Typography>
                     )}
                   </Box>

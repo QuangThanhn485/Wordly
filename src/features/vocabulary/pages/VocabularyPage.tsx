@@ -30,7 +30,7 @@ import {
   Stack,
 } from '@mui/material';
 import {
-  FileText as FileIcon,
+  BookOpenCheck as TopicIcon,
   Volume2 as VolumeUpIcon,
   BookOpen as MenuBookIcon,
   FolderTree as CategoryIcon,
@@ -55,29 +55,30 @@ import {
 } from 'lucide-react';
 
 // Import types
-import type { VocabItem, FolderNode, FileLeaf, SnackState } from '../types';
+import type { VocabItem, FolderNode, TopicItem, SnackState } from '../types';
 
 import { getDefaultTree } from '../constants/seedData';
 
 // Import utilities
 import {
   genId,
-  cloneNode,
+  cloneNodeWithTopicMapping,
   findNodeByPath,
   isDescendant,
   ensureUniqueName,
-  getAllFileNames,
+  getAllTopicIds,
   removeAtPath,
 } from '../utils/treeUtils';
 import { TreeIndex } from '../utils/treeIndex';
 import {
-  saveVocabFile,
-  loadVocabFile,
-  deleteVocabFile,
-  loadVocabCounts,
+  saveVocabularyTopic,
+  loadVocabularyTopic,
+  deleteVocabularyTopic,
+  loadVocabularyTopicCounts,
+  normalizeLegacyTopicLabel,
   saveTreeToStorage,
   loadTreeFromStorage,
-  syncAllVocabCounts,
+  syncAllVocabularyTopicCounts,
 } from '../utils/storageUtils';
 import { speak } from '@/utils/speechUtils';
 import { saveTrainingSession as saveReadingSession } from '@/features/train/train-start/sessionStorage';
@@ -89,15 +90,22 @@ import { saveTrainingSession as saveListenWriteSession } from '@/features/train/
 import { FolderItem } from '../components/FolderTree';
 import { type BreadcrumbItem } from '../components/FolderGrid';
 import { FolderGridModal } from '../components/FolderGridModal';
-import { removeFileExtension } from '@/utils/fileUtils';
 import {
   RenameDialog,
   NewFolderDialog,
-  NewFileDialog,
+  NewTopicDialog,
   ConfirmDeleteDialog,
   VocabFormDialog,
 } from '../components/dialogs';
 import { VocabDetailPanel } from '../components/VocabDetailPanel';
+
+const getJsonDownloadName = (label: string): string => {
+  const safeLabel = label
+    .normalize('NFC')
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
+    .trim();
+  return `${safeLabel || 'vocabulary-topic'}.json`;
+};
 
 // ===== Styled Components =====
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
@@ -372,8 +380,9 @@ const VocabularyPage: React.FC = () => {
     [t],
   );
   
-  // Lazy load vocabMap - start empty, load files on-demand
+  // Vocabulary is loaded per topic ID on demand.
   const [vocabMap, setVocabMap] = useState<Record<string, VocabItem[]>>({});
+  const vocabMapRef = React.useRef(vocabMap);
   
   const [tree, setTree] = useState<FolderNode>(() => {
     const stored = loadTreeFromStorage();
@@ -387,11 +396,12 @@ const VocabularyPage: React.FC = () => {
     
     return defaultTree;
   });
+  const treeRef = React.useRef(tree);
+  treeRef.current = tree;
   
-  // Sync vocab counts on mount to ensure accuracy
-  // This rebuilds wordly_vocab_counts from actual vocab files
+  // Rebuild counts from canonical topic data on mount.
   React.useEffect(() => {
-    syncAllVocabCounts();
+    syncAllVocabularyTopicCounts();
   }, []); // Only run once on mount
 
   // Path index cache for O(1) node lookups - rebuilds when tree changes
@@ -400,78 +410,80 @@ const VocabularyPage: React.FC = () => {
   }, [tree]);
   
   // Helper to update vocabMap and save to localStorage
-  // OPTIMIZED: Uses per-file storage for faster saves
+  // Persist only changed topics so large vocabulary libraries remain responsive.
   const updateVocabMap = useCallback((updater: (prev: Record<string, VocabItem[]>) => Record<string, VocabItem[]>) => {
-    setVocabMap((prev) => {
-      const next = updater(prev);
-      
-      // Optimized: Only save changed files instead of entire map
-      // Find which files changed by comparing prev and next
-      const changedFiles = new Set<string>();
-      
-      // Check for added/modified files
-      for (const fileName in next) {
-        if (next.hasOwnProperty(fileName)) {
-          const prevVocab = prev[fileName];
-          const nextVocab = next[fileName];
-          
-          // File is new or changed
-          if (prevVocab !== nextVocab) {
-            changedFiles.add(fileName);
-          }
+    const prev = vocabMapRef.current;
+    const next = updater(prev);
+    if (next === prev) return;
+
+    const changedTopicIds = new Set<string>();
+    const deletedTopicIds = new Set<string>();
+
+    for (const topicId in next) {
+      if (Object.prototype.hasOwnProperty.call(next, topicId)) {
+        if (prev[topicId] !== next[topicId]) {
+          changedTopicIds.add(topicId);
         }
       }
-      
-      // Check for deleted files
-      for (const fileName in prev) {
-        if (prev.hasOwnProperty(fileName) && !next[fileName]) {
-          deleteVocabFile(fileName);
-        }
+    }
+
+    for (const topicId in prev) {
+      if (
+        Object.prototype.hasOwnProperty.call(prev, topicId) &&
+        !Object.prototype.hasOwnProperty.call(next, topicId)
+      ) {
+        deletedTopicIds.add(topicId);
       }
-      
-      // Save only changed files (FAST - per-file storage)
-      // saveVocabFile automatically updates counts in storage
-      Array.from(changedFiles).forEach((fileName) => {
-        saveVocabFile(fileName, next[fileName]);
+    }
+
+    deletedTopicIds.forEach(deleteVocabularyTopic);
+    changedTopicIds.forEach((topicId) => {
+      saveVocabularyTopic(topicId, next[topicId]);
+    });
+
+    vocabMapRef.current = next;
+    setVocabMap(next);
+    setVocabCountMap((prevCounts) => {
+      const updated = { ...prevCounts };
+      let hasChanges = false;
+
+      deletedTopicIds.forEach((topicId) => {
+        if (Object.prototype.hasOwnProperty.call(updated, topicId)) {
+          delete updated[topicId];
+          hasChanges = true;
+        }
       });
-      
-      // Update counts in state (for immediate UI update)
-      setVocabCountMap((prevCounts) => {
-        const updated = { ...prevCounts };
-        let hasChanges = false;
-        
-        Array.from(changedFiles).forEach((fileName) => {
-          const newCount = next[fileName]?.length || 0;
-          if (updated[fileName] !== newCount) {
-            updated[fileName] = newCount;
-            hasChanges = true;
-          }
-        });
-        
-        return hasChanges ? updated : prevCounts;
+
+      changedTopicIds.forEach((topicId) => {
+        const newCount = next[topicId]?.length || 0;
+        if (updated[topicId] !== newCount) {
+          updated[topicId] = newCount;
+          hasChanges = true;
+        }
       });
-      
-      return next;
+
+      return hasChanges ? updated : prevCounts;
     });
   }, []);
   
   // Helper to update tree and save to localStorage
   const updateTree = useCallback((updater: (prev: FolderNode) => FolderNode) => {
-    setTree((prev) => {
-      const next = updater(prev);
-      saveTreeToStorage(next);
-      return next;
-    });
+    const prev = treeRef.current;
+    const next = updater(prev);
+    if (next === prev) return;
+    saveTreeToStorage(next);
+    treeRef.current = next;
+    setTree(next);
   }, []);
 
-  const [selectedPath, setSelectedPath] = useState<string[] | null>(null); // path to file id
-  const selectedFile = useMemo(() => {
+  const [selectedPath, setSelectedPath] = useState<string[] | null>(null);
+  const selectedTopic = useMemo(() => {
     if (!selectedPath) return null;
     // Use index for faster lookup
     const located = treeIndex.findByPath(selectedPath);
-    return located?.node.kind === 'file' ? located.node : null;
+    return located?.node.kind === 'topic' ? located.node : null;
   }, [selectedPath, treeIndex]);
-  const selectedTitle = useMemo(() => removeFileExtension(selectedFile?.name) || '', [selectedFile]);
+  const selectedTitle = selectedTopic?.label || '';
   
   // Mobile view mode: 'folder' = show folder tree, 'vocab' = show vocab list
   const [mobileViewMode, setMobileViewMode] = useState<'folder' | 'vocab'>('folder');
@@ -479,12 +491,11 @@ const VocabularyPage: React.FC = () => {
   // Load vocab counts from storage (FAST - no need to load full vocab data)
   // This allows displaying counts immediately without clicking files
   const [vocabCountMap, setVocabCountMap] = useState<Record<string, number>>(() => {
-    return loadVocabCounts();
+    return loadVocabularyTopicCounts();
   });
   
   // Sync counts from vocabMap when it changes (in-memory data takes precedence)
   // OPTIMIZED: Use ref to track if sync is needed, avoid blocking input
-  const vocabMapRef = React.useRef(vocabMap);
   vocabMapRef.current = vocabMap;
   
   React.useEffect(() => {
@@ -496,11 +507,11 @@ const VocabularyPage: React.FC = () => {
         
         // Update counts from vocabMap (if loaded)
         const currentMap = vocabMapRef.current;
-        for (const fileName in currentMap) {
-          if (currentMap.hasOwnProperty(fileName)) {
-            const newCount = currentMap[fileName]?.length || 0;
-            if (updated[fileName] !== newCount) {
-              updated[fileName] = newCount;
+        for (const topicId in currentMap) {
+          if (currentMap.hasOwnProperty(topicId)) {
+            const newCount = currentMap[topicId]?.length || 0;
+            if (updated[topicId] !== newCount) {
+              updated[topicId] = newCount;
               hasChanges = true;
             }
           }
@@ -530,11 +541,11 @@ const VocabularyPage: React.FC = () => {
 
   // ===== Context menu state =====
   const [menu, setMenu] = useState<
-    | { type: 'folder' | 'file'; path: string[]; mouseX: number; mouseY: number; anchorEl?: HTMLElement | null }
+    | { type: 'folder' | 'topic'; path: string[]; mouseX: number; mouseY: number; anchorEl?: HTMLElement | null }
     | null
   >(null);
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
-  const openContext = useCallback((type: 'folder' | 'file', path: string[], event: React.MouseEvent | React.MouseEvent<HTMLElement>) => {
+  const openContext = useCallback((type: 'folder' | 'topic', path: string[], event: React.MouseEvent | React.MouseEvent<HTMLElement>) => {
     event.preventDefault();
     event.stopPropagation();
     // Lưu anchorEl nếu là click từ button (mobile), mouseX/Y nếu là context menu (desktop)
@@ -554,19 +565,25 @@ const VocabularyPage: React.FC = () => {
   }, []);
 
   // ===== Clipboard for cut/copy/paste =====
-  const [clip, setClip] = useState<null | { mode: 'cut' | 'copy'; node: FolderNode | FileLeaf }>(null);
+  const [clip, setClip] = useState<null | { mode: 'cut' | 'copy'; node: FolderNode | TopicItem }>(null);
 
   // ===== Dialogs =====
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const [renameTarget, setRenameTarget] = useState<{
-    type: 'folder' | 'file';
+    type: 'folder' | 'topic';
     path: string[];
   } | null>(null);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
-  const [newFileOpen, setNewFileOpen] = useState(false);
+  const [newTopicOpen, setNewTopicOpen] = useState(false);
+  const [newItemTargetPath, setNewItemTargetPath] = useState<string[] | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<null | { path: string[]; type: 'folder' | 'file'; label: string; fileNames: string[] }>(null);
+  const [pendingDelete, setPendingDelete] = useState<null | {
+    path: string[];
+    type: 'folder' | 'topic';
+    label: string;
+    topicIds: string[];
+  }>(null);
   // Vocab delete confirmation
   const [vocabDeleteOpen, setVocabDeleteOpen] = useState(false);
   const [snack, setSnack] = useState<SnackState>({ open: false, msg: '', sev: 'success' });
@@ -732,12 +749,12 @@ const VocabularyPage: React.FC = () => {
 
   // ===== Vocab form handlers =====
   const openAddVocabForm = useCallback(() => {
-    if (!selectedFile) return;
+    if (!selectedTopic) return;
     setVocabFormMode('add');
     setVocabFormIndex(null);
     setVocabFormData({ word: '', type: '', vnMeaning: '', pronunciation: '' });
     setVocabFormOpen(true);
-  }, [selectedFile]);
+  }, [selectedTopic]);
 
   const openEditVocabForm = useCallback((item: VocabItem, index: number) => {
     setVocabFormMode('edit');
@@ -753,50 +770,50 @@ const VocabularyPage: React.FC = () => {
   }, []);
 
   const handleSaveVocab = useCallback((data: VocabItem) => {
-    if (!selectedFile || !data.word.trim()) {
+    if (!selectedTopic || !data.word.trim()) {
       showSnack(t('messages.enterWord'), 'warning');
       return;
     }
 
-    const fileName = selectedFile.name;
+    const topicId = selectedTopic.id;
     updateVocabMap((prev) => {
-      const vocabList = prev[fileName] || [];
+      const vocabList = prev[topicId] || [];
       if (vocabFormMode === 'add') {
         const newList = [...vocabList, { ...data }];
-        return { ...prev, [fileName]: newList };
+        return { ...prev, [topicId]: newList };
       } else {
         if (vocabFormIndex === null) return prev;
         const newList = [...vocabList];
         newList[vocabFormIndex] = { ...data };
-        return { ...prev, [fileName]: newList };
+        return { ...prev, [topicId]: newList };
       }
     });
     setVocabFormOpen(false);
     showSnack(vocabFormMode === 'add' ? t('messages.vocabAdded') : t('messages.vocabUpdated'));
-  }, [selectedFile, vocabFormMode, vocabFormIndex, updateVocabMap, t]);
+  }, [selectedTopic, vocabFormMode, vocabFormIndex, updateVocabMap, t]);
 
   const handleDeleteSelectedVocabs = useCallback(() => {
-    if (!selectedFile || selectedVocabs.size === 0) return;
+    if (!selectedTopic || selectedVocabs.size === 0) return;
     // Open confirmation dialog
     setVocabDeleteOpen(true);
-  }, [selectedFile, selectedVocabs]);
+  }, [selectedTopic, selectedVocabs]);
 
   const confirmDeleteVocabs = useCallback(() => {
-    if (!selectedFile || selectedVocabs.size === 0) return;
+    if (!selectedTopic || selectedVocabs.size === 0) return;
     
-    const fileName = selectedFile.name;
-    const vocabList = vocabMap[fileName] || [];
+    const topicId = selectedTopic.id;
+    const vocabList = vocabMap[topicId] || [];
     const wordsToDelete = Array.from(selectedVocabs);
     
     updateVocabMap((prev) => {
       const newList = vocabList.filter((item) => !wordsToDelete.includes(item.word));
-      return { ...prev, [fileName]: newList };
+      return { ...prev, [topicId]: newList };
     });
     
     setSelectedVocabs(new Set());
     setVocabDeleteOpen(false);
         showSnack(t('messages.vocabDeletedCount', { count: wordsToDelete.length }));
-  }, [selectedFile, selectedVocabs, vocabMap, updateVocabMap]);
+  }, [selectedTopic, selectedVocabs, vocabMap, updateVocabMap]);
 
   const handleToggleVocabSelection = useCallback((word: string) => {
     setSelectedVocabs((prev) => {
@@ -811,8 +828,8 @@ const VocabularyPage: React.FC = () => {
   }, []);
 
   const handleSelectAllVocabs = useCallback(() => {
-    if (!selectedFile) return;
-    const vocabList = vocabMap[selectedFile.name] || [];
+    if (!selectedTopic) return;
+    const vocabList = vocabMap[selectedTopic.id] || [];
     if (selectedVocabs.size === vocabList.length) {
       // Deselect all
       setSelectedVocabs(new Set());
@@ -820,50 +837,43 @@ const VocabularyPage: React.FC = () => {
       // Select all
       setSelectedVocabs(new Set(vocabList.map((item) => item.word)));
     }
-  }, [selectedFile, vocabMap, selectedVocabs]);
+  }, [selectedTopic, vocabMap, selectedVocabs]);
 
   React.useEffect(() => {
     setDetailVocab(null);
-  }, [selectedFile?.name]);
+  }, [selectedTopic?.id]);
 
-  // Load vocab data when file is selected (LAZY LOADING)
+  // Load vocabulary data lazily when a topic is selected.
   React.useEffect(() => {
     setSelectedVocabs(new Set());
 
-    if (selectedFile && !vocabMap[selectedFile.name]) {
-      // Load vocab data for this file (FAST - per-file storage)
-      const vocab = loadVocabFile(selectedFile.name);
-      if (vocab) {
-        setVocabMap((prev) => ({
-          ...prev,
-          [selectedFile.name]: vocab,
-        }));
-      } else {
-        // File doesn't exist in storage, initialize empty
-        setVocabMap((prev) => ({
-          ...prev,
-          [selectedFile.name]: [],
-        }));
-      }
+    if (selectedTopic && !vocabMap[selectedTopic.id]) {
+      const vocabulary = loadVocabularyTopic(selectedTopic.id) || [];
+      const next = {
+        ...vocabMapRef.current,
+        [selectedTopic.id]: vocabulary,
+      };
+      vocabMapRef.current = next;
+      setVocabMap(next);
     }
-  }, [selectedFile, vocabMap]);
+  }, [selectedTopic, vocabMap]);
 
   // Keep the original index while sorting so rendering remains O(n log n).
   const sortedVocabEntries = useMemo(() => {
-    if (!selectedFile) return [];
-    const vocabList = vocabMap[selectedFile.name] || [];
+    if (!selectedTopic) return [];
+    const vocabList = vocabMap[selectedTopic.id] || [];
     return vocabList.map((item, originalIndex) => ({ item, originalIndex })).sort((a, b) => {
       const wordA = a.item.word.toLowerCase().trim();
       const wordB = b.item.word.toLowerCase().trim();
       return wordA.localeCompare(wordB, 'vi'); // Use Vietnamese locale for proper sorting
     });
-  }, [selectedFile, vocabMap]);
+  }, [selectedTopic, vocabMap]);
 
   // ===== Actions =====
-  const handleFileClick = useCallback((filePath: string[], fileName: string) => {
-    setSelectedPath(filePath);
+  const handleTopicClick = useCallback((topicPath: string[], _topicId: string) => {
+    setSelectedPath(topicPath);
     setSelectedVocabs(new Set());
-    // Trên mobile: chuyển sang vocab list view khi chọn file
+    // Trên mobile: chuyển sang danh sách từ khi chọn chủ đề.
     if (isMdDown) {
       setMobileViewMode('vocab');
     }
@@ -920,21 +930,20 @@ const VocabularyPage: React.FC = () => {
     // NOTE: Do NOT clear selectedPath - keep vocabulary list visible
   }, []);
 
-  const handleGridFileClick = useCallback((file: FileLeaf) => {
-    // Find path to file
-    const findFilePath = (node: FolderNode, targetFile: FileLeaf, currentPath: string[]): string[] | null => {
+  const handleGridTopicClick = useCallback((topic: TopicItem) => {
+    const findTopicPath = (node: FolderNode, targetTopic: TopicItem, currentPath: string[]): string[] | null => {
       for (const child of node.children) {
-        if (child.kind === 'file' && child.id === targetFile.id) {
+        if (child.kind === 'topic' && child.id === targetTopic.id) {
           return [...currentPath, child.id];
         }
         if (child.kind === 'folder') {
-          const result = findFilePath(child, targetFile, [...currentPath, child.id]);
+          const result = findTopicPath(child, targetTopic, [...currentPath, child.id]);
           if (result) return result;
         }
       }
       return null;
     };
-    const path = findFilePath(tree, file, [tree.id]);
+    const path = findTopicPath(tree, topic, [tree.id]);
     if (path) {
       setSelectedPath(path);
       setSelectedVocabs(new Set());
@@ -942,7 +951,7 @@ const VocabularyPage: React.FC = () => {
       setGridModalOpen(false);
       setViewMode('tree');
       saveViewModeToStorage('tree');
-      // Trên mobile: chuyển sang vocab list view khi chọn file
+      // Trên mobile: chuyển sang danh sách từ khi chọn chủ đề.
       if (isMdDown) {
         setMobileViewMode('vocab');
       }
@@ -956,10 +965,10 @@ const VocabularyPage: React.FC = () => {
     // NOTE: Do NOT clear selectedPath - keep vocabulary list visible
   }, []);
 
-  const handleGridContextMenu = useCallback((item: FolderNode | FileLeaf, e: React.MouseEvent) => {
+  const handleGridContextMenu = useCallback((item: FolderNode | TopicItem, e: React.MouseEvent) => {
     e.preventDefault();
     // Find path to this item
-    const findItemPath = (node: FolderNode, targetItem: FolderNode | FileLeaf, currentPath: string[]): string[] | null => {
+    const findItemPath = (node: FolderNode, targetItem: FolderNode | TopicItem, currentPath: string[]): string[] | null => {
       if (node.id === targetItem.id) return currentPath;
       for (const child of node.children) {
         if (child.id === targetItem.id) {
@@ -1003,7 +1012,7 @@ const VocabularyPage: React.FC = () => {
     if (!menu) return;
     const located = treeIndex.findByPath(menu.path);
     if (!located) return;
-    const currentName = located.node.kind === 'folder' ? located.node.label : located.node.name;
+    const currentName = located.node.label;
     setRenameValue(currentName);
     setRenameTarget({ type: menu.type, path: [...menu.path] });
     setRenameOpen(true);
@@ -1025,7 +1034,7 @@ const VocabularyPage: React.FC = () => {
     const folderFallback = t('defaults.folder');
     const finalName = ensureUniqueName(
       siblings,
-      nextValue.trim() || (renameTarget.type === 'folder' ? folderFallback : 'file.txt'),
+      nextValue.trim() || (renameTarget.type === 'folder' ? folderFallback : t('defaults.topic')),
       renameTarget.type === 'folder',
     );
 
@@ -1035,98 +1044,108 @@ const VocabularyPage: React.FC = () => {
       if (!located2) return prevTree;
       if (renameTarget.type === 'folder' && located2.node.kind === 'folder') {
         located2.node.label = finalName;
-      } else if (renameTarget.type === 'file' && located2.node.kind === 'file') {
-        located2.node.name = finalName;
+      } else if (renameTarget.type === 'topic' && located2.node.kind === 'topic') {
+        located2.node.label = finalName;
       }
       return copy;
     });
-    
-    if (renameTarget.type === 'file' && located.node.kind === 'file') {
-      const old = located.node.name;
-      if (old !== finalName) {
-        const storedValues = vocabMap[old] ?? loadVocabFile(old) ?? [];
-        updateVocabMap((m) => {
-          const values = m[old] ?? storedValues;
-          const rest = { ...m };
-          delete rest[old];
-          return { ...rest, [finalName]: values };
-        });
-        deleteVocabFile(old);
 
-        setVocabCountMap((prev) => {
-          if (prev[old] === undefined) return prev;
-          const { [old]: count, ...rest } = prev;
-          return { ...rest, [finalName]: count };
-        });
-      }
-    }
     closeRenameDialog();
     showSnack(t('messages.renamed'));
-  }, [renameTarget, tree, t, vocabMap, updateTree, updateVocabMap, closeRenameDialog]);
+  }, [renameTarget, tree, t, updateTree, closeRenameDialog]);
 
   const startNewSubfolder = useCallback(() => {
     if (!menu) return;
-    const targetPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1); // parent folder if file
-    // Use index for faster lookup
+    const targetPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
     const located = treeIndex.findByPath(targetPath);
     if (!located || located.node.kind !== 'folder') return;
+    setNewItemTargetPath([...targetPath]);
     setNewFolderOpen(true);
-  }, [menu, treeIndex]);
+    closeMenu();
+  }, [menu, treeIndex, closeMenu]);
+
+  const closeNewFolderDialog = useCallback(() => {
+    setNewFolderOpen(false);
+    setNewItemTargetPath(null);
+  }, []);
 
   const confirmNewSubfolder = useCallback((folderName: string) => {
-    if (!menu) return;
-    const targetPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
-    updateTree((prevTree) => {
-      const copy = structuredClone(prevTree);
-      const located = findNodeByPath(copy, targetPath);
-      if (!located || located.node.kind !== 'folder') return prevTree;
-      const newFolderName = folderName || t('defaults.newFolder');
-      const name = ensureUniqueName(located.node.children, newFolderName, true);
-      located.node.children.push({ kind: 'folder', label: name, id: genId(), children: [] });
-      return copy;
-    });
-    setNewFolderOpen(false);
-    showSnack(t('messages.folderCreated'));
-  }, [menu, updateTree]);
-
-  const startNewFile = useCallback(() => {
-    if (!menu) return;
-    const targetPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1); // parent folder if file
-    // Use index for faster lookup
-    const located = treeIndex.findByPath(targetPath);
-    if (!located || located.node.kind !== 'folder') return;
-    setNewFileOpen(true);
-  }, [menu, treeIndex]);
-
-  const confirmNewFile = useCallback((fileName: string) => {
-    if (!menu) return;
-    const targetPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
-    // Ensure .txt extension
-    let baseFileName = fileName.endsWith('.txt') ? fileName : `${fileName}.txt`;
-    
-    // Get current tree to determine unique file name - use index for faster lookup
-    const located = treeIndex.findByPath(targetPath);
+    if (!newItemTargetPath) return;
+    const located = treeIndex.findByPath(newItemTargetPath);
     if (!located || located.node.kind !== 'folder') {
-            showSnack(t('messages.folderNotFound'), 'error');
+      closeNewFolderDialog();
+      showSnack(t('messages.folderNotFound'), 'error');
       return;
     }
-    const finalFileName = ensureUniqueName(located.node.children, baseFileName, false);
+    const newFolderName = folderName || t('defaults.newFolder');
+    const name = ensureUniqueName(located.node.children, newFolderName, true);
+    const folderId = genId();
+
+    updateTree((prevTree) => {
+      const copy = structuredClone(prevTree);
+      const target = findNodeByPath(copy, newItemTargetPath);
+      if (!target || target.node.kind !== 'folder') return prevTree;
+      target.node.children.push({ kind: 'folder', label: name, id: folderId, children: [] });
+      return copy;
+    });
+
+    closeNewFolderDialog();
+    showSnack(t('messages.folderCreated'));
+  }, [
+    newItemTargetPath,
+    treeIndex,
+    closeNewFolderDialog,
+    t,
+    updateTree,
+  ]);
+
+  const startNewTopic = useCallback(() => {
+    if (!menu) return;
+    const targetPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
+    const located = treeIndex.findByPath(targetPath);
+    if (!located || located.node.kind !== 'folder') return;
+    setNewItemTargetPath([...targetPath]);
+    setNewTopicOpen(true);
+    closeMenu();
+  }, [menu, treeIndex, closeMenu]);
+
+  const closeNewTopicDialog = useCallback(() => {
+    setNewTopicOpen(false);
+    setNewItemTargetPath(null);
+  }, []);
+
+  const confirmNewTopic = useCallback((topicLabel: string) => {
+    if (!newItemTargetPath) return;
+    const located = treeIndex.findByPath(newItemTargetPath);
+    if (!located || located.node.kind !== 'folder') {
+      closeNewTopicDialog();
+      showSnack(t('messages.folderNotFound'), 'error');
+      return;
+    }
+    const finalTopicLabel = ensureUniqueName(located.node.children, topicLabel, false);
+    const topicId = genId();
     
     updateTree((prevTree) => {
       const copy = structuredClone(prevTree);
-      const located2 = findNodeByPath(copy, targetPath);
+      const located2 = findNodeByPath(copy, newItemTargetPath);
       if (!located2 || located2.node.kind !== 'folder') return prevTree;
-      const fileNode: FileLeaf = { kind: 'file', name: finalFileName, id: genId() };
-      located2.node.children.push(fileNode);
+      const topic: TopicItem = { kind: 'topic', label: finalTopicLabel, id: topicId };
+      located2.node.children.push(topic);
       return copy;
     });
     
-    // Create empty vocab array for the new file
-    updateVocabMap((m) => ({ ...m, [finalFileName]: [] }));
+    updateVocabMap((current) => ({ ...current, [topicId]: [] }));
     
-    setNewFileOpen(false);
-    showSnack(t('messages.fileCreated', { name: finalFileName }));
-  }, [menu, treeIndex, updateTree, updateVocabMap]);
+    closeNewTopicDialog();
+    showSnack(t('messages.topicCreated', { name: finalTopicLabel }));
+  }, [
+    newItemTargetPath,
+    treeIndex,
+    closeNewTopicDialog,
+    t,
+    updateTree,
+    updateVocabMap,
+  ]);
 
   const startImport = useCallback(() => {
     if (!menu) return;
@@ -1144,36 +1163,44 @@ const VocabularyPage: React.FC = () => {
           const text = String(reader.result || '');
           const importData = JSON.parse(text);
           
-          // Validate import data structure
-          if (!importData.vocabulary || !Array.isArray(importData.vocabulary)) {
-                        showSnack(t('messages.importInvalidJson'), 'error');
+          if (!Array.isArray(importData.vocabulary)) {
+            showSnack(t('messages.importInvalidJson'), 'error');
             return;
           }
           
           const items: VocabItem[] = importData.vocabulary;
-
           const targetFolderPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
-          // Use fileName from JSON or fallback to file.name
-          const base = importData.fileName || file.name.replace(/\.json$/i, '.txt');
-          // Get current tree to determine final file name - use index for faster lookup
           const located = treeIndex.findByPath(targetFolderPath);
           if (!located || located.node.kind !== 'folder') {
             showSnack(t('messages.folderNotFound'), 'error');
             return;
           }
-          const finalFileName = ensureUniqueName(located.node.children, base, false);
-          
+
+          const importedLabel =
+            importData.topic?.label ||
+            importData.topicLabel ||
+            importData.fileName ||
+            file.name.replace(/\.json$/i, '');
+          const finalTopicLabel = ensureUniqueName(
+            located.node.children,
+            normalizeLegacyTopicLabel(importedLabel),
+            false,
+          );
+          const topicId = genId();
+
           updateTree((prevTree) => {
             const copy = structuredClone(prevTree);
             const located2 = findNodeByPath(copy, targetFolderPath);
             if (!located2 || located2.node.kind !== 'folder') return prevTree;
-            const fileNode: FileLeaf = { kind: 'file', name: finalFileName, id: genId() };
-            located2.node.children.push(fileNode);
+            located2.node.children.push({
+              kind: 'topic',
+              label: finalTopicLabel,
+              id: topicId,
+            });
             return copy;
           });
-          // Import vocabulary data - always save the items array (even if empty)
-          updateVocabMap((m) => ({ ...m, [finalFileName]: items }));
-                    showSnack(t('messages.importFileSuccess', { name: finalFileName, count: items.length }));
+          updateVocabMap((current) => ({ ...current, [topicId]: items }));
+          showSnack(t('messages.importTopicSuccess', { name: finalTopicLabel, count: items.length }));
           closeMenu();
         } catch (err) {
           console.error(err);
@@ -1182,48 +1209,45 @@ const VocabularyPage: React.FC = () => {
       };
       reader.readAsText(file);
     },
-    [menu, tree, updateTree, updateVocabMap, treeIndex, closeMenu],
+    [menu, updateTree, updateVocabMap, treeIndex, closeMenu, t],
   );
 
-  const handleExportFile = useCallback(() => {
-    if (!menu || menu.type !== 'file') return;
-    // Use index for faster lookup
+  const handleExportTopic = useCallback(() => {
+    if (!menu || menu.type !== 'topic') return;
     const located = treeIndex.findByPath(menu.path);
-    if (!located || located.node.kind !== 'file') return;
+    if (!located || located.node.kind !== 'topic') return;
     
-    const fileName = located.node.name;
-    const items = vocabMap[fileName] || [];
+    const topic = located.node;
+    const items = vocabMap[topic.id] || loadVocabularyTopic(topic.id) || [];
     
     if (items.length === 0) {
-            showSnack(t('messages.noVocabToExport'), 'warning');
+      showSnack(t('messages.noVocabToExport'), 'warning');
       return;
     }
     
-    // Create export data structure (JSON format)
     const exportData = {
-      fileName: fileName,
+      topic: {
+        label: topic.label,
+      },
       vocabulary: items,
       exportDate: new Date().toISOString(),
-      version: '1.0',
+      version: '2.0',
     };
     
-    // Convert to JSON
     const jsonContent = JSON.stringify(exportData, null, 2);
-    
-    // Create and download file
     const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = fileName.replace(/\.txt$/i, '.json');
+    link.download = getJsonDownloadName(topic.label);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-        showSnack(t('messages.exportFileSuccess', { name: fileName }));
+    showSnack(t('messages.exportTopicSuccess', { name: topic.label }));
     closeMenu();
-  }, [menu, tree, vocabMap, closeMenu, treeIndex]);
+  }, [menu, vocabMap, closeMenu, treeIndex, t]);
 
   const handleExportFolder = useCallback(() => {
     if (!menu || menu.type !== 'folder') return;
@@ -1234,15 +1258,11 @@ const VocabularyPage: React.FC = () => {
     const folderNode = located.node;
     const folderName = folderNode.label;
     
-    // Collect all file names in this folder recursively
-    const allFileNames = getAllFileNames(folderNode);
-    
-    // Create vocabulary data for all files in folder
+    const allTopicIds = getAllTopicIds(folderNode);
     const folderVocabData: Record<string, VocabItem[]> = {};
-    allFileNames.forEach((fileName) => {
-      if (vocabMap[fileName]) {
-        folderVocabData[fileName] = vocabMap[fileName];
-      }
+    allTopicIds.forEach((topicId) => {
+      folderVocabData[topicId] =
+        vocabMap[topicId] || loadVocabularyTopic(topicId) || [];
     });
     
     // Create export data structure
@@ -1250,7 +1270,7 @@ const VocabularyPage: React.FC = () => {
       folderStructure: folderNode,
       vocabularyData: folderVocabData,
       exportDate: new Date().toISOString(),
-      version: '1.0',
+      version: '2.0',
     };
     
     // Convert to JSON
@@ -1267,9 +1287,9 @@ const VocabularyPage: React.FC = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-        showSnack(t('messages.exportFolderSuccess', { name: folderName, count: allFileNames.length }));
+    showSnack(t('messages.exportFolderSuccess', { name: folderName, count: allTopicIds.length }));
     closeMenu();
-  }, [menu, tree, vocabMap, closeMenu, treeIndex]);
+  }, [menu, vocabMap, closeMenu, treeIndex, t]);
 
   const startImportFolder = useCallback(() => {
     if (!menu) return;
@@ -1294,91 +1314,106 @@ const VocabularyPage: React.FC = () => {
             return;
           }
           
-          const folderNode: FolderNode = importData.folderStructure;
           const folderVocabData: Record<string, VocabItem[]> = importData.vocabularyData;
-          
           const targetFolderPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
-          // Use index for faster lookup
           const located = treeIndex.findByPath(targetFolderPath);
           
           if (!located || located.node.kind !== 'folder') {
             showSnack(t('messages.folderNotFound'), 'error');
             return;
           }
-          
-          // Ensure unique folder name
-          const uniqueFolderName = ensureUniqueName(located.node.children, folderNode.label, true);
-          folderNode.label = uniqueFolderName;
-          
-          // Regenerate all IDs to avoid conflicts
-          const clonedFolder = cloneNode(folderNode) as FolderNode;
-          
-          // Get all file names for notification
-          const allFiles = getAllFileNames(clonedFolder);
-          const fileNameMapping: Record<string, string> = {};
-          
-          // Build file name mapping (old name -> new unique name)
-          // Track all existing file names (from vocabMap) and newly renamed files
-          const allExistingFileNames = new Set(Object.keys(vocabMap));
-          const processedFileNames = new Set<string>(); // Track files already processed in this import
-          
-          // Recursively rename files to ensure uniqueness
-          const renameFilesRecursively = (node: FolderNode | FileLeaf): void => {
-            if (node.kind === 'file') {
-              const oldName = node.name;
-              
-              // Build siblings list: existing files + already processed files from this import
-              const siblings: FileLeaf[] = [];
-              
-              // Add all existing files from vocabMap
-              allExistingFileNames.forEach(name => {
-                siblings.push({ kind: 'file', name, id: '' });
-              });
-              
-              // Add all files already processed in this import (to avoid conflicts within same import)
-              processedFileNames.forEach(name => {
-                siblings.push({ kind: 'file', name, id: '' });
-              });
-              
-              // Generate unique name
-              const newName = ensureUniqueName(siblings, oldName, false);
-              
-              // Update mapping and node name
-              fileNameMapping[oldName] = newName;
-              node.name = newName;
-              
-              // Track this file name for next iterations
-              processedFileNames.add(newName);
-            } else {
-              // For folders, recursively process children
-              node.children.forEach(child => renameFilesRecursively(child));
+
+          const sourceReferencesByTopicId: Record<string, string[]> = {};
+          const normalizeImportedNode = (rawNode: any): FolderNode | TopicItem => {
+            if (!rawNode || typeof rawNode !== 'object') {
+              throw new Error('Invalid vocabulary tree node');
             }
+
+            if (rawNode.kind === 'folder') {
+              const siblings: Array<FolderNode | TopicItem> = [];
+              const children = Array.isArray(rawNode.children)
+                ? rawNode.children.map((rawChild: any) => {
+                    const child = normalizeImportedNode(rawChild);
+                    child.label = ensureUniqueName(
+                      siblings,
+                      child.label,
+                      child.kind === 'folder',
+                    );
+                    siblings.push(child);
+                    return child;
+                  })
+                : [];
+              return {
+                kind: 'folder',
+                id: genId(),
+                label:
+                  typeof rawNode.label === 'string' && rawNode.label.trim()
+                    ? rawNode.label.trim().normalize('NFC')
+                    : t('defaults.folder'),
+                children,
+              };
+            }
+
+            if (rawNode.kind !== 'topic' && rawNode.kind !== 'file') {
+              throw new Error('Unsupported vocabulary tree node');
+            }
+
+            const topicId = genId();
+            const rawLabel = rawNode.kind === 'file' ? rawNode.name : rawNode.label;
+            const label =
+              rawNode.kind === 'file'
+                ? normalizeLegacyTopicLabel(rawLabel)
+                : String(rawLabel || t('defaults.topic')).trim().normalize('NFC');
+            sourceReferencesByTopicId[topicId] = [
+              rawNode.id,
+              rawNode.name,
+              rawNode.label,
+            ].filter((value): value is string => typeof value === 'string' && value.length > 0);
+            return { kind: 'topic', id: topicId, label };
           };
+
+          const importedRoot = normalizeImportedNode(importData.folderStructure);
+          if (importedRoot.kind !== 'folder') {
+            showSnack(t('messages.importInvalidFormat'), 'error');
+            return;
+          }
+          importedRoot.label = ensureUniqueName(
+            located.node.children,
+            importedRoot.label,
+            true,
+          );
+          const allTopicIds = getAllTopicIds(importedRoot);
           
-          renameFilesRecursively(clonedFolder);
-          
-          // Update tree
           updateTree((prevTree) => {
             const copy = structuredClone(prevTree);
             const located2 = findNodeByPath(copy, targetFolderPath);
             if (!located2 || located2.node.kind !== 'folder') return prevTree;
-            located2.node.children.push(clonedFolder);
+            located2.node.children.push(importedRoot);
             return copy;
           });
           
-          // Update vocabulary data with renamed file names
           updateVocabMap((prevMap) => {
             const newData = { ...prevMap };
-            Object.keys(folderVocabData).forEach((oldFileName) => {
-              const newFileName = fileNameMapping[oldFileName] || oldFileName;
-              newData[newFileName] = folderVocabData[oldFileName];
+            allTopicIds.forEach((topicId) => {
+              const sourceReference = sourceReferencesByTopicId[topicId]?.find(
+                (reference) => Array.isArray(folderVocabData[reference]),
+              );
+              newData[topicId] = sourceReference ? folderVocabData[sourceReference] : [];
             });
             return newData;
           });
           
-          // Count total vocabulary words
-          const totalWords = Object.values(folderVocabData).reduce((sum, vocab) => sum + vocab.length, 0);
-                    showSnack(t('messages.importFolderSuccess', { name: uniqueFolderName, fileCount: allFiles.length, wordCount: totalWords }));
+          const totalWords = allTopicIds.reduce((sum, topicId) => {
+            const sourceReference = sourceReferencesByTopicId[topicId]?.find(
+              (reference) => Array.isArray(folderVocabData[reference]),
+            );
+            return sum + (sourceReference ? folderVocabData[sourceReference].length : 0);
+          }, 0);
+          showSnack(t('messages.importFolderSuccess', {
+            name: importedRoot.label,
+            topicCount: allTopicIds.length,
+            wordCount: totalWords,
+          }));
           closeMenu();
         } catch (err) {
           console.error(err);
@@ -1387,7 +1422,7 @@ const VocabularyPage: React.FC = () => {
       };
       reader.readAsText(file);
     },
-    [menu, treeIndex, vocabMap, updateTree, updateVocabMap, closeMenu],
+    [menu, treeIndex, updateTree, updateVocabMap, closeMenu, t],
   );
 
   const doCopy = useCallback(() => {
@@ -1395,7 +1430,7 @@ const VocabularyPage: React.FC = () => {
     // Use index for faster lookup
     const located = treeIndex.findByPath(menu.path);
     if (!located) return;
-    setClip({ mode: 'copy', node: cloneNode(located.node) });
+    setClip({ mode: 'copy', node: structuredClone(located.node) });
     showSnack(t('messages.copied'));
     closeMenu();
   }, [menu, treeIndex, closeMenu]);
@@ -1421,45 +1456,45 @@ const VocabularyPage: React.FC = () => {
   const doPaste = useCallback(() => {
     if (!menu || !clip) return;
     const targetFolderPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
-    
+    const target = treeIndex.findByPath(targetFolderPath);
+    if (!target || target.node.kind !== 'folder') return;
+
+    const cloned = clip.mode === 'copy'
+      ? cloneNodeWithTopicMapping(clip.node)
+      : { node: clip.node, topicIdMapping: {} };
+    const toInsert = cloned.node;
+    toInsert.label = ensureUniqueName(
+      target.node.children,
+      toInsert.label,
+      toInsert.kind === 'folder',
+    );
+
     updateTree((prevTree) => {
-      // paste vào thư mục
       const copyRoot = structuredClone(prevTree);
-      const target = findNodeByPath(copyRoot, targetFolderPath);
-      if (!target || target.node.kind !== 'folder') return prevTree;
-
-      let toInsert: FolderNode | FileLeaf = clip.mode === 'copy' ? cloneNode(clip.node) : clip.node;
-
-      // ensure unique name among siblings
-      const siblings = target.node.children;
-      if (toInsert.kind === 'folder') {
-        (toInsert as FolderNode).label = ensureUniqueName(siblings, (toInsert as FolderNode).label, true);
-      } else {
-        const oldName = (toInsert as FileLeaf).name;
-        const newName = ensureUniqueName(siblings, oldName, false);
-        if (newName !== oldName && vocabMap[oldName]) {
-          if (clip.mode === 'copy') {
-            updateVocabMap((m) => ({ ...m, [newName]: structuredClone(m[oldName]) }));
-          } else {
-            updateVocabMap((m) => {
-              const { [oldName]: vals, ...rest } = m;
-              return { ...rest, [newName]: vals };
-            });
-          }
-        }
-        (toInsert as FileLeaf).name = newName;
-      }
-
-      target.node.children.push(toInsert);
+      const currentTarget = findNodeByPath(copyRoot, targetFolderPath);
+      if (!currentTarget || currentTarget.node.kind !== 'folder') return prevTree;
+      currentTarget.node.children.push(toInsert);
       return copyRoot;
     });
+
+    if (clip.mode === 'copy') {
+      updateVocabMap((current) => {
+        const next = { ...current };
+        Object.entries(cloned.topicIdMapping).forEach(([sourceTopicId, newTopicId]) => {
+          const sourceVocabulary =
+            current[sourceTopicId] || loadVocabularyTopic(sourceTopicId) || [];
+          next[newTopicId] = structuredClone(sourceVocabulary);
+        });
+        return next;
+      });
+    }
     
     setClip(null);
     showSnack(t('messages.pasted'));
     closeMenu();
-  }, [menu, clip, vocabMap, closeMenu, updateTree, updateVocabMap]);
+  }, [menu, clip, treeIndex, closeMenu, updateTree, updateVocabMap, t]);
 
-  // Delete: mở confirm cho file / folder
+  // Mở xác nhận trước khi xóa chủ đề hoặc thư mục.
   const startDelete = useCallback(() => {
     if (!menu) return;
     
@@ -1472,9 +1507,9 @@ const VocabularyPage: React.FC = () => {
     
     const located = findNodeByPath(tree, menu.path);
     if (!located) return;
-    const label = located.node.kind === 'folder' ? located.node.label : located.node.name;
-    const fileNames = getAllFileNames(located.node);
-    setPendingDelete({ path: menu.path, type: menu.type, label, fileNames });
+    const label = located.node.label;
+    const topicIds = getAllTopicIds(located.node);
+    setPendingDelete({ path: menu.path, type: menu.type, label, topicIds });
     setConfirmOpen(true);
   }, [menu, tree, closeMenu]);
 
@@ -1487,11 +1522,16 @@ const VocabularyPage: React.FC = () => {
     if (selectedPath && (selectedPath.join('/') === pendingDelete.path.join('/') || isDescendant(pendingDelete.path, selectedPath))) {
       setSelectedPath(null);
     }
-    // remove vocab contents for files under deleted node
-    if (pendingDelete.fileNames.length) {
+    if (pendingDelete.topicIds.length) {
       updateVocabMap((m) => {
         const next = { ...m } as Record<string, VocabItem[]>;
-        for (const nm of pendingDelete.fileNames) delete next[nm];
+        pendingDelete.topicIds.forEach((topicId) => delete next[topicId]);
+        return next;
+      });
+      pendingDelete.topicIds.forEach(deleteVocabularyTopic);
+      setVocabCountMap((current) => {
+        const next = { ...current };
+        pendingDelete.topicIds.forEach((topicId) => delete next[topicId]);
         return next;
       });
     }
@@ -1616,14 +1656,14 @@ const VocabularyPage: React.FC = () => {
               <List disablePadding>
                 <FolderItem
                   node={tree}
-                  onFileClick={handleFileClick}
+                  onTopicClick={handleTopicClick}
                   onContext={openContext}
                   path={[tree.id]}
                   forceShowMenu={isMdDown}
                   isFolderOpen={openFolders}
                   onToggle={handleFolderToggle}
                   vocabCountMap={vocabCountMap}
-                  selectedFileId={selectedFile?.id || null}
+                  selectedTopicId={selectedTopic?.id || null}
                 />
               </List>
             </Box>
@@ -1729,7 +1769,7 @@ const VocabularyPage: React.FC = () => {
             </Tooltip>
           )}
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            {selectedFile ? (
+            {selectedTopic ? (
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
                 {/* Back button - chỉ hiển thị trên mobile */}
@@ -1758,7 +1798,7 @@ const VocabularyPage: React.FC = () => {
                       {selectedTitle}
                     </Typography>
                   </Tooltip>
-                  {vocabCountMap[selectedFile.name] !== undefined && (
+                  {vocabCountMap[selectedTopic.id] !== undefined && (
                     <Typography 
                       variant="caption" 
                       color="text.secondary" 
@@ -1769,7 +1809,7 @@ const VocabularyPage: React.FC = () => {
                         lineHeight: 1.2,
                       }}
                     >
-                      {t('table.wordCount', { count: vocabCountMap[selectedFile.name] })}
+                      {t('table.wordCount', { count: vocabCountMap[selectedTopic.id] })}
                     </Typography>
                   )}
               </Box>
@@ -1808,12 +1848,11 @@ const VocabularyPage: React.FC = () => {
                   size="small"
                   startIcon={<RocketLaunchIcon size={17} />}
                   onClick={() => {
-                    if (selectedFile) {
-                      const fileName = selectedFile.name;
-                      // Update session storage for all training modes with the new file name
-                      // This ensures all training pages use the same file when navigating between them
+                    if (selectedTopic) {
+                      const topicId = selectedTopic.id;
                       const baseSession = {
-                        fileName,
+                        topicId,
+                        topicLabel: selectedTopic.label,
                         timestamp: Date.now(),
                       };
                       
@@ -1858,8 +1897,7 @@ const VocabularyPage: React.FC = () => {
                         mistakes: 0,
                       });
                       
-                      // Navigate to flashcards-reading with file parameter
-                      navigate(`/train/flashcards-reading?file=${encodeURIComponent(fileName)}`);
+                      navigate(`/train/flashcards-reading?topic=${encodeURIComponent(topicId)}`);
                     }
                   }}
                 sx={{
@@ -1911,7 +1949,7 @@ const VocabularyPage: React.FC = () => {
           flexDirection: 'column',
           minHeight: 0,
         }}>
-          {selectedFile ? (
+          {selectedTopic ? (
             <Paper 
               elevation={0} 
               sx={{ 
@@ -2025,12 +2063,12 @@ const VocabularyPage: React.FC = () => {
                 px: 2,
               }}
             >
-              <FileIcon size={56} style={{ color: 'gray', marginBottom: 12 }} />
+              <TopicIcon size={56} style={{ color: 'gray', marginBottom: 12 }} />
               <Typography variant={isSmDown ? 'subtitle1' : 'h6'} color="text.secondary" sx={{ mb: 1 }}>
-                {t('table.noFileSelectedTitle')}
+                {t('table.noTopicSelectedTitle')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {t('table.noFileSelectedDescription')}
+                {t('table.noTopicSelectedDescription')}
               </Typography>
             </Box>
           )}
@@ -2073,18 +2111,18 @@ const VocabularyPage: React.FC = () => {
             />
           </MenuItem>,
           <MenuItem 
-            key="new-file" 
-            onClick={startNewFile}
+            key="new-topic"
+            onClick={startNewTopic}
             sx={{
               fontSize: { xs: '0.875rem', sm: '1rem' },
               py: { xs: 1.25, sm: 1 },
             }}
           >
             <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
-              <FileIcon fontSize={isSmDown ? 'small' : 'medium'} />
+              <TopicIcon size={isSmDown ? 18 : 20} />
             </ListItemIcon>
             <ListItemText 
-              primary={t('contextMenu.newFile')}
+              primary={t('contextMenu.newTopic')}
               primaryTypographyProps={{
                 fontSize: { xs: '0.875rem', sm: '1rem' },
               }}
@@ -2099,9 +2137,9 @@ const VocabularyPage: React.FC = () => {
               <ListItemIcon><ImportIcon fontSize="small" /></ListItemIcon>
             <ListItemText primary={t('contextMenu.importFolder')} />
           </MenuItem>,
-          <MenuItem key="import-file" onClick={startImport}>
+          <MenuItem key="import-topic" onClick={startImport}>
             <ListItemIcon><ImportIcon fontSize="small" /></ListItemIcon>
-            <ListItemText primary={t('contextMenu.importFile')} />
+            <ListItemText primary={t('contextMenu.importTopic')} />
           </MenuItem>,
           <Divider key="divider-2" />,
           <MenuItem key="rename" onClick={startRename}>
@@ -2126,9 +2164,9 @@ const VocabularyPage: React.FC = () => {
               <ListItemText primary={t('contextMenu.deleteFolder')} />
           </MenuItem>,
         ] : [
-          <MenuItem key="export-file" onClick={handleExportFile}>
+          <MenuItem key="export-topic" onClick={handleExportTopic}>
               <ListItemIcon><ExportIcon fontSize="small" /></ListItemIcon>
-            <ListItemText primary={t('contextMenu.exportFile')} />
+            <ListItemText primary={t('contextMenu.exportTopic')} />
           </MenuItem>,
           <Divider key="divider-1" />,
           <MenuItem key="rename" onClick={startRename}>
@@ -2146,7 +2184,7 @@ const VocabularyPage: React.FC = () => {
           <Divider key="divider-2" />,
           <MenuItem key="delete" onClick={startDelete}>
               <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
-              <ListItemText primary={t('contextMenu.deleteFile')} />
+              <ListItemText primary={t('contextMenu.deleteTopic')} />
           </MenuItem>,
         ]}
       </Menu>
@@ -2161,19 +2199,19 @@ const VocabularyPage: React.FC = () => {
 
       <NewFolderDialog
         open={newFolderOpen}
-        onClose={() => setNewFolderOpen(false)}
+        onClose={closeNewFolderDialog}
         onConfirm={confirmNewSubfolder}
       />
 
-      <NewFileDialog
-        open={newFileOpen}
-        onClose={() => setNewFileOpen(false)}
-        onConfirm={confirmNewFile}
+      <NewTopicDialog
+        open={newTopicOpen}
+        onClose={closeNewTopicDialog}
+        onConfirm={confirmNewTopic}
       />
 
       <ConfirmDeleteDialog
         open={confirmOpen}
-        type={pendingDelete?.type || 'file'}
+        type={pendingDelete?.type || 'topic'}
         label={pendingDelete?.label || ''}
         onClose={() => setConfirmOpen(false)}
         onConfirm={confirmDelete}
@@ -2209,9 +2247,9 @@ const VocabularyPage: React.FC = () => {
         onClose={closeGridModal}
         currentFolder={currentFolder}
         breadcrumbPath={breadcrumbPath}
-        selectedFileName={selectedFile?.name || null}
+        selectedTopicId={selectedTopic?.id || null}
         onFolderClick={handleGridFolderClick}
-        onFileClick={handleGridFileClick}
+        onTopicClick={handleGridTopicClick}
         onBreadcrumbNavigate={handleBreadcrumbNavigate}
         onContextMenu={handleGridContextMenu}
         onEmptySpaceContextMenu={handleEmptySpaceContextMenu}

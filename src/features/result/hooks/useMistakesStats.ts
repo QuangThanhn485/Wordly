@@ -1,17 +1,22 @@
 // src/features/result/hooks/useMistakesStats.ts
 import { useState, useMemo } from 'react';
 import { loadMistakesStats } from '@/features/train/train-read-write/mistakesStorage';
-import { loadVocabCounts, loadTreeFromStorage } from '@/features/vocabulary/utils/storageUtils';
-import { getAllFileNames } from '@/features/vocabulary/utils/treeUtils';
-import { processMistakesData, calculateOverviewStats, groupMistakesByMode, groupMistakesByFile } from '../utils/dataTransform';
-import { getDisplayFileName } from '@/utils/fileUtils';
+import { loadTreeFromStorage } from '@/features/vocabulary/utils/storageUtils';
+import { getAllTopics } from '@/features/vocabulary/utils/treeUtils';
+import {
+  processMistakesData,
+  calculateOverviewStats,
+  groupMistakesByMode,
+  groupMistakesByTopic,
+} from '../utils/dataTransform';
 
 export type SortOption = 'mistakes-desc' | 'mistakes-asc' | 'time-desc' | 'time-asc' | 'word-asc' | 'word-desc';
+export type TopicFilterOption = { id: string; label: string };
 
 export const useMistakesStats = () => {
   const [rawStats, setRawStats] = useState(loadMistakesStats());
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
   const [selectedModes, setSelectedModes] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>('mistakes-desc');
 
@@ -20,20 +25,19 @@ export const useMistakesStats = () => {
     return processMistakesData(rawStats);
   }, [rawStats]);
 
-  // Get unique files - load from tree structure (all files) and merge with files from mistakes
-  const uniqueFiles = useMemo(() => {
-    // Load all files from tree structure (including nested folders)
+  const uniqueTopics = useMemo<TopicFilterOption[]>(() => {
     const tree = loadTreeFromStorage();
-    const filesFromTree = tree ? getAllFileNames(tree) : [];
-    
-    // Also get files from mistakes data
-    const filesFromMistakes = new Set<string>();
-    processedMistakes.forEach((m) => filesFromMistakes.add(m.fileName));
-    
-    // Merge both sources (tree + mistakes) and sort
-    const allFiles = new Set([...filesFromTree, ...Array.from(filesFromMistakes)]);
-    return Array.from(allFiles).sort((a, b) =>
-      getDisplayFileName(a).localeCompare(getDisplayFileName(b))
+    const topicLabels = new Map<string, string>();
+    if (tree) {
+      getAllTopics(tree).forEach((topic) => topicLabels.set(topic.id, topic.label));
+    }
+    processedMistakes.forEach((mistake) => {
+      if (!topicLabels.has(mistake.topicId)) {
+        topicLabels.set(mistake.topicId, mistake.topicLabel);
+      }
+    });
+    return Array.from(topicLabels, ([id, label]) => ({ id, label })).sort(
+      (a, b) => a.label.localeCompare(b.label, 'vi'),
     );
   }, [processedMistakes]);
 
@@ -60,9 +64,9 @@ export const useMistakesStats = () => {
     return groupMistakesByMode(processedMistakes);
   }, [processedMistakes]);
 
-  // Group mistakes by file
-  const mistakesByFile = useMemo(() => {
-    return groupMistakesByFile(processedMistakes);
+  // Group mistakes by topic.
+  const mistakesByTopic = useMemo(() => {
+    return groupMistakesByTopic(processedMistakes);
   }, [processedMistakes]);
 
   // Filter and sort data
@@ -79,9 +83,8 @@ export const useMistakesStats = () => {
       );
     }
 
-    // File filter
-    if (selectedFiles.length > 0) {
-      filtered = filtered.filter((m) => selectedFiles.includes(m.fileName));
+    if (selectedTopicIds.length > 0) {
+      filtered = filtered.filter((m) => selectedTopicIds.includes(m.topicId));
     }
 
     // Mode filter
@@ -112,7 +115,7 @@ export const useMistakesStats = () => {
     });
 
     return filtered;
-  }, [processedMistakes, searchQuery, selectedFiles, selectedModes, sortBy]);
+  }, [processedMistakes, searchQuery, selectedTopicIds, selectedModes, sortBy]);
 
   // Refresh data
   const refresh = () => {
@@ -122,7 +125,7 @@ export const useMistakesStats = () => {
   // Clear all filters
   const clearFilters = () => {
     setSearchQuery('');
-    setSelectedFiles([]);
+    setSelectedTopicIds([]);
     setSelectedModes([]);
     setSortBy('mistakes-desc');
   };
@@ -142,9 +145,8 @@ export const useMistakesStats = () => {
         );
       }
 
-      // Apply file filter
-      if (selectedFiles.length > 0) {
-        groupMistakes = groupMistakes.filter((m) => selectedFiles.includes(m.fileName));
+      if (selectedTopicIds.length > 0) {
+        groupMistakes = groupMistakes.filter((m) => selectedTopicIds.includes(m.topicId));
       }
 
       // Sort
@@ -184,11 +186,10 @@ export const useMistakesStats = () => {
     }
 
     return filtered.filter((group) => group.mistakes.length > 0);
-  }, [mistakesByMode, searchQuery, selectedFiles, selectedModes, sortBy]);
+  }, [mistakesByMode, searchQuery, selectedTopicIds, selectedModes, sortBy]);
 
-  // Filter mistakes by file (for file grouped view)
-  const filteredMistakesByFile = useMemo(() => {
-    let filtered = mistakesByFile.map((group) => {
+  const filteredMistakesByTopic = useMemo(() => {
+    let filtered = mistakesByTopic.map((group) => {
       let groupMistakes = [...group.mistakes];
 
       // Apply search filter
@@ -201,9 +202,8 @@ export const useMistakesStats = () => {
         );
       }
 
-      // Apply file filter
-      if (selectedFiles.length > 0) {
-        groupMistakes = groupMistakes.filter((m) => selectedFiles.includes(m.fileName));
+      if (selectedTopicIds.length > 0) {
+        groupMistakes = groupMistakes.filter((m) => selectedTopicIds.includes(m.topicId));
       }
 
       // Apply mode filter
@@ -253,19 +253,19 @@ export const useMistakesStats = () => {
 
     // Filter out empty groups
     return filtered.filter((group) => group.mistakes.length > 0);
-  }, [mistakesByFile, searchQuery, selectedFiles, selectedModes, sortBy]);
+  }, [mistakesByTopic, searchQuery, selectedTopicIds, selectedModes, sortBy]);
 
   return {
     mistakes: filteredMistakes,
     mistakesByMode: filteredMistakesByMode,
-    mistakesByFile: filteredMistakesByFile,
+    mistakesByTopic: filteredMistakesByTopic,
     overviewStats,
-    uniqueFiles,
+    uniqueTopics,
     uniqueModes,
     searchQuery,
     setSearchQuery,
-    selectedFiles,
-    setSelectedFiles,
+    selectedTopicIds,
+    setSelectedTopicIds,
     selectedModes,
     setSelectedModes,
     sortBy,

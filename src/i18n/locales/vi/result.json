@@ -12,7 +12,7 @@
   "filters": {
     "all": "Tất cả",
     "byWord": "Theo từ",
-    "byFile": "Theo file",
+    "byTopic": "Theo chủ đề",
     "byMode": "Theo chế độ",
     "searchPlaceholder": "Tìm kiếm từ...",
     "sortBy": "Sắp xếp theo",
@@ -30,7 +30,7 @@
   "card": {
     "mistakeCount": "Số lần sai",
     "lastMistake": "Lần sai gần nhất",
-    "file": "File",
+    "topic": "Chủ đề",
     "mode": "Chế độ luyện tập",
     "correctAnswer": "Đáp án đúng",
     "yourAnswer": "Câu trả lời của bạn",
@@ -55,6 +55,7 @@
     "summary": "{{words}} từ vựng với {{mistakes}} lỗi",
     "wordsLabel": "{{count}} từ",
     "mistakesLabel": "{{count}} lỗi",
-    "trainTop": "Train 40% ({{count}} từ sai nhiều nhất)"
+    "trainTop": "Luyện 40% ({{count}} từ sai nhiều nhất)",
+    "topMistakesLabel": "Từ sai nhiều nhất"
   }
 }

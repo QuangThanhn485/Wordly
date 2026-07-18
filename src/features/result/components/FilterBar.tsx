@@ -12,20 +12,19 @@ import {
 } from '@mui/material';
 import { Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { type SortOption } from '../hooks/useMistakesStats';
+import { type SortOption, type TopicFilterOption } from '../hooks/useMistakesStats';
 import { getTrainingModeLabel } from '../utils/dataTransform';
-import { getDisplayFileName } from '@/utils/fileUtils';
 
 interface FilterBarProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
-  selectedFiles: string[];
-  onFilesChange: (files: string[]) => void;
+  selectedTopicIds: string[];
+  onTopicIdsChange: (topicIds: string[]) => void;
   selectedModes: string[];
   onModesChange: (modes: string[]) => void;
   sortBy: SortOption;
   onSortChange: (sort: SortOption) => void;
-  uniqueFiles: string[];
+  uniqueTopics: TopicFilterOption[];
   uniqueModes: string[];
   onClearFilters: () => void;
 }
@@ -33,13 +32,13 @@ interface FilterBarProps {
 export const FilterBar: React.FC<FilterBarProps> = ({
   searchQuery,
   onSearchChange,
-  selectedFiles,
-  onFilesChange,
+  selectedTopicIds,
+  onTopicIdsChange,
   selectedModes,
   onModesChange,
   sortBy,
   onSortChange,
-  uniqueFiles,
+  uniqueTopics,
   uniqueModes,
   onClearFilters,
 }) => {
@@ -76,7 +75,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   }, [searchQuery]);
 
   const hasActiveFilters =
-    searchQuery.trim() !== '' || selectedFiles.length > 0 || selectedModes.length > 0;
+    searchQuery.trim() !== '' || selectedTopicIds.length > 0 || selectedModes.length > 0;
 
   return (
     <Paper
@@ -149,7 +148,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           />
         </Box>
 
-        {/* File Filter with search */}
+        {/* Topic filter */}
         <Box
           sx={{
             width: { xs: '100%', sm: 'auto' },
@@ -162,21 +161,22 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         >
           <Autocomplete
             multiple
-            options={uniqueFiles}
-            value={selectedFiles}
-            onChange={(_, newValue) => onFilesChange(newValue)}
+            options={uniqueTopics}
+            value={uniqueTopics.filter((topic) => selectedTopicIds.includes(topic.id))}
+            onChange={(_, newValue) => onTopicIdsChange(newValue.map((topic) => topic.id))}
             size="small"
             filterSelectedOptions
             fullWidth={isMobile}
-            getOptionLabel={(option) => getDisplayFileName(option)}
+            getOptionLabel={(option) => option.label}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
             renderOption={(props, option) => (
-              <li {...props}>{getDisplayFileName(option)}</li>
+              <li {...props} key={option.id}>{option.label}</li>
             )}
             renderInput={(params) => (
               <TextField 
                 {...params} 
-                label={t('filters.byFile')} 
-                placeholder={t('filters.byFile')}
+                label={t('filters.byTopic')}
+                placeholder={t('filters.byTopic')}
                 fullWidth
                 sx={{ 
                   width: '100%',
@@ -204,8 +204,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     value.map((option, index) => (
                       <Chip
                         {...getTagProps({ index })}
-                        key={option}
-                        label={getDisplayFileName(option)}
+                        key={option.id}
+                        label={option.label}
                         size="small"
                         sx={{ maxWidth: { xs: '120px', sm: 'none' } }}
                       />
@@ -215,8 +215,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                       {value.slice(0, 1).map((option, index) => (
                         <Chip
                           {...getTagProps({ index })}
-                          key={option}
-                          label={getDisplayFileName(option)}
+                          key={option.id}
+                          label={option.label}
                           size="small"
                           sx={{ maxWidth: { xs: '120px', sm: 'none' } }}
                         />

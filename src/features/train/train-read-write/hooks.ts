@@ -2,20 +2,21 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { getWords, type TrainWordItem } from './api';
+import { getTrainingTopicParams } from '../utils/topicSession';
 
 export const useTrainWords = () => {
   const [searchParams] = useSearchParams();
-  const fileName = searchParams.get('file');
+  const { topicId } = getTrainingTopicParams(searchParams);
   const [words, setWords] = useState<TrainWordItem[]>([]);
   const [isLoading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    getWords(fileName || undefined).then((data) => {
+    getWords(topicId || undefined).then((data) => {
       setWords(data);
       setLoading(false);
     });
-  }, [fileName]);
+  }, [topicId]);
 
   return { words, isLoading };
 };

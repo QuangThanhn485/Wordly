@@ -20,12 +20,16 @@ import {
   saveTrainingSession, 
   loadTrainingSession, 
   clearTrainingSession,
-  isSessionForFile,
+  isSessionForTopic,
   type TrainingSession 
 } from '@/features/train/train-start/sessionStorage';
 import { recordMistakes } from '@/features/train/train-start/mistakesStorage';
 import { CompletionModal, type SessionMistake } from '@/features/train/train-read-write/components/CompletionModal';
 import { speakEnglishAsync } from '@/utils/speechUtils';
+import {
+  createTrainingSearchParams,
+  getTrainingTopicParams,
+} from '@/features/train/utils/topicSession';
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
@@ -81,10 +85,12 @@ const FlashcardsReadingPage = () => {
   const { t } = useTranslation('train');
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const currentFileName = searchParams.get('file');
-  const sourceFileName = searchParams.get('sourceFile');
-  const trainingSource = searchParams.get('trainingSource');
-  const recordFileName = sourceFileName || currentFileName;
+  const {
+    topicId: currentTopicId,
+    sourceTopicId,
+    trainingSource,
+  } = getTrainingTopicParams(searchParams);
+  const recordTopicId = sourceTopicId || currentTopicId;
   const skipMistakeLogging = trainingSource === 'top-mistakes';
   const [sessionRestored, setSessionRestored] = useState(false); // Track if we've attempted to restore session
   const { settings, setRemoveCorrectCards } = useFlashcardsSettings();
@@ -94,38 +100,30 @@ const FlashcardsReadingPage = () => {
     removeCorrectCardsRef.current = settings.removeCorrectCards;
   }, [settings.removeCorrectCards]);
 
-  // Check for saved session on mount - if no file in URL but session exists, restore it
-  // BUT if URL has a different file, that takes priority (user selected a new file)
+  // Restore a saved session unless the URL explicitly selects another topic.
   useEffect(() => {
     if (sessionRestored) return; // Only run once on mount
     
     const savedSession = loadTrainingSession();
     
-    // Priority 1: If URL has a file parameter, use it (user selected a file)
-    if (currentFileName) {
-      // Check if this is a different file than the saved session
+    if (currentTopicId) {
       if (
         savedSession &&
-        (savedSession.fileName !== currentFileName ||
+        (savedSession.topicId !== currentTopicId ||
           (trainingSource && savedSession.trainingSource !== trainingSource))
       ) {
-        // Different file - clear old session immediately
         clearTrainingSession();
       }
       setSessionRestored(true);
       return;
     }
     
-    // Priority 2: No file in URL - restore from saved session if available
-    if (savedSession && savedSession.fileName) {
-      const params: Record<string, string> = { file: savedSession.fileName };
-      if (savedSession.sourceFileName) params.sourceFile = savedSession.sourceFileName;
-      if (savedSession.trainingSource) params.trainingSource = savedSession.trainingSource;
-      setSearchParams(params, { replace: true });
+    if (savedSession?.topicId) {
+      setSearchParams(createTrainingSearchParams(savedSession), { replace: true });
     }
     
     setSessionRestored(true);
-  }, [currentFileName, sessionRestored, setSearchParams, trainingSource]);
+  }, [currentTopicId, sessionRestored, setSearchParams, trainingSource]);
 
   const { words: rawWords, isLoading } = useTrainWords();
   const baseItems = useMemo(() => adaptWords(rawWords ?? []), [rawWords]);
@@ -163,26 +161,23 @@ const FlashcardsReadingPage = () => {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [pendingCorrectFeedbackCount, setPendingCorrectFeedbackCount] = useState(0);
 
-  // Track previous file name to detect file changes
-  const prevFileNameRef = useRef<string | null>(null);
+  const prevTopicIdRef = useRef<string | null>(null);
   const prevTrainingSourceRef = useRef<string | null>(null);
   const cardRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   // Load saved session when items are ready
   useEffect(() => {
-    if (isLoading || items.length === 0 || !currentFileName || !sessionRestored) return;
+    if (isLoading || items.length === 0 || !currentTopicId || !sessionRestored) return;
     
-    // Check if file or training source has changed
-    const fileChanged = prevFileNameRef.current !== null && prevFileNameRef.current !== currentFileName;
+    const topicChanged =
+      prevTopicIdRef.current !== null && prevTopicIdRef.current !== currentTopicId;
     const trainingSourceChanged =
       prevTrainingSourceRef.current !== null && prevTrainingSourceRef.current !== trainingSource;
-    prevFileNameRef.current = currentFileName;
+    prevTopicIdRef.current = currentTopicId;
     prevTrainingSourceRef.current = trainingSource;
     
-    // If file or training source changed, clear session immediately
-    if (fileChanged || trainingSourceChanged) {
+    if (topicChanged || trainingSourceChanged) {
       clearTrainingSession();
-      // Reset state for new file
       setFlipped({});
       setRemovingCorrectCards({});
       setHiddenCorrectCards({});
@@ -198,9 +193,8 @@ const FlashcardsReadingPage = () => {
       return;
     }
     
-    // File hasn't changed - try to restore session
     const session = loadTrainingSession();
-    if (isSessionForFile(session, currentFileName, trainingSource)) {
+    if (isSessionForTopic(session, currentTopicId, trainingSource)) {
       // Validate session data matches current items
       if (session && session.targetIdx >= 0 && session.targetIdx < items.length) {
         // Restore session state
@@ -230,7 +224,7 @@ const FlashcardsReadingPage = () => {
     setPendingCorrectFeedbackCount(0);
     setTargetIdx(pickRandomIndex(items.length, new Set()));
     setLanguage('vi');
-  }, [currentFileName, isLoading, items.length, sessionRestored, trainingSource]);
+  }, [currentTopicId, isLoading, items.length, sessionRestored, trainingSource]);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const getAudioCtx = () => {
@@ -337,11 +331,11 @@ const FlashcardsReadingPage = () => {
 
   // Save session to localStorage whenever relevant state changes
   useEffect(() => {
-    if (!currentFileName || isLoading || items.length === 0) return;
+    if (!currentTopicId || isLoading || items.length === 0) return;
     
     const session: TrainingSession = {
-      fileName: currentFileName,
-      sourceFileName: sourceFileName || undefined,
+      topicId: currentTopicId,
+      sourceTopicId: sourceTopicId || undefined,
       trainingSource: trainingSource || undefined,
       score,
       mistakes,
@@ -352,8 +346,8 @@ const FlashcardsReadingPage = () => {
     };
     saveTrainingSession(session);
   }, [
-    currentFileName,
-    sourceFileName,
+    currentTopicId,
+    sourceTopicId,
     trainingSource,
     score,
     mistakes,
@@ -498,17 +492,16 @@ const FlashcardsReadingPage = () => {
     // Shuffle cards for next session
     setShuffleKey(prev => prev + 1);
     // Clear saved session on restart
-    if (currentFileName) {
+    if (currentTopicId) {
       clearTrainingSession();
     }
-  }, [items.length, currentFileName]);
+  }, [items.length, currentTopicId]);
   
   // Save mistakes to localStorage and handle actions
   const saveMistakesAndAction = useCallback((action: 'exit' | 'restart' | 'next') => {
-    // Always save mistakes if there are any (even if no fileName, we still track them)
-    if (!skipMistakeLogging && sessionMistakes.length > 0 && recordFileName) {
+    if (!skipMistakeLogging && sessionMistakes.length > 0 && recordTopicId) {
       // Save mistakes to localStorage
-      recordMistakes(sessionMistakes, recordFileName, 'flashcards-reading');
+      recordMistakes(sessionMistakes, recordTopicId, 'flashcards-reading');
     }
     
     // Execute action
@@ -527,7 +520,7 @@ const FlashcardsReadingPage = () => {
       }
       setShowCompletionModal(false);
     }
-  }, [recordFileName, sessionMistakes, handleRestart, navigate, searchParams, skipMistakeLogging]);
+  }, [recordTopicId, sessionMistakes, handleRestart, navigate, searchParams, skipMistakeLogging]);
   
   const handleCompletionExit = () => {
     saveMistakesAndAction('exit');
@@ -779,7 +772,7 @@ const FlashcardsReadingPage = () => {
       {/* Vocabulary Quick View */}
       <VocabularyQuickView
         vocabularyList={items}
-        currentFileName={sourceFileName || currentFileName}
+        currentTopicId={sourceTopicId || currentTopicId}
       />
 
       <FlashcardsSettingsPanel

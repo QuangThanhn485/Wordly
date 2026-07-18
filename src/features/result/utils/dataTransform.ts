@@ -5,7 +5,8 @@ import { type MistakeRecord, type MistakesStats } from '@/features/train/train-r
 export type ProcessedMistake = {
   word: string;
   viMeaning: string;
-  fileName: string;
+  topicId: string;
+  topicLabel: string;
   totalMistakes: number; // Tổng số lỗi qua tất cả training modes
   lastMistakeTime: number; // Thời gian sai gần nhất
   mistakesByMode: Record<string, number>; // Số lỗi theo từng mode
@@ -20,12 +21,13 @@ export type MistakesByMode = {
   totalWords: number; // Tổng số từ có lỗi trong mode này
 };
 
-export type MistakesByFile = {
-  fileName: string;
-  mistakes: ProcessedMistake[]; // Các từ có lỗi trong file này
-  totalMistakes: number; // Tổng số lỗi trong file này
-  totalWords: number; // Tổng số từ có lỗi trong file này
-  mistakesByMode: Record<string, number>; // Số lỗi theo từng mode trong file này
+export type MistakesByTopic = {
+  topicId: string;
+  topicLabel: string;
+  mistakes: ProcessedMistake[]; // Các từ có lỗi trong chủ đề này
+  totalMistakes: number; // Tổng số lỗi trong chủ đề này
+  totalWords: number; // Tổng số từ có lỗi trong chủ đề này
+  mistakesByMode: Record<string, number>; // Số lỗi theo từng mode trong chủ đề này
 };
 
 export type OverviewStats = {
@@ -33,7 +35,7 @@ export type OverviewStats = {
   totalMistakes: number; // Tổng số lần sai
   mostMistakenWord: { word: string; count: number } | null; // Từ sai nhiều nhất
   mistakesByMode: Record<string, number>; // Số lỗi theo từng training mode
-  mistakesByFile: Record<string, number>; // Số lỗi theo từng file
+  mistakesByTopic: Record<string, number>; // Số lỗi theo từng chủ đề
 };
 
 /**
@@ -43,7 +45,7 @@ export const processMistakesData = (stats: MistakesStats): ProcessedMistake[] =>
   const wordMap = new Map<string, ProcessedMistake>();
 
   Object.values(stats).forEach((record: MistakeRecord) => {
-    const key = `${record.fileName}:${record.word}`;
+    const key = `${record.topicId}:${record.word}`;
     
     if (wordMap.has(key)) {
       const existing = wordMap.get(key)!;
@@ -64,7 +66,8 @@ export const processMistakesData = (stats: MistakesStats): ProcessedMistake[] =>
       wordMap.set(key, {
         word: record.word,
         viMeaning: record.viMeaning,
-        fileName: record.fileName,
+        topicId: record.topicId,
+        topicLabel: record.topicLabel,
         totalMistakes: record.mistakeCount,
         lastMistakeTime: record.lastMistakeTime,
         mistakesByMode: {
@@ -88,14 +91,14 @@ export const calculateOverviewStats = (processedMistakes: ProcessedMistake[]): O
       totalMistakes: 0,
       mostMistakenWord: null,
       mistakesByMode: {},
-      mistakesByFile: {},
+      mistakesByTopic: {},
     };
   }
 
   let totalMistakes = 0;
   let mostMistakenWord: { word: string; count: number } | null = null;
   const mistakesByMode: Record<string, number> = {};
-  const mistakesByFile: Record<string, number> = {};
+  const mistakesByTopic: Record<string, number> = {};
 
   processedMistakes.forEach((mistake) => {
     totalMistakes += mistake.totalMistakes;
@@ -105,9 +108,9 @@ export const calculateOverviewStats = (processedMistakes: ProcessedMistake[]): O
       mistakesByMode[mode] = (mistakesByMode[mode] || 0) + count;
     });
 
-    // Track mistakes by file
-    mistakesByFile[mistake.fileName] = 
-      (mistakesByFile[mistake.fileName] || 0) + mistake.totalMistakes;
+    // Track mistakes by topic
+    mistakesByTopic[mistake.topicId] =
+      (mistakesByTopic[mistake.topicId] || 0) + mistake.totalMistakes;
 
     // Track most mistaken word
     if (!mostMistakenWord || mistake.totalMistakes > mostMistakenWord.count) {
@@ -123,7 +126,7 @@ export const calculateOverviewStats = (processedMistakes: ProcessedMistake[]): O
     totalMistakes,
     mostMistakenWord,
     mistakesByMode,
-    mistakesByFile,
+    mistakesByTopic,
   };
 };
 
@@ -204,7 +207,7 @@ export const groupMistakesByMode = (
     // Remove duplicates (same word can appear in multiple modes)
     const uniqueMistakes = new Map<string, ProcessedMistake>();
     mistakes.forEach((mistake) => {
-      const key = `${mistake.fileName}:${mistake.word}`;
+      const key = `${mistake.topicId}:${mistake.word}`;
       if (!uniqueMistakes.has(key)) {
         uniqueMistakes.set(key, mistake);
       }
@@ -230,26 +233,26 @@ export const groupMistakesByMode = (
 };
 
 /**
- * Group mistakes by file name
+ * Group mistakes by topic
  */
-export const groupMistakesByFile = (
+export const groupMistakesByTopic = (
   processedMistakes: ProcessedMistake[]
-): MistakesByFile[] => {
-  const fileMap = new Map<string, ProcessedMistake[]>();
+): MistakesByTopic[] => {
+  const topicMap = new Map<string, ProcessedMistake[]>();
 
-  // Group mistakes by file
+  // Group mistakes by topic
   processedMistakes.forEach((mistake) => {
-    if (!fileMap.has(mistake.fileName)) {
-      fileMap.set(mistake.fileName, []);
+    if (!topicMap.has(mistake.topicId)) {
+      topicMap.set(mistake.topicId, []);
     }
-    fileMap.get(mistake.fileName)!.push(mistake);
+    topicMap.get(mistake.topicId)!.push(mistake);
   });
 
   // Convert to array and calculate stats
-  const result: MistakesByFile[] = Array.from(fileMap.entries()).map(([fileName, mistakes]) => {
+  const result: MistakesByTopic[] = Array.from(topicMap.entries()).map(([topicId, mistakes]) => {
     const totalMistakes = mistakes.reduce((sum, m) => sum + m.totalMistakes, 0);
     
-    // Calculate mistakes by mode for this file
+    // Calculate mistakes by mode for this topic
     const mistakesByMode: Record<string, number> = {};
     mistakes.forEach((mistake) => {
       Object.entries(mistake.mistakesByMode).forEach(([mode, count]) => {
@@ -258,7 +261,8 @@ export const groupMistakesByFile = (
     });
 
     return {
-      fileName,
+      topicId,
+      topicLabel: mistakes[0]?.topicLabel || topicId,
       mistakes,
       totalMistakes,
       totalWords: mistakes.length,

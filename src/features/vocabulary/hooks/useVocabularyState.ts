@@ -1,16 +1,15 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { VocabItem, FolderNode, FileLeaf, SnackState } from '../types';
+import type { VocabItem, FolderNode, TopicItem, SnackState } from '../types';
 import { getDefaultTree } from '../constants/seedData';
 import { TreeIndex } from '../utils/treeIndex';
 import {
-  saveVocabFile,
-  loadVocabFile,
-  deleteVocabFile,
-  loadVocabCounts,
+  saveVocabularyTopic,
+  deleteVocabularyTopic,
+  loadVocabularyTopicCounts,
   saveTreeToStorage,
   loadTreeFromStorage,
-  syncAllVocabCounts,
+  syncAllVocabularyTopicCounts,
 } from '../utils/storageUtils';
 
 // ===== Helper: localStorage for viewMode =====
@@ -42,7 +41,7 @@ export interface VocabularyState {
   
   // Selection
   selectedPath: string[] | null;
-  selectedFile: FileLeaf | null;
+  selectedTopic: TopicItem | null;
   
   // View state
   viewMode: 'tree' | 'grid';
@@ -88,6 +87,7 @@ export function useVocabularyState(): UseVocabularyStateReturn {
   
   // Core data state
   const [vocabMap, setVocabMap] = useState<Record<string, VocabItem[]>>({});
+  const vocabMapRef = useRef(vocabMap);
   
   const [tree, setTree] = useState<FolderNode>(() => {
     const stored = loadTreeFromStorage();
@@ -98,10 +98,12 @@ export function useVocabularyState(): UseVocabularyStateReturn {
     saveTreeToStorage(defaultTree);
     return defaultTree;
   });
+  const treeRef = useRef(tree);
+  treeRef.current = tree;
   
   // Sync vocab counts on mount
   useEffect(() => {
-    syncAllVocabCounts();
+    syncAllVocabularyTopicCounts();
   }, []);
 
   // Path index cache for O(1) node lookups
@@ -111,16 +113,16 @@ export function useVocabularyState(): UseVocabularyStateReturn {
   
   // Load vocab counts from storage
   const [vocabCountMap, setVocabCountMap] = useState<Record<string, number>>(() => {
-    return loadVocabCounts();
+    return loadVocabularyTopicCounts();
   });
   
   // Selection state
   const [selectedPath, setSelectedPath] = useState<string[] | null>(null);
   
-  const selectedFile = useMemo(() => {
+  const selectedTopic = useMemo(() => {
     if (!selectedPath) return null;
     const located = treeIndex.findByPath(selectedPath);
-    return located?.node.kind === 'file' ? located.node : null;
+    return located?.node.kind === 'topic' ? located.node : null;
   }, [selectedPath, treeIndex]);
   
   // View state
@@ -150,7 +152,6 @@ export function useVocabularyState(): UseVocabularyStateReturn {
   }, [tree.id]);
 
   // Sync counts from vocabMap when it changes
-  const vocabMapRef = useRef(vocabMap);
   vocabMapRef.current = vocabMap;
   
   useEffect(() => {
@@ -160,11 +161,11 @@ export function useVocabularyState(): UseVocabularyStateReturn {
         let hasChanges = false;
         
         const currentMap = vocabMapRef.current;
-        for (const fileName in currentMap) {
-          if (currentMap.hasOwnProperty(fileName)) {
-            const newCount = currentMap[fileName]?.length || 0;
-            if (updated[fileName] !== newCount) {
-              updated[fileName] = newCount;
+        for (const topicId in currentMap) {
+          if (currentMap.hasOwnProperty(topicId)) {
+            const newCount = currentMap[topicId]?.length || 0;
+            if (updated[topicId] !== newCount) {
+              updated[topicId] = newCount;
               hasChanges = true;
             }
           }
@@ -179,58 +180,68 @@ export function useVocabularyState(): UseVocabularyStateReturn {
 
   // Helper to update vocabMap and save to localStorage
   const updateVocabMap = useCallback((updater: (prev: Record<string, VocabItem[]>) => Record<string, VocabItem[]>) => {
-    setVocabMap((prev) => {
-      const next = updater(prev);
-      
-      const changedFiles = new Set<string>();
-      
-      for (const fileName in next) {
-        if (next.hasOwnProperty(fileName)) {
-          const prevVocab = prev[fileName];
-          const nextVocab = next[fileName];
-          
-          if (!prevVocab || JSON.stringify(prevVocab) !== JSON.stringify(nextVocab)) {
-            changedFiles.add(fileName);
-          }
+    const prev = vocabMapRef.current;
+    const next = updater(prev);
+    if (next === prev) return;
+
+    const changedTopicIds = new Set<string>();
+    const deletedTopicIds = new Set<string>();
+
+    for (const topicId in next) {
+      if (Object.prototype.hasOwnProperty.call(next, topicId)) {
+        if (prev[topicId] !== next[topicId]) {
+          changedTopicIds.add(topicId);
         }
       }
-      
-      for (const fileName in prev) {
-        if (prev.hasOwnProperty(fileName) && !next[fileName]) {
-          deleteVocabFile(fileName);
-        }
+    }
+
+    for (const topicId in prev) {
+      if (
+        Object.prototype.hasOwnProperty.call(prev, topicId) &&
+        !Object.prototype.hasOwnProperty.call(next, topicId)
+      ) {
+        deletedTopicIds.add(topicId);
       }
-      
-      Array.from(changedFiles).forEach((fileName) => {
-        saveVocabFile(fileName, next[fileName]);
+    }
+
+    deletedTopicIds.forEach(deleteVocabularyTopic);
+    changedTopicIds.forEach((topicId) => {
+      saveVocabularyTopic(topicId, next[topicId]);
+    });
+
+    vocabMapRef.current = next;
+    setVocabMap(next);
+    setVocabCountMap((prevCounts) => {
+      const updated = { ...prevCounts };
+      let hasChanges = false;
+
+      deletedTopicIds.forEach((topicId) => {
+        if (Object.prototype.hasOwnProperty.call(updated, topicId)) {
+          delete updated[topicId];
+          hasChanges = true;
+        }
       });
-      
-      setVocabCountMap((prevCounts) => {
-        const updated = { ...prevCounts };
-        let hasChanges = false;
-        
-        Array.from(changedFiles).forEach((fileName) => {
-          const newCount = next[fileName]?.length || 0;
-          if (updated[fileName] !== newCount) {
-            updated[fileName] = newCount;
-            hasChanges = true;
-          }
-        });
-        
-        return hasChanges ? updated : prevCounts;
+
+      changedTopicIds.forEach((topicId) => {
+        const newCount = next[topicId]?.length || 0;
+        if (updated[topicId] !== newCount) {
+          updated[topicId] = newCount;
+          hasChanges = true;
+        }
       });
-      
-      return next;
+
+      return hasChanges ? updated : prevCounts;
     });
   }, []);
   
   // Helper to update tree and save to localStorage
   const updateTree = useCallback((updater: (prev: FolderNode) => FolderNode) => {
-    setTree((prev) => {
-      const next = updater(prev);
-      saveTreeToStorage(next);
-      return next;
-    });
+    const prev = treeRef.current;
+    const next = updater(prev);
+    if (next === prev) return;
+    saveTreeToStorage(next);
+    treeRef.current = next;
+    setTree(next);
   }, []);
 
   const showSnack = useCallback((msg: string, sev: 'success' | 'info' | 'warning' | 'error' = 'success') => {
@@ -244,7 +255,7 @@ export function useVocabularyState(): UseVocabularyStateReturn {
       vocabCountMap,
       treeIndex,
       selectedPath,
-      selectedFile,
+      selectedTopic,
       viewMode,
       mobileViewMode,
       openFolders,

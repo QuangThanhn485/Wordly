@@ -8,7 +8,7 @@
   "stats": {
     "totalWords": "Tổng số từ",
     "learning": "Đang học",
-    "files": "File từ vựng",
+    "topics": "Chủ đề từ vựng",
     "created": "Đã tạo",
     "wordsToReview": "Từ cần ôn",
     "mistakeAtLeastOnce": "Từ sai ít nhất 1 lần",
@@ -39,7 +39,7 @@
     "title": "Tính năng nổi bật",
     "vocabManagement": {
       "title": "Quản lý từ vựng",
-      "description": "Tổ chức từ vựng theo folder, import/export dễ dàng"
+      "description": "Tổ chức từ vựng theo thư mục và chủ đề, nhập/xuất dễ dàng"
     },
     "progressTracking": {
       "title": "Theo dõi tiến độ",

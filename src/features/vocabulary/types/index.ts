@@ -6,21 +6,21 @@ export type VocabItem = {
   pronunciation: string;
 };
 
-export type FileLeaf = { 
-  kind: 'file'; 
-  name: string; 
-  id: string 
+export type TopicItem = {
+  kind: 'topic';
+  label: string;
+  id: string;
 };
 
 export type FolderNode = { 
   kind: 'folder'; 
   label: string; 
   id: string; 
-  children: Array<FolderNode | FileLeaf> 
+  children: Array<FolderNode | TopicItem>;
 };
 
 export type MenuState = {
-  type: 'folder' | 'file';
+  type: 'folder' | 'topic';
   path: string[];
   mouseX: number;
   mouseY: number;
@@ -28,7 +28,7 @@ export type MenuState = {
 
 export type ClipboardState = {
   mode: 'cut' | 'copy';
-  node: FolderNode | FileLeaf;
+  node: FolderNode | TopicItem;
 } | null;
 
 export type SnackState = {

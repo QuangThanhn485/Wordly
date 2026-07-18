@@ -21,7 +21,7 @@ import { alpha } from '@mui/material/styles';
 import { List as ListIcon, X, Volume2, MoreVertical, Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { speakEnglish } from '@/utils/speechUtils';
-import { removeFileExtension } from '@/utils/fileUtils';
+import { getTopicLabel } from '@/features/vocabulary/utils/storageUtils';
 import { VocabDetailPanel } from '@/features/vocabulary/components/VocabDetailPanel';
 
 interface VocabularyItem {
@@ -31,12 +31,12 @@ interface VocabularyItem {
 
 interface VocabularyQuickViewProps {
   vocabularyList: VocabularyItem[];
-  currentFileName?: string | null;
+  currentTopicId?: string | null;
 }
 
 export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
   vocabularyList,
-  currentFileName,
+  currentTopicId,
 }) => {
   const [open, setOpen] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<{ anchorEl: HTMLElement; item: VocabularyItem } | null>(null);
@@ -139,9 +139,9 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
               <Typography variant="h6" fontWeight={600}>
                 {t('quickView.title')}
               </Typography>
-              {currentFileName && (
+              {currentTopicId && (
                 <Typography variant="caption" color="text.secondary">
-                  {removeFileExtension(currentFileName)}
+                  {getTopicLabel(currentTopicId)}
                 </Typography>
               )}
             </Box>

@@ -124,7 +124,7 @@
   "errors": {
     "noWords": "Không có từ để luyện tập",
     "loadFailed": "Không thể tải từ vựng",
-    "selectFile": "Vui lòng chọn file từ vựng trước"
+    "selectTopic": "Vui lòng chọn chủ đề từ vựng trước"
   },
   "quickView": {
     "title": "Danh sách từ vựng",

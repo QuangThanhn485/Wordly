@@ -2,21 +2,21 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 
-interface NewFileDialogProps {
+interface NewTopicDialogProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: (fileName: string) => void;
+  onConfirm: (topicLabel: string) => void;
 }
 
-export const NewFileDialog: React.FC<NewFileDialogProps> = React.memo(({ open, onClose, onConfirm }) => {
+export const NewTopicDialog: React.FC<NewTopicDialogProps> = React.memo(({ open, onClose, onConfirm }) => {
   const { t } = useTranslation('vocabulary');
-  const [fileName, setFileName] = React.useState('');
+  const [topicLabel, setTopicLabel] = React.useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Reset và focus khi mở dialog
   React.useEffect(() => {
     if (open) {
-      setFileName('');
+      setTopicLabel('');
       // Focus sau khi dialog animation hoàn thành
       const timer = setTimeout(() => {
         inputRef.current?.focus();
@@ -26,37 +26,37 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = React.memo(({ open, o
   }, [open]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFileName(e.target.value);
+    setTopicLabel(e.target.value);
   }, []);
 
   const handleConfirm = useCallback(() => {
-    const trimmed = fileName.trim();
+    const trimmed = topicLabel.trim();
     if (trimmed) {
       onConfirm(trimmed); // Truyền giá trị trực tiếp - không race condition!
     }
-  }, [fileName, onConfirm]);
+  }, [topicLabel, onConfirm]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && fileName.trim()) {
+    if (e.key === 'Enter' && topicLabel.trim()) {
       handleConfirm();
     }
-  }, [fileName, handleConfirm]);
+  }, [topicLabel, handleConfirm]);
 
-  const isDisabled = useMemo(() => !fileName.trim(), [fileName]);
+  const isDisabled = useMemo(() => !topicLabel.trim(), [topicLabel]);
   
   return (
     <Dialog open={open} onClose={onClose}>
-      <DialogTitle>{t('dialogs.newFile.title')}</DialogTitle>
+      <DialogTitle>{t('dialogs.newTopic.title')}</DialogTitle>
       <DialogContent>
         <TextField
           inputRef={inputRef}
           fullWidth
           margin="dense"
-          label={t('dialogs.newFile.label')}
-          value={fileName}
+          label={t('dialogs.newTopic.label')}
+          value={topicLabel}
           onChange={handleChange}
-          placeholder={t('dialogs.newFile.placeholder')}
-          helperText={t('dialogs.newFile.helper')}
+          placeholder={t('dialogs.newTopic.placeholder')}
+          helperText={t('dialogs.newTopic.helper')}
           onKeyDown={handleKeyDown}
         />
       </DialogContent>
@@ -70,4 +70,4 @@ export const NewFileDialog: React.FC<NewFileDialogProps> = React.memo(({ open, o
   );
 });
 
-NewFileDialog.displayName = 'NewFileDialog';
+NewTopicDialog.displayName = 'NewTopicDialog';

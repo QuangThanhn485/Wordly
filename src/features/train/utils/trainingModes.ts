@@ -48,16 +48,16 @@ export function hasNextTrainingMode(currentMode: TrainingMode): boolean {
 }
 
 /**
- * Build the URL for a training mode with optional file parameter
+ * Build the URL for a training mode with an optional topic ID.
  * @param mode - The training mode
- * @param fileName - Optional file name to include in the URL
+ * @param topicId - Optional vocabulary topic ID to include in the URL
  * @returns The complete URL path
  */
-export function getTrainingModeUrl(mode: TrainingMode, fileName?: string): string {
+export function getTrainingModeUrl(mode: TrainingMode, topicId?: string): string {
   const basePath = `/train/${mode}`;
   
-  if (fileName) {
-    return `${basePath}?file=${encodeURIComponent(fileName)}`;
+  if (topicId) {
+    return `${basePath}?topic=${encodeURIComponent(topicId)}`;
   }
   
   return basePath;

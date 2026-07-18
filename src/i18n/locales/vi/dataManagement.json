@@ -1,7 +1,7 @@
 {
   "title": "Quản lý Dữ liệu",
   "stats": {
-    "vocabFiles": "Tổng số file từ vựng",
+    "vocabTopics": "Tổng số chủ đề từ vựng",
     "vocabWords": "Tổng số từ vựng",
     "backupStatus": "Trạng thái Backup",
     "storageUsage": "Dung lượng sử dụng",
@@ -28,7 +28,7 @@
     "deleteReports": "Xóa Báo cáo Lỗi",
     "deleteReportsDescription": "Xóa báo cáo lỗi theo khoảng thời gian hoặc toàn bộ",
     "deleteVocab": "Xóa Từ vựng",
-    "deleteVocabDescription": "Xóa toàn bộ file và thư mục từ vựng",
+    "deleteVocabDescription": "Xóa toàn bộ chủ đề và thư mục từ vựng",
     "deleteAll": "Xóa Toàn bộ Dữ liệu",
     "deleteAllDescription": "Xóa tất cả dữ liệu",
     "keepBackupNote": "Backup data và timestamp sẽ được giữ lại"
@@ -70,7 +70,7 @@
     "deleteVocabCancel": "Hủy",
     "deleteAllTitle": "Xác nhận Xóa Toàn bộ Dữ liệu",
     "deleteAllWarning": "Cảnh báo nguy hiểm!",
-    "deleteAllList": "Hành động này sẽ xóa: tất cả file từ vựng, tất cả báo cáo lỗi, tất cả session training, toàn bộ cấu trúc thư mục.",
+    "deleteAllList": "Hành động này sẽ xóa: tất cả chủ đề từ vựng, tất cả báo cáo lỗi, tất cả phiên luyện tập và toàn bộ cấu trúc thư mục.",
     "deleteAllChecked": "Backup đã được kiểm tra và không thay đổi sau backup. Có thể khôi phục sau khi xóa.",
     "deleteAllCta": "Xóa Toàn bộ",
     "deleteAllCancel": "Hủy",
@@ -99,7 +99,7 @@
     "deleteReportsSuccess": "Đã xóa toàn bộ báo cáo lỗi.",
     "deleteReportsRangeSuccess": "Đã xóa {{count}} báo cáo lỗi trong khoảng thời gian đã chọn.",
     "deleteReportsError": "Lỗi xóa: {{error}}",
-    "deleteVocabSuccess": "Đã xóa {{count}} file từ vựng và cấu trúc thư mục.",
+    "deleteVocabSuccess": "Đã xóa {{count}} chủ đề từ vựng và cấu trúc thư mục.",
     "deleteVocabError": "Lỗi xóa: {{error}}",
     "deleteAllSuccess": "Đã xóa {{count}} mục dữ liệu. Backup timestamp vẫn được giữ lại.",
     "deleteAllError": "Lỗi xóa: {{error}}",

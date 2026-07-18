@@ -1,70 +1,128 @@
-// src/features/train/train-start/mistakesStorage.ts
-// Storage utilities for tracking mistakes statistics (cumulative)
+import {
+  getTopicLabel,
+  normalizeLegacyTopicLabel,
+  resolveTopicId,
+} from '@/features/vocabulary/utils/storageUtils';
 
 const STORAGE_KEY_MISTAKES_STATS = 'wordly_mistakes_stats';
 
 export type MistakeRecord = {
-  word: string; // English word
-  viMeaning: string; // Vietnamese meaning
-  fileName: string; // File containing the word
-  trainingMode: string; // Training mode (e.g., 'flashcards-reading', 'flashcards-listening')
-  mistakeCount: number; // Cumulative mistake count for this word in this mode
-  lastMistakeTime: number; // Timestamp of last mistake
+  word: string;
+  viMeaning: string;
+  topicId: string;
+  topicLabel: string;
+  trainingMode: string;
+  mistakeCount: number;
+  lastMistakeTime: number;
 };
 
-export type MistakesStats = Record<string, MistakeRecord>; // key: `${fileName}:${word}:${trainingMode}`
+export type MistakesStats = Record<string, MistakeRecord>;
 
-/**
- * Get mistake statistics from localStorage
- */
+type LegacyMistakeRecord = Partial<MistakeRecord> & {
+  fileName?: string;
+};
+
 export const loadMistakesStats = (): MistakesStats => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY_MISTAKES_STATS);
-    return stored ? JSON.parse(stored) : {};
-  } catch (err) {
-    console.error('Failed to load mistakes stats:', err);
+    if (!stored) return {};
+    const rawStats = JSON.parse(stored) as Record<string, LegacyMistakeRecord>;
+    const normalized: MistakesStats = {};
+    let changed = false;
+
+    Object.values(rawStats).forEach((record) => {
+      if (
+        !record ||
+        typeof record.word !== 'string' ||
+        typeof record.trainingMode !== 'string'
+      ) {
+        changed = true;
+        return;
+      }
+
+      const legacyReference = record.topicId || record.fileName;
+      const topicId = resolveTopicId(legacyReference) || legacyReference;
+      if (!topicId) {
+        changed = true;
+        return;
+      }
+
+      const currentTopicLabel = getTopicLabel(topicId);
+      const topicLabel =
+        currentTopicLabel ||
+        record.topicLabel ||
+        normalizeLegacyTopicLabel(legacyReference);
+      const normalizedRecord: MistakeRecord = {
+        word: record.word,
+        viMeaning: record.viMeaning || '',
+        topicId,
+        topicLabel,
+        trainingMode: record.trainingMode,
+        mistakeCount:
+          typeof record.mistakeCount === 'number' ? record.mistakeCount : 0,
+        lastMistakeTime:
+          typeof record.lastMistakeTime === 'number'
+            ? record.lastMistakeTime
+            : Date.now(),
+      };
+      const key = `${topicId}:${record.word}:${record.trainingMode}`;
+      const existing = normalized[key];
+      if (existing) {
+        existing.mistakeCount += normalizedRecord.mistakeCount;
+        existing.lastMistakeTime = Math.max(
+          existing.lastMistakeTime,
+          normalizedRecord.lastMistakeTime,
+        );
+      } else {
+        normalized[key] = normalizedRecord;
+      }
+      if (
+        record.fileName ||
+        record.topicId !== topicId ||
+        record.topicLabel !== topicLabel
+      ) {
+        changed = true;
+      }
+    });
+
+    if (changed) saveMistakesStats(normalized);
+    return normalized;
+  } catch (error) {
+    console.error('Failed to load mistake statistics:', error);
     return {};
   }
 };
 
-/**
- * Save mistake statistics to localStorage
- */
 export const saveMistakesStats = (stats: MistakesStats): void => {
   try {
     localStorage.setItem(STORAGE_KEY_MISTAKES_STATS, JSON.stringify(stats));
-  } catch (err) {
-    console.error('Failed to save mistakes stats:', err);
+  } catch (error) {
+    console.error('Failed to save mistake statistics:', error);
   }
 };
 
-/**
- * Record mistakes from a training session
- * @param mistakes List of mistakes with word info and count for current session
- * @param fileName File name being trained
- * @param trainingMode Training mode identifier
- */
 export const recordMistakes = (
   mistakes: Array<{ word: string; viMeaning: string; count: number }>,
-  fileName: string,
-  trainingMode: string
+  topicId: string,
+  trainingMode: string,
 ): void => {
   const stats = loadMistakesStats();
+  const topicLabel = getTopicLabel(topicId) || topicId;
 
   mistakes.forEach(({ word, viMeaning, count }) => {
-    const key = `${fileName}:${word}:${trainingMode}`;
+    const key = `${topicId}:${word}:${trainingMode}`;
     const existing = stats[key];
 
     if (existing) {
-      // Update existing record (cumulative)
       existing.mistakeCount += count;
       existing.lastMistakeTime = Date.now();
+      existing.topicLabel = topicLabel;
     } else {
-      // Create new record
       stats[key] = {
         word,
         viMeaning,
-        fileName,
+        topicId,
+        topicLabel,
         trainingMode,
         mistakeCount: count,
         lastMistakeTime: Date.now(),
@@ -75,15 +133,11 @@ export const recordMistakes = (
   saveMistakesStats(stats);
 };
 
-/**
- * Get mistake statistics for a specific word in a specific file and mode
- */
 export const getWordMistakeStats = (
-  fileName: string,
+  topicId: string,
   word: string,
-  trainingMode: string
+  trainingMode: string,
 ): MistakeRecord | null => {
   const stats = loadMistakesStats();
-  const key = `${fileName}:${word}:${trainingMode}`;
-  return stats[key] || null;
+  return stats[`${topicId}:${word}:${trainingMode}`] || null;
 };

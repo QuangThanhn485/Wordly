@@ -1,4 +1,4 @@
-// src/features/result/components/MistakeGroupByFile.tsx
+// src/features/result/components/MistakeGroupByTopic.tsx
 import React from 'react';
 import {
   Box,
@@ -9,19 +9,20 @@ import {
   Button,
 } from '@mui/material';
 import { MistakeCard } from './MistakeCard';
-import { type MistakesByFile } from '../utils/dataTransform';
+import { type MistakesByTopic } from '../utils/dataTransform';
 import { getTrainingModeLabel } from '../utils/dataTransform';
 import { Folder } from 'lucide-react';
-import { getDisplayFileName } from '@/utils/fileUtils';
 import { useNavigate } from 'react-router-dom';
 import { saveTrainingSession as saveReadingSession } from '@/features/train/train-start/sessionStorage';
 import { saveTrainingSession as saveListeningSession } from '@/features/train/train-listen/sessionStorage';
 import { saveTrainingSession as saveReadWriteSession } from '@/features/train/train-read-write/sessionStorage';
 import { saveTrainingSession as saveListenWriteSession } from '@/features/train/train-listen-write/sessionStorage';
 import { useTranslation } from 'react-i18next';
+import { saveTrainingVocabularySet } from '@/features/vocabulary/utils/storageUtils';
+import { createTrainingSearchParams } from '@/features/train/utils/topicSession';
 
-interface MistakeGroupByFileProps {
-  group: MistakesByFile;
+interface MistakeGroupByTopicProps {
+  group: MistakesByTopic;
 }
 
 const TOP_MISTAKE_RATIO = 0.4;
@@ -36,22 +37,9 @@ const hashString = (value: string): string => {
   return Math.abs(hash).toString(36);
 };
 
-const buildTrainingFileName = (fileName: string): string => {
-  const base = getDisplayFileName(fileName);
-  const sanitizedBase = base
-    .replace(/[^\w-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .toLowerCase();
-  const safeBase = sanitizedBase || 'vocab';
-  const suffix = hashString(fileName);
-  return `${TOP_MISTAKE_PREFIX}${safeBase}-${suffix}.txt`;
-};
-
-export const MistakeGroupByFile: React.FC<MistakeGroupByFileProps> = ({ group }) => {
+export const MistakeGroupByTopic: React.FC<MistakeGroupByTopicProps> = ({ group }) => {
   const theme = useTheme();
   const { t } = useTranslation('result');
-  const displayFileName = getDisplayFileName(group.fileName);
   const navigate = useNavigate();
 
   const topCount = Math.max(1, Math.ceil(group.mistakes.length * TOP_MISTAKE_RATIO));
@@ -61,7 +49,8 @@ export const MistakeGroupByFile: React.FC<MistakeGroupByFileProps> = ({ group })
   const handleTrainTopMistakes = () => {
     if (!group.mistakes.length) return;
 
-    const trainingFileName = buildTrainingFileName(group.fileName);
+    const trainingTopicId = `${TOP_MISTAKE_PREFIX}${hashString(group.topicId)}`;
+    const trainingTopicLabel = `${group.topicLabel} - ${t('group.topMistakesLabel')}`;
     const trainingSource = 'top-mistakes';
 
     const topMistakes = [...group.mistakes]
@@ -78,12 +67,13 @@ export const MistakeGroupByFile: React.FC<MistakeGroupByFileProps> = ({ group })
       pronunciation: '',
     }));
 
-    localStorage.setItem(`wordly_vocab_file:${trainingFileName}`, JSON.stringify(vocabItems));
+    saveTrainingVocabularySet(trainingTopicId, vocabItems);
 
-    // Prime training sessions for all modes so the top-mistake file is used consistently
     const baseSession = {
-      fileName: trainingFileName,
-      sourceFileName: group.fileName,
+      topicId: trainingTopicId,
+      topicLabel: trainingTopicLabel,
+      sourceTopicId: group.topicId,
+      sourceTopicLabel: group.topicLabel,
       trainingSource,
       timestamp: Date.now(),
     };
@@ -126,11 +116,7 @@ export const MistakeGroupByFile: React.FC<MistakeGroupByFileProps> = ({ group })
       hasStarted: false,
     });
 
-    const params = new URLSearchParams();
-    params.set('file', trainingFileName);
-    params.set('sourceFile', group.fileName);
-    params.set('trainingSource', trainingSource);
-
+    const params = createTrainingSearchParams(baseSession);
     navigate(`/train/flashcards-reading?${params.toString()}`);
   };
 
@@ -172,7 +158,7 @@ export const MistakeGroupByFile: React.FC<MistakeGroupByFileProps> = ({ group })
                   wordBreak: 'break-word',
                 }}
               >
-                {displayFileName}
+                {group.topicLabel}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {t('group.summary', { words: group.totalWords, mistakes: group.totalMistakes })}
@@ -205,7 +191,7 @@ export const MistakeGroupByFile: React.FC<MistakeGroupByFileProps> = ({ group })
           </Box>
         </Box>
 
-        {/* Training modes in this file */}
+        {/* Training modes in this topic */}
         {Object.keys(group.mistakesByMode).length > 0 && (
           <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
@@ -241,7 +227,7 @@ export const MistakeGroupByFile: React.FC<MistakeGroupByFileProps> = ({ group })
       >
         {group.mistakes.map((mistake, index) => (
           <Box
-            key={`${mistake.fileName}:${mistake.word}:${index}`}
+            key={`${mistake.topicId}:${mistake.word}:${index}`}
           >
             <MistakeCard mistake={mistake} />
           </Box>

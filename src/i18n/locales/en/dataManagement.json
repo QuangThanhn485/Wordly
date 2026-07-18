@@ -1,7 +1,7 @@
 {
   "title": "Data Management",
   "stats": {
-    "vocabFiles": "Total vocabulary files",
+    "vocabTopics": "Total vocabulary topics",
     "vocabWords": "Total vocabulary words",
     "backupStatus": "Backup status",
     "storageUsage": "Storage usage",
@@ -28,7 +28,7 @@
     "deleteReports": "Delete Reports",
     "deleteReportsDescription": "Delete error reports by time range or all",
     "deleteVocab": "Delete Vocabulary",
-    "deleteVocabDescription": "Delete all vocabulary files and folder structure",
+    "deleteVocabDescription": "Delete all vocabulary topics and folder structure",
     "deleteAll": "Delete All Data",
     "deleteAllDescription": "Delete all data sets",
     "keepBackupNote": "Backup data and timestamp will be kept"
@@ -70,7 +70,7 @@
     "deleteVocabCancel": "Cancel",
     "deleteAllTitle": "Confirm Delete All Data",
     "deleteAllWarning": "Danger warning!",
-    "deleteAllList": "This will delete: all vocabulary files, all error reports, all training sessions, all folder structures.",
+    "deleteAllList": "This will delete all vocabulary topics, error reports, training sessions, and folder structures.",
     "deleteAllChecked": "Backup verified and unchanged after backup. Safe to restore later.",
     "deleteAllCta": "Delete All",
     "deleteAllCancel": "Cancel",
@@ -99,7 +99,7 @@
     "deleteReportsSuccess": "Deleted all error reports.",
     "deleteReportsRangeSuccess": "Deleted {{count}} error reports in the selected range.",
     "deleteReportsError": "Delete failed: {{error}}",
-    "deleteVocabSuccess": "Deleted {{count}} vocabulary files and folder structure.",
+    "deleteVocabSuccess": "Deleted {{count}} vocabulary topics and folder structure.",
     "deleteVocabError": "Delete failed: {{error}}",
     "deleteAllSuccess": "Deleted {{count}} data items. Backup timestamps kept.",
     "deleteAllError": "Delete failed: {{error}}",

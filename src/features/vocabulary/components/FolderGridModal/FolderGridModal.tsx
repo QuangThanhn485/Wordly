@@ -10,7 +10,7 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import { X as CloseIcon, FolderOpen as FolderOpenIcon } from 'lucide-react';
-import type { FolderNode, FileLeaf } from '../../types';
+import type { FolderNode, TopicItem } from '../../types';
 import { FolderGridView } from '../FolderGrid/FolderGridView';
 import { BreadcrumbNav, type BreadcrumbItem } from '../FolderGrid/Breadcrumb';
 import { useTranslation } from 'react-i18next';
@@ -21,13 +21,13 @@ interface FolderGridModalProps {
   onClose: () => void;
   currentFolder: FolderNode;
   breadcrumbPath: BreadcrumbItem[];
-  selectedFileName: string | null;
+  selectedTopicId: string | null;
   onFolderClick: (folder: FolderNode) => void;
-  onFileClick: (file: FileLeaf) => void;
+  onTopicClick: (topic: TopicItem) => void;
   onBreadcrumbNavigate: (folderId: string) => void;
-  onContextMenu: (item: FolderNode | FileLeaf, e: React.MouseEvent) => void;
+  onContextMenu: (item: FolderNode | TopicItem, e: React.MouseEvent) => void;
   onEmptySpaceContextMenu: (e: React.MouseEvent) => void;
-  vocabCountMap?: Record<string, number>; // fileName -> count
+  vocabCountMap?: Record<string, number>; // topicId -> count
 }
 
 // ===== Component =====
@@ -36,9 +36,9 @@ export const FolderGridModal: React.FC<FolderGridModalProps> = ({
   onClose,
   currentFolder,
   breadcrumbPath,
-  selectedFileName,
+  selectedTopicId,
   onFolderClick,
-  onFileClick,
+  onTopicClick,
   onBreadcrumbNavigate,
   onContextMenu,
   onEmptySpaceContextMenu,
@@ -101,9 +101,9 @@ export const FolderGridModal: React.FC<FolderGridModalProps> = ({
           <FolderGridView
             items={currentFolder.children}
             onFolderClick={onFolderClick}
-            onFileClick={onFileClick}
+            onTopicClick={onTopicClick}
             onContext={onContextMenu}
-            selectedFileName={selectedFileName}
+            selectedTopicId={selectedTopicId}
             vocabCountMap={vocabCountMap}
             onEmptySpaceContextMenu={handleEmptySpaceContextMenu}
           />

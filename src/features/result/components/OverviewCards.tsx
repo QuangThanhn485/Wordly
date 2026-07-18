@@ -37,8 +37,8 @@ export const OverviewCards: React.FC<OverviewCardsProps> = ({ stats }) => {
       bgColor: theme.palette.info.light + '20',
     },
     {
-      title: t('card.file'),
-      value: Object.keys(stats.mistakesByFile).length,
+      title: t('card.topic'),
+      value: Object.keys(stats.mistakesByTopic).length,
       icon: <BarChart3 size={24} />,
       color: theme.palette.success.main,
       bgColor: theme.palette.success.light + '20',

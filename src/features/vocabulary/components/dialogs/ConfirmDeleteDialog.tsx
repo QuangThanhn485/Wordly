@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 interface ConfirmDeleteDialogProps {
   open: boolean;
-  type: 'folder' | 'file' | 'vocab';
+  type: 'folder' | 'topic' | 'vocab';
   label: string;
   count?: number; // For vocab: number of words to delete
   onClose: () => void;

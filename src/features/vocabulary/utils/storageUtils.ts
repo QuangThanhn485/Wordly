@@ -1,311 +1,607 @@
-import type { VocabItem, FolderNode } from '../types';
+import type { FolderNode, TopicItem, VocabItem } from '../types';
 
-// ===== LocalStorage Keys =====
-const STORAGE_KEY_VOCAB_OLD = 'wordly_vocab_map'; // Old format - for migration
-const STORAGE_KEY_VOCAB_PREFIX = 'wordly_vocab_file:'; // New format prefix
-const STORAGE_KEY_VOCAB_INDEX = 'wordly_vocab_index'; // Index of all file names
-const STORAGE_KEY_VOCAB_COUNTS = 'wordly_vocab_counts'; // Counts map: { "file1.txt": 10, ... }
-const STORAGE_KEY_TREE = 'wordly_tree';
+export const VOCAB_TOPIC_STORAGE_PREFIX = 'wordly_vocab_topic:';
+export const VOCAB_TOPIC_INDEX_KEY = 'wordly_vocab_topic_index';
+export const VOCAB_TOPIC_COUNTS_KEY = 'wordly_vocab_topic_counts';
+export const VOCAB_TREE_STORAGE_KEY = 'wordly_tree';
 
-// ===== Migration =====
-/**
- * Migrate from old single-key format to new per-file format
- * This is a one-time migration that runs automatically
- */
-const migrateOldVocabFormat = (): void => {
+const VOCAB_SCHEMA_VERSION_KEY = 'wordly_vocab_schema_version';
+const VOCAB_SCHEMA_VERSION = '2';
+const LEGACY_VOCAB_MAP_KEY = 'wordly_vocab_map';
+const LEGACY_VOCAB_PREFIX = 'wordly_vocab_file:';
+const TRAINING_VOCABULARY_SET_PREFIX = 'wordly_training_topic:';
+const LEGACY_VOCAB_INDEX_KEY = 'wordly_vocab_index';
+const LEGACY_VOCAB_COUNTS_KEY = 'wordly_vocab_counts';
+const LEGACY_TRAINING_TOPIC_PREFIX = '__top_mistakes__';
+
+type UnknownRecord = Record<string, unknown>;
+type LegacyTopicReferenceMap = Record<string, string[]>;
+
+let migrationRunning = false;
+let migrationChecked = false;
+
+const parseJson = <T,>(value: string | null, fallback: T): T => {
+  if (!value) return fallback;
   try {
-    const oldData = localStorage.getItem(STORAGE_KEY_VOCAB_OLD);
-    if (!oldData) return; // No old data to migrate
-
-    const oldVocabMap: Record<string, VocabItem[]> = JSON.parse(oldData);
-    const fileNames = Object.keys(oldVocabMap);
-
-    // Check if already migrated (index exists and has files)
-    const existingIndex = localStorage.getItem(STORAGE_KEY_VOCAB_INDEX);
-    if (existingIndex && JSON.parse(existingIndex).length > 0) {
-      return; // Already migrated
-    }
-
-    console.log(`🔄 Migrating ${fileNames.length} vocab files to new storage format...`);
-
-    // Migrate each file to its own key
-    for (const fileName of fileNames) {
-      const vocab = oldVocabMap[fileName];
-      if (vocab && vocab.length > 0) {
-        const key = `${STORAGE_KEY_VOCAB_PREFIX}${fileName}`;
-        localStorage.setItem(key, JSON.stringify(vocab));
-      }
-    }
-
-    // Save index
-    localStorage.setItem(STORAGE_KEY_VOCAB_INDEX, JSON.stringify(fileNames));
-
-    // Keep old data for safety (can remove later)
-    // localStorage.removeItem(STORAGE_KEY_VOCAB_OLD);
-    console.log('✅ Migration completed');
-  } catch (err) {
-    console.error('Failed to migrate vocab storage:', err);
-  }
-};
-
-// ===== Index Management =====
-/**
- * Get all file names from index
- */
-const getVocabIndex = (): string[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_VOCAB_INDEX);
-    return stored ? JSON.parse(stored) : [];
+    return JSON.parse(value) as T;
   } catch {
-    return [];
+    return fallback;
   }
 };
 
-/**
- * Update index with new file name
- */
-const addToVocabIndex = (fileName: string): void => {
-  const index = getVocabIndex();
-  if (!index.includes(fileName)) {
-    index.push(fileName);
-    localStorage.setItem(STORAGE_KEY_VOCAB_INDEX, JSON.stringify(index));
+const isRecord = (value: unknown): value is UnknownRecord =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isVocabArray = (value: unknown): value is VocabItem[] => Array.isArray(value);
+
+const createMigrationId = (): string =>
+  `topic_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
+export const normalizeLegacyTopicLabel = (value: unknown): string => {
+  const label = typeof value === 'string' ? value.trim() : '';
+  return (label.replace(/\.txt$/i, '').trim() || 'Topic').normalize('NFC');
+};
+
+const makeUniqueLabel = (label: string, usedLabels: Set<string>): string => {
+  const base = label.trim().normalize('NFC') || 'Topic';
+  let candidate = base;
+  let suffix = 1;
+  while (usedLabels.has(candidate.toLocaleLowerCase('vi'))) {
+    candidate = `${base} (${suffix})`;
+    suffix += 1;
   }
+  usedLabels.add(candidate.toLocaleLowerCase('vi'));
+  return candidate;
 };
 
-/**
- * Remove file name from index
- */
-const removeFromVocabIndex = (fileName: string): void => {
-  const index = getVocabIndex();
-  const filtered = index.filter((name) => name !== fileName);
-  localStorage.setItem(STORAGE_KEY_VOCAB_INDEX, JSON.stringify(filtered));
-};
+const readLegacyVocabulary = (): Record<string, VocabItem[]> => {
+  const result: Record<string, VocabItem[]> = {};
+  const oldMap = parseJson<Record<string, unknown>>(
+    localStorage.getItem(LEGACY_VOCAB_MAP_KEY),
+    {},
+  );
 
-/**
- * Update index (replace entire list)
- */
-const updateVocabIndex = (fileNames: string[]): void => {
-  localStorage.setItem(STORAGE_KEY_VOCAB_INDEX, JSON.stringify(fileNames));
-};
+  Object.entries(oldMap).forEach(([reference, value]) => {
+    if (isVocabArray(value)) result[reference] = value;
+  });
 
-// ===== Per-File Vocab Storage (NEW FORMAT) =====
-/**
- * Get storage key for a specific file
- */
-const getVocabFileKey = (fileName: string): string => {
-  return `${STORAGE_KEY_VOCAB_PREFIX}${fileName}`;
-};
+  const legacyIndex = parseJson<string[]>(
+    localStorage.getItem(LEGACY_VOCAB_INDEX_KEY),
+    [],
+  );
+  const references = new Set(legacyIndex);
 
-/**
- * Load vocab for a single file (FAST - only loads one file)
- */
-export const loadVocabFile = (fileName: string): VocabItem[] | null => {
-  try {
-    const key = getVocabFileKey(fileName);
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : null;
-  } catch (err) {
-    console.error(`Failed to load vocab file "${fileName}":`, err);
-    return null;
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index);
+    if (key?.startsWith(LEGACY_VOCAB_PREFIX)) {
+      references.add(key.slice(LEGACY_VOCAB_PREFIX.length));
+    }
   }
+
+  references.forEach((reference) => {
+    const stored = parseJson<unknown>(
+      localStorage.getItem(`${LEGACY_VOCAB_PREFIX}${reference}`),
+      null,
+    );
+    if (isVocabArray(stored)) result[reference] = stored;
+  });
+
+  return result;
 };
 
-/**
- * Save vocab for a single file (FAST - only saves one file)
- * Also updates the count automatically
- */
-export const saveVocabFile = (fileName: string, vocab: VocabItem[]): void => {
-  try {
-    const key = getVocabFileKey(fileName);
-    localStorage.setItem(key, JSON.stringify(vocab));
-    addToVocabIndex(fileName);
-    
-    // Auto-update count when saving vocab
-    updateVocabCount(fileName, vocab.length);
-  } catch (err) {
-    console.error(`Failed to save vocab file "${fileName}":`, err);
-  }
-};
+const normalizeStoredTree = (
+  rawTree: unknown,
+  legacyVocabulary: Record<string, VocabItem[]>,
+): {
+  tree: FolderNode;
+  legacyReferencesByTopicId: LegacyTopicReferenceMap;
+  consumedLegacyReferences: Set<string>;
+  changed: boolean;
+} => {
+  const legacyReferencesByTopicId: LegacyTopicReferenceMap = {};
+  const consumedLegacyReferences = new Set<string>();
+  const usedIds = new Set<string>();
+  let changed = false;
 
-/**
- * Delete vocab file
- * Also removes the count
- */
-export const deleteVocabFile = (fileName: string): void => {
-  try {
-    const key = getVocabFileKey(fileName);
-    localStorage.removeItem(key);
-    removeFromVocabIndex(fileName);
-    removeVocabCount(fileName);
-  } catch (err) {
-    console.error(`Failed to delete vocab file "${fileName}":`, err);
-  }
-};
+  const uniqueId = (value: unknown): string => {
+    const preferred = typeof value === 'string' && value.trim() ? value : createMigrationId();
+    if (!usedIds.has(preferred)) {
+      usedIds.add(preferred);
+      return preferred;
+    }
+    changed = true;
+    let replacement = createMigrationId();
+    while (usedIds.has(replacement)) replacement = createMigrationId();
+    usedIds.add(replacement);
+    return replacement;
+  };
 
-/**
- * Load all vocab files (for backward compatibility or bulk operations)
- * This is slower but sometimes needed
- */
-export const loadVocabFromStorage = (): Record<string, VocabItem[]> | null => {
-  // Run migration first
-  migrateOldVocabFormat();
+  const normalizeTopic = (
+    rawNode: UnknownRecord,
+    usedLabels: Set<string>,
+  ): TopicItem => {
+    const legacy = rawNode.kind === 'file';
+    const id = uniqueId(rawNode.id);
+    const rawLabel = legacy ? rawNode.name : rawNode.label;
+    const normalizedLabel = legacy
+      ? normalizeLegacyTopicLabel(rawLabel)
+      : (typeof rawLabel === 'string' ? rawLabel.trim().normalize('NFC') : 'Topic');
+    const label = makeUniqueLabel(normalizedLabel || 'Topic', usedLabels);
 
-  try {
-    const fileNames = getVocabIndex();
-    const vocabMap: Record<string, VocabItem[]> = {};
+    if (legacy || rawNode.kind !== 'topic' || rawNode.label !== label || rawNode.id !== id) {
+      changed = true;
+    }
 
-    // Load each file
-    for (const fileName of fileNames) {
-      const vocab = loadVocabFile(fileName);
-      if (vocab) {
-        vocabMap[fileName] = vocab;
+    const references = new Set<string>();
+    if (typeof rawNode.name === 'string' && rawNode.name.trim()) {
+      references.add(rawNode.name.trim());
+    }
+    if (legacy) {
+      references.add(label);
+      references.add(`${label}.txt`);
+    }
+
+    legacyReferencesByTopicId[id] = Array.from(references);
+    references.forEach((reference) => {
+      if (legacyVocabulary[reference]) consumedLegacyReferences.add(reference);
+    });
+
+    return { kind: 'topic', id, label };
+  };
+
+  const normalizeFolder = (rawNode: UnknownRecord): FolderNode => {
+    const id = uniqueId(rawNode.id);
+    const label =
+      typeof rawNode.label === 'string' && rawNode.label.trim()
+        ? rawNode.label.trim().normalize('NFC')
+        : 'Root';
+    const rawChildren = Array.isArray(rawNode.children) ? rawNode.children : [];
+    const usedLabels = new Set<string>();
+    const children: Array<FolderNode | TopicItem> = [];
+
+    rawChildren.forEach((rawChild) => {
+      if (!isRecord(rawChild)) {
+        changed = true;
+        return;
       }
+      if (rawChild.kind === 'folder') {
+        const child = normalizeFolder(rawChild);
+        child.label = makeUniqueLabel(child.label, usedLabels);
+        children.push(child);
+        return;
+      }
+      if (rawChild.kind === 'topic' || rawChild.kind === 'file') {
+        children.push(normalizeTopic(rawChild, usedLabels));
+        return;
+      }
+      changed = true;
+    });
+
+    if (
+      rawNode.kind !== 'folder' ||
+      rawNode.id !== id ||
+      rawNode.label !== label ||
+      rawChildren.length !== children.length
+    ) {
+      changed = true;
     }
 
-    return Object.keys(vocabMap).length > 0 ? vocabMap : null;
-  } catch (err) {
-    console.error('Failed to load vocab from storage:', err);
+    return { kind: 'folder', id, label, children };
+  };
+
+  const root = isRecord(rawTree) && rawTree.kind === 'folder'
+    ? normalizeFolder(rawTree)
+    : normalizeFolder({ kind: 'folder', id: createMigrationId(), label: 'Root', children: [] });
+
+  const rootUsedLabels = new Set(
+    root.children.map((child) => child.label.toLocaleLowerCase('vi')),
+  );
+
+  Object.keys(legacyVocabulary).forEach((reference) => {
+    if (
+      consumedLegacyReferences.has(reference) ||
+      reference.startsWith(LEGACY_TRAINING_TOPIC_PREFIX)
+    ) {
+      return;
+    }
+
+    const id = uniqueId(undefined);
+    const label = makeUniqueLabel(normalizeLegacyTopicLabel(reference), rootUsedLabels);
+    root.children.push({ kind: 'topic', id, label });
+    legacyReferencesByTopicId[id] = [reference];
+    consumedLegacyReferences.add(reference);
+    changed = true;
+  });
+
+  return {
+    tree: root,
+    legacyReferencesByTopicId,
+    consumedLegacyReferences,
+    changed,
+  };
+};
+
+const getTopicIdsFromTree = (node: FolderNode | TopicItem): string[] => {
+  if (node.kind === 'topic') return [node.id];
+  return node.children.flatMap(getTopicIdsFromTree);
+};
+
+const verifyStoredValue = (key: string, expected: string): void => {
+  if (localStorage.getItem(key) !== expected) {
+    throw new Error(`Failed to verify migrated vocabulary data at "${key}"`);
+  }
+};
+
+const cleanupMigratedLegacyData = (consumedReferences: Set<string>): void => {
+  consumedReferences.forEach((reference) => {
+    localStorage.removeItem(`${LEGACY_VOCAB_PREFIX}${reference}`);
+  });
+
+  const oldMap = parseJson<Record<string, unknown>>(
+    localStorage.getItem(LEGACY_VOCAB_MAP_KEY),
+    {},
+  );
+  consumedReferences.forEach((reference) => delete oldMap[reference]);
+  if (Object.keys(oldMap).length > 0) {
+    localStorage.setItem(LEGACY_VOCAB_MAP_KEY, JSON.stringify(oldMap));
+  } else {
+    localStorage.removeItem(LEGACY_VOCAB_MAP_KEY);
+  }
+
+  const remainingIndex = parseJson<string[]>(
+    localStorage.getItem(LEGACY_VOCAB_INDEX_KEY),
+    [],
+  ).filter((reference) => !consumedReferences.has(reference));
+  if (remainingIndex.length > 0) {
+    localStorage.setItem(LEGACY_VOCAB_INDEX_KEY, JSON.stringify(remainingIndex));
+  } else {
+    localStorage.removeItem(LEGACY_VOCAB_INDEX_KEY);
+  }
+
+  const remainingCounts = parseJson<Record<string, number>>(
+    localStorage.getItem(LEGACY_VOCAB_COUNTS_KEY),
+    {},
+  );
+  consumedReferences.forEach((reference) => delete remainingCounts[reference]);
+  if (Object.keys(remainingCounts).length > 0) {
+    localStorage.setItem(LEGACY_VOCAB_COUNTS_KEY, JSON.stringify(remainingCounts));
+  } else {
+    localStorage.removeItem(LEGACY_VOCAB_COUNTS_KEY);
+  }
+};
+
+export const ensureVocabularyTopicMigration = (): void => {
+  if (migrationRunning || migrationChecked) return;
+  migrationRunning = true;
+
+  try {
+    const rawTree = parseJson<unknown>(
+      localStorage.getItem(VOCAB_TREE_STORAGE_KEY),
+      null,
+    );
+    const legacyVocabulary = readLegacyVocabulary();
+    const hasLegacyTreeNodes = JSON.stringify(rawTree).includes('"kind":"file"');
+    const hasLegacyVocabulary = Object.keys(legacyVocabulary).some(
+      (reference) => !reference.startsWith(LEGACY_TRAINING_TOPIC_PREFIX),
+    );
+    const hasCanonicalIndex = localStorage.getItem(VOCAB_TOPIC_INDEX_KEY) !== null;
+    const hasUsableTree = isRecord(rawTree) && rawTree.kind === 'folder';
+    const isCurrentSchema =
+      localStorage.getItem(VOCAB_SCHEMA_VERSION_KEY) === VOCAB_SCHEMA_VERSION;
+
+    if (
+      isCurrentSchema &&
+      hasUsableTree &&
+      hasCanonicalIndex &&
+      !hasLegacyTreeNodes &&
+      !hasLegacyVocabulary
+    ) {
+      migrationChecked = true;
+      return;
+    }
+
+    if (!rawTree && !hasLegacyVocabulary && !hasCanonicalIndex) {
+      migrationChecked = true;
+      return;
+    }
+
+    const normalized = normalizeStoredTree(rawTree, legacyVocabulary);
+    const topicIds = getTopicIdsFromTree(normalized.tree);
+    const counts: Record<string, number> = {};
+    const writes: Array<{ key: string; value: string }> = [];
+
+    topicIds.forEach((topicId) => {
+      const canonicalKey = `${VOCAB_TOPIC_STORAGE_PREFIX}${topicId}`;
+      const canonicalData = parseJson<unknown>(localStorage.getItem(canonicalKey), null);
+      let vocabulary: VocabItem[] | null = isVocabArray(canonicalData)
+        ? canonicalData
+        : null;
+
+      if (!vocabulary) {
+        const references = normalized.legacyReferencesByTopicId[topicId] || [];
+        const legacyReference = references.find((reference) => legacyVocabulary[reference]);
+        vocabulary = legacyReference ? legacyVocabulary[legacyReference] : [];
+      }
+
+      const serialized = JSON.stringify(vocabulary);
+      writes.push({ key: canonicalKey, value: serialized });
+      counts[topicId] = vocabulary.length;
+    });
+
+    const canonicalIndex = parseJson<string[]>(
+      localStorage.getItem(VOCAB_TOPIC_INDEX_KEY),
+      [],
+    );
+    canonicalIndex.forEach((topicId) => {
+      const key = `${VOCAB_TOPIC_STORAGE_PREFIX}${topicId}`;
+      if (!topicIds.includes(topicId) && localStorage.getItem(key) !== null) {
+        topicIds.push(topicId);
+        const value = localStorage.getItem(key) || '[]';
+        counts[topicId] = isVocabArray(parseJson<unknown>(value, null))
+          ? (parseJson<VocabItem[]>(value, [])).length
+          : 0;
+      }
+    });
+
+    writes.forEach(({ key, value }) => {
+      localStorage.setItem(key, value);
+      verifyStoredValue(key, value);
+    });
+
+    const indexValue = JSON.stringify(topicIds);
+    const countsValue = JSON.stringify(counts);
+    const treeValue = JSON.stringify(normalized.tree);
+    localStorage.setItem(VOCAB_TOPIC_INDEX_KEY, indexValue);
+    localStorage.setItem(VOCAB_TOPIC_COUNTS_KEY, countsValue);
+    localStorage.setItem(VOCAB_TREE_STORAGE_KEY, treeValue);
+    localStorage.setItem(VOCAB_SCHEMA_VERSION_KEY, VOCAB_SCHEMA_VERSION);
+    verifyStoredValue(VOCAB_TOPIC_INDEX_KEY, indexValue);
+    verifyStoredValue(VOCAB_TOPIC_COUNTS_KEY, countsValue);
+    verifyStoredValue(VOCAB_TREE_STORAGE_KEY, treeValue);
+    verifyStoredValue(VOCAB_SCHEMA_VERSION_KEY, VOCAB_SCHEMA_VERSION);
+
+    if (hasLegacyTreeNodes || hasLegacyVocabulary || normalized.changed) {
+      cleanupMigratedLegacyData(normalized.consumedLegacyReferences);
+    }
+    migrationChecked = true;
+  } catch (error) {
+    console.error('Failed to migrate vocabulary topics. Legacy data was kept:', error);
+  } finally {
+    migrationRunning = false;
+  }
+};
+
+export const getVocabularyTopicIndex = (): string[] => {
+  ensureVocabularyTopicMigration();
+  return parseJson<string[]>(localStorage.getItem(VOCAB_TOPIC_INDEX_KEY), []);
+};
+
+const updateVocabularyTopicIndex = (topicIds: string[]): void => {
+  localStorage.setItem(
+    VOCAB_TOPIC_INDEX_KEY,
+    JSON.stringify(Array.from(new Set(topicIds))),
+  );
+};
+
+const addToVocabularyTopicIndex = (topicId: string): void => {
+  const topicIds = getVocabularyTopicIndex();
+  if (!topicIds.includes(topicId)) updateVocabularyTopicIndex([...topicIds, topicId]);
+};
+
+const removeFromVocabularyTopicIndex = (topicId: string): void => {
+  updateVocabularyTopicIndex(
+    getVocabularyTopicIndex().filter((candidate) => candidate !== topicId),
+  );
+};
+
+export const loadVocabularyTopic = (topicId: string): VocabItem[] | null => {
+  ensureVocabularyTopicMigration();
+  try {
+    const stored =
+      localStorage.getItem(`${VOCAB_TOPIC_STORAGE_PREFIX}${topicId}`) ||
+      localStorage.getItem(`${TRAINING_VOCABULARY_SET_PREFIX}${topicId}`);
+    return stored ? parseJson<VocabItem[] | null>(stored, null) : null;
+  } catch (error) {
+    console.error(`Failed to load vocabulary topic "${topicId}":`, error);
     return null;
   }
 };
 
-/**
- * Save all vocab files (for backward compatibility)
- * Note: This is slower, prefer saveVocabFile for single file updates
- */
-export const saveVocabToStorage = (vocabMap: Record<string, VocabItem[]>): void => {
+export const saveTrainingVocabularySet = (
+  topicId: string,
+  vocabulary: VocabItem[],
+): void => {
+  localStorage.setItem(
+    `${TRAINING_VOCABULARY_SET_PREFIX}${topicId}`,
+    JSON.stringify(vocabulary),
+  );
+};
+
+export const saveVocabularyTopic = (topicId: string, vocabulary: VocabItem[]): void => {
+  ensureVocabularyTopicMigration();
   try {
-    const fileNames = Object.keys(vocabMap);
-
-    // Save each file
-    for (const fileName of fileNames) {
-      saveVocabFile(fileName, vocabMap[fileName]);
-    }
-
-    // Update index
-    updateVocabIndex(fileNames);
-  } catch (err) {
-    console.error('Failed to save vocab to storage:', err);
+    localStorage.setItem(
+      `${VOCAB_TOPIC_STORAGE_PREFIX}${topicId}`,
+      JSON.stringify(vocabulary),
+    );
+    addToVocabularyTopicIndex(topicId);
+    updateVocabularyTopicCount(topicId, vocabulary.length);
+  } catch (error) {
+    console.error(`Failed to save vocabulary topic "${topicId}":`, error);
+    throw error;
   }
 };
 
-// ===== Tree Storage =====
+export const deleteVocabularyTopic = (topicId: string): void => {
+  ensureVocabularyTopicMigration();
+  try {
+    localStorage.removeItem(`${VOCAB_TOPIC_STORAGE_PREFIX}${topicId}`);
+    removeFromVocabularyTopicIndex(topicId);
+    removeVocabularyTopicCount(topicId);
+  } catch (error) {
+    console.error(`Failed to delete vocabulary topic "${topicId}":`, error);
+    throw error;
+  }
+};
+
+export const loadVocabularyTopics = (): Record<string, VocabItem[]> | null => {
+  ensureVocabularyTopicMigration();
+  const result: Record<string, VocabItem[]> = {};
+  getVocabularyTopicIndex().forEach((topicId) => {
+    const vocabulary = loadVocabularyTopic(topicId);
+    if (vocabulary) result[topicId] = vocabulary;
+  });
+  return Object.keys(result).length > 0 ? result : null;
+};
+
+export const saveVocabularyTopics = (
+  vocabularyByTopicId: Record<string, VocabItem[]>,
+): void => {
+  const topicIds = Object.keys(vocabularyByTopicId);
+  topicIds.forEach((topicId) => {
+    saveVocabularyTopic(topicId, vocabularyByTopicId[topicId]);
+  });
+  updateVocabularyTopicIndex(topicIds);
+};
+
+export const clearVocabularyTopics = (): number => {
+  const topicIds = getVocabularyTopicIndex();
+  const keysToRemove: string[] = [];
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index);
+    if (
+      key?.startsWith(VOCAB_TOPIC_STORAGE_PREFIX) ||
+      key?.startsWith(TRAINING_VOCABULARY_SET_PREFIX) ||
+      key?.startsWith(LEGACY_VOCAB_PREFIX)
+    ) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach((key) => localStorage.removeItem(key));
+  localStorage.removeItem(VOCAB_TOPIC_INDEX_KEY);
+  localStorage.removeItem(VOCAB_TOPIC_COUNTS_KEY);
+  localStorage.removeItem(VOCAB_TREE_STORAGE_KEY);
+  localStorage.removeItem(VOCAB_SCHEMA_VERSION_KEY);
+  localStorage.removeItem(LEGACY_VOCAB_MAP_KEY);
+  localStorage.removeItem(LEGACY_VOCAB_INDEX_KEY);
+  localStorage.removeItem(LEGACY_VOCAB_COUNTS_KEY);
+  return topicIds.length;
+};
+
 export const saveTreeToStorage = (tree: FolderNode): void => {
   try {
-    localStorage.setItem(STORAGE_KEY_TREE, JSON.stringify(tree));
-  } catch (err) {
-    console.error('Failed to save tree to localStorage:', err);
+    localStorage.setItem(VOCAB_TREE_STORAGE_KEY, JSON.stringify(tree));
+  } catch (error) {
+    console.error('Failed to save vocabulary tree:', error);
+    throw error;
   }
 };
 
 export const loadTreeFromStorage = (): FolderNode | null => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_TREE);
-    return stored ? JSON.parse(stored) : null;
-  } catch (err) {
-    console.error('Failed to load tree from localStorage:', err);
-    return null;
+  ensureVocabularyTopicMigration();
+  const stored = localStorage.getItem(VOCAB_TREE_STORAGE_KEY);
+  return stored ? parseJson<FolderNode | null>(stored, null) : null;
+};
+
+export const loadVocabularyTopicCounts = (): Record<string, number> => {
+  ensureVocabularyTopicMigration();
+  return parseJson<Record<string, number>>(
+    localStorage.getItem(VOCAB_TOPIC_COUNTS_KEY),
+    {},
+  );
+};
+
+export const saveVocabularyTopicCounts = (counts: Record<string, number>): void => {
+  const serialized = JSON.stringify(counts);
+  if (localStorage.getItem(VOCAB_TOPIC_COUNTS_KEY) !== serialized) {
+    localStorage.setItem(VOCAB_TOPIC_COUNTS_KEY, serialized);
   }
 };
 
-// ===== Cleanup =====
-/**
- * Remove old storage format (run after migration is confirmed working)
- */
-export const cleanupOldVocabFormat = (): void => {
-  try {
-    localStorage.removeItem(STORAGE_KEY_VOCAB_OLD);
-  } catch (err) {
-    console.error('Failed to cleanup old vocab format:', err);
-  }
+export const updateVocabularyTopicCount = (topicId: string, count: number): void => {
+  const counts = loadVocabularyTopicCounts();
+  counts[topicId] = count;
+  saveVocabularyTopicCounts(counts);
 };
 
-// ===== Vocab Counts Storage (FAST - for displaying counts without loading full vocab) =====
-/**
- * Load vocab counts map from storage
- * Returns { "file1.txt": 10, "file2.txt": 5, ... }
- * 
- * MECHANISM:
- * - Counts are automatically updated by saveVocabFile() and deleteVocabFile()
- * - Use this for fast counting without loading full vocab data
- * - syncAllVocabCounts() rebuilds entire map on app init for accuracy
- */
-export const loadVocabCounts = (): Record<string, number> => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_VOCAB_COUNTS);
-    return stored ? JSON.parse(stored) : {};
-  } catch (err) {
-    console.error('Failed to load vocab counts:', err);
-    return {};
-  }
+export const removeVocabularyTopicCount = (topicId: string): void => {
+  const counts = loadVocabularyTopicCounts();
+  delete counts[topicId];
+  saveVocabularyTopicCounts(counts);
 };
 
-/**
- * Save vocab counts map to storage
- */
-export const saveVocabCounts = (counts: Record<string, number>): void => {
-  try {
-    const serialized = JSON.stringify(counts);
-    const existing = localStorage.getItem(STORAGE_KEY_VOCAB_COUNTS);
-    if (existing === serialized) {
-      return; // Skip redundant writes
-    }
-    localStorage.setItem(STORAGE_KEY_VOCAB_COUNTS, serialized);
-  } catch (err) {
-    console.error('Failed to save vocab counts:', err);
-  }
-};
-
-/**
- * Update count for a single file
- */
-export const updateVocabCount = (fileName: string, count: number): void => {
-  const counts = loadVocabCounts();
-  counts[fileName] = count;
-  saveVocabCounts(counts);
-};
-
-/**
- * Remove count for a file
- */
-export const removeVocabCount = (fileName: string): void => {
-  const counts = loadVocabCounts();
-  delete counts[fileName];
-  saveVocabCounts(counts);
-};
-
-/**
- * Rename count key (when file is renamed)
- */
-export const renameVocabCount = (oldFileName: string, newFileName: string): void => {
-  const counts = loadVocabCounts();
-  if (counts[oldFileName] !== undefined) {
-    counts[newFileName] = counts[oldFileName];
-    delete counts[oldFileName];
-    saveVocabCounts(counts);
-  }
-};
-
-/**
- * Sync count from actual vocab file (recalculate)
- */
-export const syncVocabCount = (fileName: string): void => {
-  const vocab = loadVocabFile(fileName);
-  const count = vocab ? vocab.length : 0;
-  updateVocabCount(fileName, count);
-};
-
-/**
- * Sync all counts from actual vocab files (rebuild counts map)
- */
-export const syncAllVocabCounts = (): void => {
-  const fileNames = getVocabIndex();
+export const syncAllVocabularyTopicCounts = (): void => {
   const counts: Record<string, number> = {};
-  
-  for (const fileName of fileNames) {
-    const vocab = loadVocabFile(fileName);
-    counts[fileName] = vocab ? vocab.length : 0;
-  }
-  
-  saveVocabCounts(counts);
+  getVocabularyTopicIndex().forEach((topicId) => {
+    counts[topicId] = loadVocabularyTopic(topicId)?.length || 0;
+  });
+  saveVocabularyTopicCounts(counts);
 };
+
+const findTopic = (
+  node: FolderNode | TopicItem,
+  predicate: (topic: TopicItem) => boolean,
+): TopicItem | null => {
+  if (node.kind === 'topic') return predicate(node) ? node : null;
+  for (const child of node.children) {
+    const result = findTopic(child, predicate);
+    if (result) return result;
+  }
+  return null;
+};
+
+const hashReference = (value: string): string => {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+};
+
+export const resolveTopicId = (reference: string | null | undefined): string | null => {
+  if (!reference) return null;
+  ensureVocabularyTopicMigration();
+  const topicIds = getVocabularyTopicIndex();
+  if (topicIds.includes(reference)) return reference;
+  if (localStorage.getItem(`${TRAINING_VOCABULARY_SET_PREFIX}${reference}`)) {
+    return reference;
+  }
+
+  const tree = loadTreeFromStorage();
+  const normalizedReference = normalizeLegacyTopicLabel(reference).toLocaleLowerCase('vi');
+  const topicId = tree
+    ? findTopic(
+      tree,
+      (topic) => topic.label.toLocaleLowerCase('vi') === normalizedReference,
+    )?.id
+    : null;
+  if (topicId) return topicId;
+
+  const legacyKey = `${LEGACY_VOCAB_PREFIX}${reference}`;
+  const legacyVocabulary = parseJson<unknown>(localStorage.getItem(legacyKey), null);
+  if (isVocabArray(legacyVocabulary)) {
+    const transientTopicId = `legacy_${hashReference(reference)}`;
+    if (reference.startsWith(LEGACY_TRAINING_TOPIC_PREFIX)) {
+      saveTrainingVocabularySet(transientTopicId, legacyVocabulary);
+    } else {
+      saveVocabularyTopic(transientTopicId, legacyVocabulary);
+    }
+    return transientTopicId;
+  }
+
+  return null;
+};
+
+export const getTopicLabel = (topicId: string | null | undefined): string => {
+  if (!topicId) return '';
+  const tree = loadTreeFromStorage();
+  return tree ? findTopic(tree, (topic) => topic.id === topicId)?.label || '' : '';
+};
+
+export const getTopicIdFromSearchParams = (
+  searchParams: URLSearchParams,
+  canonicalKey = 'topic',
+  legacyKey = 'file',
+): string | null =>
+  resolveTopicId(searchParams.get(canonicalKey) || searchParams.get(legacyKey));
