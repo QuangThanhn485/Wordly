@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import { loadPreferences } from '@/data';
 
 // Import English translations
 import enCommon from './locales/en/common.json';
@@ -43,6 +44,7 @@ export const resources = {
 
 export const defaultNS = 'common';
 export const fallbackLng = 'en';
+const preferredLanguage = loadPreferences().language;
 
 i18n
   .use(LanguageDetector)
@@ -50,6 +52,7 @@ i18n
   .init({
     resources,
     fallbackLng,
+    ...(preferredLanguage ? { lng: preferredLanguage } : {}),
     defaultNS,
     ns: ['common', 'home', 'navbar', 'vocabulary', 'train', 'result', 'dataManagement'],
     interpolation: {

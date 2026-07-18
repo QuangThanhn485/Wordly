@@ -8,6 +8,7 @@ import {
 export type AppPreferences = {
   themeMode: 'light' | 'dark';
   vocabularyViewMode: 'tree' | 'grid';
+  language: 'vi' | 'en' | null;
   flashcards: {
     removeCorrectCards: boolean;
   };
@@ -28,6 +29,7 @@ export type BackupMetadata = {
 const DEFAULT_PREFERENCES: AppPreferences = {
   themeMode: 'light',
   vocabularyViewMode: 'tree',
+  language: null,
   flashcards: {
     removeCorrectCards: false,
   },
@@ -38,14 +40,27 @@ export const loadPreferences = (): AppPreferences => {
     DATABASE_KEYS.preferences,
     {},
   );
-  return {
+  const legacyLanguage = localStorage.getItem('i18nextLng');
+  const language =
+    stored.language === 'vi' || stored.language === 'en'
+      ? stored.language
+      : legacyLanguage === 'vi' || legacyLanguage === 'en'
+        ? legacyLanguage
+        : null;
+  const preferences: AppPreferences = {
     ...DEFAULT_PREFERENCES,
     ...stored,
+    language,
     flashcards: {
       ...DEFAULT_PREFERENCES.flashcards,
       ...stored.flashcards,
     },
   };
+
+  if (language && stored.language !== language) {
+    writeDatabaseValue(DATABASE_KEYS.preferences, preferences);
+  }
+  return preferences;
 };
 
 export const updatePreferences = (

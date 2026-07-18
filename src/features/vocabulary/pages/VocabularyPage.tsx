@@ -78,11 +78,17 @@ import {
   loadVocabularyTopic,
   deleteVocabularyTopic,
   loadVocabularyTopicCounts,
-  normalizeLegacyTopicLabel,
   normalizeVocabularyItems,
+  saveVocabularyImportAtomically,
   saveTreeToStorage,
   loadTreeFromStorage,
 } from '../utils/storageUtils';
+import {
+  createVocabularyFolderExport,
+  createVocabularyTopicExport,
+  parseVocabularyFolderImport,
+  parseVocabularyTopicImport,
+} from '../utils/importExport';
 import { speak } from '@/utils/speechUtils';
 import { saveTrainingSession as saveReadingSession } from '@/features/train/train-start/sessionStorage';
 import { saveTrainingSession as saveListeningSession } from '@/features/train/train-listen/sessionStorage';
@@ -129,9 +135,8 @@ const downloadJsonFile = (data: unknown, fileName: string): void => {
 const getVocabItemIdentity = (item: VocabItem): string =>
   item.id || item.word;
 
-const createVocabularyImportSample = () => ({
-  format: 'wordly-vocabulary-folder',
-  folderStructure: {
+const createVocabularyImportSample = () => {
+  const folder: FolderNode = {
     kind: 'folder',
     id: 'sample-folder-root',
     label: 'Dữ liệu mẫu',
@@ -154,8 +159,8 @@ const createVocabularyImportSample = () => ({
         ],
       },
     ],
-  },
-  vocabularyData: {
+  };
+  const vocabularyData: Record<string, VocabItem[]> = {
     'sample-topic-animals': [
       {
         word: 'cat',
@@ -178,10 +183,9 @@ const createVocabularyImportSample = () => ({
         pronunciation: '/kriˈeɪt/',
       },
     ],
-  },
-  exportDate: new Date().toISOString(),
-  version: '3.0',
-});
+  };
+  return createVocabularyFolderExport(folder, vocabularyData);
+};
 
 // ===== Styled Components =====
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
@@ -553,6 +557,33 @@ const VocabularyPage: React.FC = () => {
     saveTreeToStorage(next);
     treeRef.current = next;
     setTree(next);
+  }, []);
+
+  const commitVocabularyImport = useCallback((
+    nextTree: FolderNode,
+    importedVocabulary: Record<string, VocabItem[]>,
+  ): Record<string, VocabItem[]> => {
+    const preparedVocabulary = saveVocabularyImportAtomically(
+      nextTree,
+      importedVocabulary,
+    );
+    const nextVocabMap = {
+      ...vocabMapRef.current,
+      ...preparedVocabulary,
+    };
+
+    treeRef.current = nextTree;
+    vocabMapRef.current = nextVocabMap;
+    setTree(nextTree);
+    setVocabMap(nextVocabMap);
+    setVocabCountMap((current) => {
+      const next = { ...current };
+      Object.entries(preparedVocabulary).forEach(([topicId, vocabulary]) => {
+        next[topicId] = vocabulary.length;
+      });
+      return next;
+    });
+    return preparedVocabulary;
   }, []);
 
   const [selectedPath, setSelectedPath] = useState<string[] | null>(null);
@@ -1282,13 +1313,11 @@ const VocabularyPage: React.FC = () => {
         try {
           const text = String(reader.result || '');
           const importData = JSON.parse(text);
-          
-          if (!Array.isArray(importData.vocabulary)) {
-            showSnack(t('messages.importInvalidJson'), 'error');
-            return;
-          }
-          
-          const items: VocabItem[] = importData.vocabulary;
+          const parsedImport = parseVocabularyTopicImport(
+            importData,
+            file.name.replace(/\.json$/i, ''),
+          );
+          const items = parsedImport.vocabulary;
           const targetFolderPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
           const located = treeIndex.findByPath(targetFolderPath);
           if (!located || located.node.kind !== 'folder') {
@@ -1296,31 +1325,34 @@ const VocabularyPage: React.FC = () => {
             return;
           }
 
-          const importedLabel =
-            importData.topic?.label ||
-            importData.topicLabel ||
-            importData.fileName ||
-            file.name.replace(/\.json$/i, '');
           const finalTopicLabel = ensureUniqueName(
             located.node.children,
-            normalizeLegacyTopicLabel(importedLabel),
+            parsedImport.label,
             false,
           );
           const topicId = genId();
 
-          updateTree((prevTree) => {
-            const copy = structuredClone(prevTree);
-            const located2 = findNodeByPath(copy, targetFolderPath);
-            if (!located2 || located2.node.kind !== 'folder') return prevTree;
-            located2.node.children.push({
-              kind: 'topic',
-              label: finalTopicLabel,
-              id: topicId,
-            });
-            return copy;
+          const nextTree = structuredClone(treeRef.current);
+          const targetFolder = findNodeByPath(
+            nextTree,
+            targetFolderPath,
+          );
+          if (!targetFolder || targetFolder.node.kind !== 'folder') {
+            throw new Error('Vocabulary import target no longer exists.');
+          }
+          targetFolder.node.children.push({
+            kind: 'topic',
+            label: finalTopicLabel,
+            id: topicId,
           });
-          updateVocabMap((current) => ({ ...current, [topicId]: items }));
-          showSnack(t('messages.importTopicSuccess', { name: finalTopicLabel, count: items.length }));
+          const preparedVocabulary = commitVocabularyImport(
+            nextTree,
+            { [topicId]: items },
+          );
+          showSnack(t('messages.importTopicSuccess', {
+            name: finalTopicLabel,
+            count: preparedVocabulary[topicId].length,
+          }));
           closeMenu();
         } catch (err) {
           console.error(err);
@@ -1329,7 +1361,7 @@ const VocabularyPage: React.FC = () => {
       };
       reader.readAsText(file);
     },
-    [menu, updateTree, updateVocabMap, treeIndex, closeMenu, t],
+    [menu, commitVocabularyImport, treeIndex, closeMenu, t],
   );
 
   const handleExportTopic = useCallback(() => {
@@ -1340,31 +1372,10 @@ const VocabularyPage: React.FC = () => {
     const topic = located.node;
     const items = vocabMap[topic.id] || loadVocabularyTopic(topic.id) || [];
     
-    if (items.length === 0) {
-      showSnack(t('messages.noVocabToExport'), 'warning');
-      return;
-    }
-    
-    const exportData = {
-      format: 'wordly-vocabulary-topic',
-      topic: {
-        label: topic.label,
-      },
-      vocabulary: items,
-      exportDate: new Date().toISOString(),
-      version: '3.0',
-    };
-    
-    const jsonContent = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = getJsonDownloadName(topic.label);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadJsonFile(
+      createVocabularyTopicExport(topic, items),
+      getJsonDownloadName(topic.label),
+    );
     
     showSnack(t('messages.exportTopicSuccess', { name: topic.label }));
     closeMenu();
@@ -1386,28 +1397,10 @@ const VocabularyPage: React.FC = () => {
         vocabMap[topicId] || loadVocabularyTopic(topicId) || [];
     });
     
-    // Create export data structure
-    const exportData = {
-      format: 'wordly-vocabulary-folder',
-      folderStructure: folderNode,
-      vocabularyData: folderVocabData,
-      exportDate: new Date().toISOString(),
-      version: '3.0',
-    };
-    
-    // Convert to JSON
-    const jsonContent = JSON.stringify(exportData, null, 2);
-    
-    // Create and download file
-    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${folderName.replace(/\s+/g, '_')}_folder.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadJsonFile(
+      createVocabularyFolderExport(folderNode, folderVocabData),
+      getJsonDownloadName(`${folderName}_folder`),
+    );
     
     showSnack(t('messages.exportFolderSuccess', { name: folderName, count: allTopicIds.length }));
     closeMenu();
@@ -1442,14 +1435,14 @@ const VocabularyPage: React.FC = () => {
         try {
           const text = String(reader.result || '');
           const importData = JSON.parse(text);
-          
-          // Validate import data structure
-          if (!importData.folderStructure || !importData.vocabularyData) {
-            showSnack(t('messages.importInvalidFormat'), 'error');
-            return;
-          }
-          
-          const folderVocabData: Record<string, VocabItem[]> = importData.vocabularyData;
+          const parsedImport = parseVocabularyFolderImport(
+            importData,
+            genId,
+            {
+              folder: t('defaults.folder'),
+              topic: t('defaults.topic'),
+            },
+          );
           const targetFolderPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
           const located = treeIndex.findByPath(targetFolderPath);
           
@@ -1458,91 +1451,30 @@ const VocabularyPage: React.FC = () => {
             return;
           }
 
-          const sourceReferencesByTopicId: Record<string, string[]> = {};
-          const normalizeImportedNode = (rawNode: any): FolderNode | TopicItem => {
-            if (!rawNode || typeof rawNode !== 'object') {
-              throw new Error('Invalid vocabulary tree node');
-            }
-
-            if (rawNode.kind === 'folder') {
-              const siblings: Array<FolderNode | TopicItem> = [];
-              const children = Array.isArray(rawNode.children)
-                ? rawNode.children.map((rawChild: any) => {
-                    const child = normalizeImportedNode(rawChild);
-                    child.label = ensureUniqueName(
-                      siblings,
-                      child.label,
-                      child.kind === 'folder',
-                    );
-                    siblings.push(child);
-                    return child;
-                  })
-                : [];
-              return {
-                kind: 'folder',
-                id: genId(),
-                label:
-                  typeof rawNode.label === 'string' && rawNode.label.trim()
-                    ? rawNode.label.trim().normalize('NFC')
-                    : t('defaults.folder'),
-                children,
-              };
-            }
-
-            if (rawNode.kind !== 'topic' && rawNode.kind !== 'file') {
-              throw new Error('Unsupported vocabulary tree node');
-            }
-
-            const topicId = genId();
-            const rawLabel = rawNode.kind === 'file' ? rawNode.name : rawNode.label;
-            const label =
-              rawNode.kind === 'file'
-                ? normalizeLegacyTopicLabel(rawLabel)
-                : String(rawLabel || t('defaults.topic')).trim().normalize('NFC');
-            sourceReferencesByTopicId[topicId] = [
-              rawNode.id,
-              rawNode.name,
-              rawNode.label,
-            ].filter((value): value is string => typeof value === 'string' && value.length > 0);
-            return { kind: 'topic', id: topicId, label };
-          };
-
-          const importedRoot = normalizeImportedNode(importData.folderStructure);
-          if (importedRoot.kind !== 'folder') {
-            showSnack(t('messages.importInvalidFormat'), 'error');
-            return;
-          }
+          const importedRoot = parsedImport.folder;
           importedRoot.label = ensureUniqueName(
             located.node.children,
             importedRoot.label,
             true,
           );
           const allTopicIds = getAllTopicIds(importedRoot);
-          
-          updateTree((prevTree) => {
-            const copy = structuredClone(prevTree);
-            const located2 = findNodeByPath(copy, targetFolderPath);
-            if (!located2 || located2.node.kind !== 'folder') return prevTree;
-            located2.node.children.push(importedRoot);
-            return copy;
-          });
-          
-          updateVocabMap((prevMap) => {
-            const newData = { ...prevMap };
-            allTopicIds.forEach((topicId) => {
-              const sourceReference = sourceReferencesByTopicId[topicId]?.find(
-                (reference) => Array.isArray(folderVocabData[reference]),
-              );
-              newData[topicId] = sourceReference ? folderVocabData[sourceReference] : [];
-            });
-            return newData;
-          });
-          
+
+          const nextTree = structuredClone(treeRef.current);
+          const targetFolder = findNodeByPath(
+            nextTree,
+            targetFolderPath,
+          );
+          if (!targetFolder || targetFolder.node.kind !== 'folder') {
+            throw new Error('Vocabulary import target no longer exists.');
+          }
+          targetFolder.node.children.push(importedRoot);
+          const preparedVocabulary = commitVocabularyImport(
+            nextTree,
+            parsedImport.vocabularyByTopicId,
+          );
+
           const totalWords = allTopicIds.reduce((sum, topicId) => {
-            const sourceReference = sourceReferencesByTopicId[topicId]?.find(
-              (reference) => Array.isArray(folderVocabData[reference]),
-            );
-            return sum + (sourceReference ? folderVocabData[sourceReference].length : 0);
+            return sum + (preparedVocabulary[topicId]?.length ?? 0);
           }, 0);
           showSnack(t('messages.importFolderSuccess', {
             name: importedRoot.label,
@@ -1557,7 +1489,7 @@ const VocabularyPage: React.FC = () => {
       };
       reader.readAsText(file);
     },
-    [menu, treeIndex, updateTree, updateVocabMap, closeMenu, t],
+    [menu, treeIndex, commitVocabularyImport, closeMenu, t],
   );
 
   const doCopy = useCallback(() => {

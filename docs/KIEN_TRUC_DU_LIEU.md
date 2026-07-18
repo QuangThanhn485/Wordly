@@ -42,7 +42,7 @@ Namespace hiện tại là `wordly:v3`.
 | `wordly:v3:training:sets` | Các tập từ tạm thời, ví dụ top lỗi | Ghi khi tạo lại tập luyện |
 | `wordly:v3:training:sessions` | Session của bốn chế độ luyện tập | Ghi khi tiến độ luyện tập đổi |
 | `wordly:v3:learning:mistakes` | Thống kê lỗi học tập | Ghi khi hoàn thành/cập nhật lỗi |
-| `wordly:v3:preferences` | Theme, chế độ xem, cài đặt flashcard | Ghi khi cài đặt đổi |
+| `wordly:v3:preferences` | Theme, ngôn ngữ, chế độ xem, cài đặt flashcard | Ghi khi cài đặt đổi |
 | `wordly:v3:system:backup` | Thời điểm backup gần nhất | Ghi khi tạo/khôi phục backup |
 
 `topicId` được `encodeURIComponent` trước khi ghép vào key. Tên hiển thị không nằm trong key nên có thể dùng tiếng Việt có dấu, khoảng trắng và đổi tên mà không phải di chuyển dữ liệu.
@@ -237,6 +237,22 @@ Quy trình restore:
 9. Nếu có lỗi khi ghi, khôi phục snapshot trước đó.
 
 Backup schema v2 không được import vào v3. Đây là chủ ý vì giai đoạn hiện tại cho phép bỏ dữ liệu thử nghiệm và tránh mang cấu trúc lỗi sang database mới.
+
+### 9.1. Phạm vi và khả năng round-trip
+
+File tạo tại màn hình `/data` chứa toàn bộ record thuộc schema Wordly v3: catalog, dữ liệu từng chủ đề, tập luyện tạm, phiên luyện tập, thống kê lỗi, preferences và metadata backup. Preferences gồm theme, chế độ xem vocabulary, cài đặt flashcard và ngôn ngữ giao diện. Token đăng nhập và key ngoài namespace Wordly không được đưa vào file backup.
+
+Backup toàn phần giữ nguyên ID, revision, timestamp và quan hệ giữa các record. Test round-trip thực hiện đúng đường đi thực tế `object -> JSON -> object -> restore` và đối chiếu lại từng record. Restore lỗi trong lúc ghi sẽ quay lại snapshot trước thao tác.
+
+Import/export tại `/vocabulary` là gói dữ liệu cục bộ, không thay thế backup toàn phần:
+
+- Export chủ đề giữ nhãn, danh sách từ, word ID và timestamp; chủ đề rỗng vẫn xuất được.
+- Export thư mục giữ toàn bộ cây con và luôn có một mảng dữ liệu cho từng chủ đề, kể cả mảng rỗng.
+- Khi import, folder/topic ID được cấp mới để không xung đột với catalog hiện tại; word metadata được giữ.
+- File format hiện tại thiếu payload của một chủ đề hoặc có item không hợp lệ sẽ bị từ chối toàn bộ, không nhập một phần.
+- Việc ghi cây và các topic của một lần import dùng snapshot rollback; state giao diện chỉ đổi sau khi mọi record đã được ghi thành công.
+
+Muốn phục hồi chính xác cả lịch sử học và session đang tham chiếu topic ID cũ phải dùng backup `/data`. Gói `/vocabulary` phù hợp để chuyển hoặc ghép nội dung từ vựng vào một catalog khác.
 
 ## 10. Chính sách khởi tạo schema v3
 

@@ -1,10 +1,16 @@
 import {
   __resetDatabaseForTests,
+  clearDatabase,
   createDatabaseBackup,
   DATABASE_KEYS,
   listDatabaseKeys,
+  loadPreferences,
+  loadTrainingSessionValue,
   readDatabaseValue,
   restoreDatabaseBackup,
+  saveBackupMetadata,
+  saveTrainingSessionValue,
+  updatePreferences,
 } from '@/data';
 import type { FolderNode, VocabItem } from '../types';
 import {
@@ -12,7 +18,9 @@ import {
   loadVocabularyTopic,
   loadVocabularyTopicCounts,
   normalizeVocabularyItems,
+  saveTrainingVocabularySet,
   saveTreeToStorage,
+  saveVocabularyImportAtomically,
   saveVocabularyTopic,
   type VocabularyCatalog,
 } from './storageUtils';
@@ -151,6 +159,186 @@ describe('normalized vocabulary storage', () => {
     expect(stats.map((record) => record.wordId).sort()).toEqual([
       'word-1',
       'word-2',
+    ]);
+  });
+
+  it('rolls back a folder import when one topic cannot be written', () => {
+    const initialTree: FolderNode = {
+      kind: 'folder',
+      id: 'root',
+      label: 'Root',
+      children: [{
+        kind: 'topic',
+        id: 'topic-existing',
+        label: 'Hiện có',
+      }],
+    };
+    saveTreeToStorage(initialTree);
+    saveVocabularyTopic('topic-existing', [{
+      word: 'existing',
+      type: 'adjective',
+      vnMeaning: 'hiện có',
+      pronunciation: '',
+    }]);
+    const beforeImport = createDatabaseBackup(600).records;
+
+    const importedTree: FolderNode = {
+      ...initialTree,
+      children: [
+        ...initialTree.children,
+        {
+          kind: 'topic',
+          id: 'topic-new-one',
+          label: 'Mới một',
+        },
+        {
+          kind: 'topic',
+          id: 'topic-new-two',
+          label: 'Mới hai',
+        },
+      ],
+    };
+    const failingKey =
+      `${DATABASE_KEYS.vocabularyTopicPrefix}topic-new-two`;
+    const originalSetItem = Storage.prototype.setItem;
+    let failNextWrite = true;
+    const setItemSpy = jest
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(function setItem(
+        this: Storage,
+        key: string,
+        value: string,
+      ) {
+        if (failNextWrite && key === failingKey) {
+          failNextWrite = false;
+          throw new Error('Simulated topic write failure');
+        }
+        return originalSetItem.call(this, key, value);
+      });
+
+    try {
+      expect(() =>
+        saveVocabularyImportAtomically(importedTree, {
+          'topic-new-one': [{
+            word: 'one',
+            type: 'number',
+            vnMeaning: 'một',
+            pronunciation: '',
+          }],
+          'topic-new-two': [{
+            word: 'two',
+            type: 'number',
+            vnMeaning: 'hai',
+            pronunciation: '',
+          }],
+        }),
+      ).toThrow(/Simulated topic write failure/);
+    } finally {
+      setItemSpy.mockRestore();
+    }
+
+    expect(createDatabaseBackup(600).records).toEqual(beforeImport);
+    expect(loadTreeFromStorage()).toEqual(initialTree);
+    expect(loadVocabularyTopic('topic-new-one')).toBeNull();
+    expect(loadVocabularyTopic('topic-new-two')).toBeNull();
+  });
+
+  it('round-trips all application data through a JSON backup', () => {
+    const exportedAt = 987654321;
+    const tree: FolderNode = {
+      kind: 'folder',
+      id: 'root',
+      label: 'Kho từ vựng',
+      children: [{
+        kind: 'folder',
+        id: 'folder-daily',
+        label: 'Từ vựng hằng ngày',
+        children: [
+          {
+            kind: 'topic',
+            id: 'topic-food',
+            label: 'Đồ ăn và thức uống',
+          },
+          {
+            kind: 'topic',
+            id: 'topic-empty',
+            label: 'Chủ đề rỗng',
+          },
+        ],
+      }],
+    };
+    const foodItems: VocabItem[] = [{
+      id: 'word-cathedral',
+      word: 'cathedral',
+      type: 'noun',
+      vnMeaning: 'nhà thờ chính tòa',
+      pronunciation: '/kəˈθiːdrəl/',
+      createdAt: 100,
+      updatedAt: 200,
+    }];
+
+    saveTreeToStorage(tree);
+    saveVocabularyTopic('topic-food', foodItems);
+    saveVocabularyTopic('topic-empty', []);
+    saveTrainingVocabularySet('training-mistakes', foodItems);
+    updatePreferences((current) => ({
+      ...current,
+      themeMode: 'dark',
+      vocabularyViewMode: 'grid',
+      language: 'vi',
+      flashcards: { removeCorrectCards: true },
+    }));
+    saveTrainingSessionValue('flashcardsReading', {
+      topicId: 'topic-food',
+      score: 2,
+      mistakes: 1,
+      flipped: { 0: true },
+      targetIdx: 0,
+      language: 'vi',
+      timestamp: 300,
+    });
+    recordMistakes(
+      [{
+        wordId: 'word-cathedral',
+        word: 'cathedral',
+        viMeaning: 'nhà thờ chính tòa',
+        count: 2,
+      }],
+      'topic-food',
+      'flashcards-reading',
+    );
+    saveBackupMetadata(exportedAt);
+
+    const exported = JSON.parse(
+      JSON.stringify(createDatabaseBackup(exportedAt)),
+    ) as ReturnType<typeof createDatabaseBackup>;
+    const expectedRecords = exported.records;
+
+    clearDatabase();
+    restoreDatabaseBackup(exported);
+
+    expect(createDatabaseBackup(exportedAt).records).toEqual(
+      expectedRecords,
+    );
+    expect(loadTreeFromStorage()).toEqual(tree);
+    expect(loadVocabularyTopic('topic-food')).toEqual(foodItems);
+    expect(loadVocabularyTopic('topic-empty')).toEqual([]);
+    expect(loadPreferences()).toEqual({
+      themeMode: 'dark',
+      vocabularyViewMode: 'grid',
+      language: 'vi',
+      flashcards: { removeCorrectCards: true },
+    });
+    expect(
+      loadTrainingSessionValue<{ topicId: string }>('flashcardsReading')
+        ?.topicId,
+    ).toBe('topic-food');
+    expect(Object.values(loadMistakesStats())).toEqual([
+      expect.objectContaining({
+        wordId: 'word-cathedral',
+        topicId: 'topic-food',
+        mistakeCount: 2,
+      }),
     ]);
   });
 });

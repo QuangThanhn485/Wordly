@@ -8,11 +8,12 @@ import {
   restoreDatabaseBackup,
   writeDatabaseValue,
 } from './database';
-import type { AppPreferences } from './appStorage';
+import { loadPreferences, type AppPreferences } from './appStorage';
 
 const preferences: AppPreferences = {
   themeMode: 'dark',
   vocabularyViewMode: 'grid',
+  language: 'vi',
   flashcards: {
     removeCorrectCards: true,
   },
@@ -39,6 +40,13 @@ describe('key-value database', () => {
     expect(localStorage.getItem('accessToken')).toBe('keep-me');
     expect(localStorage.getItem('i18nextLng')).toBe('vi');
     expect(readDatabaseRecord(DATABASE_KEYS.meta)?.schemaVersion).toBe(3);
+    expect(loadPreferences().language).toBe('vi');
+    expect(
+      readDatabaseValue<AppPreferences | null>(
+        DATABASE_KEYS.preferences,
+        null,
+      )?.language,
+    ).toBe('vi');
   });
 
   it('increments revision only on the record being written', () => {
@@ -102,5 +110,50 @@ describe('key-value database', () => {
     expect(() => createDatabaseBackup()).toThrow(
       /Khong the backup/,
     );
+  });
+
+  it('rolls back to the current database when a restore write fails', () => {
+    writeDatabaseValue(DATABASE_KEYS.preferences, preferences);
+    const backup = JSON.parse(
+      JSON.stringify(createDatabaseBackup(123456)),
+    ) as ReturnType<typeof createDatabaseBackup>;
+    writeDatabaseValue(DATABASE_KEYS.preferences, {
+      ...preferences,
+      themeMode: 'light',
+    });
+
+    const originalSetItem = Storage.prototype.setItem;
+    let failNextPreferencesWrite = true;
+    const setItemSpy = jest
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(function setItem(
+        this: Storage,
+        key: string,
+        value: string,
+      ) {
+        if (
+          failNextPreferencesWrite &&
+          key === DATABASE_KEYS.preferences
+        ) {
+          failNextPreferencesWrite = false;
+          throw new Error('Simulated storage failure');
+        }
+        return originalSetItem.call(this, key, value);
+      });
+
+    try {
+      expect(() => restoreDatabaseBackup(backup)).toThrow(
+        /Simulated storage failure/,
+      );
+    } finally {
+      setItemSpy.mockRestore();
+    }
+
+    expect(
+      readDatabaseValue<AppPreferences>(
+        DATABASE_KEYS.preferences,
+        preferences,
+      ).themeMode,
+    ).toBe('light');
   });
 });

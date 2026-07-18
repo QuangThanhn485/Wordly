@@ -216,6 +216,12 @@ const isValidRecordData = (key: string, data: unknown): boolean => {
         data.vocabularyViewMode === 'tree' ||
         data.vocabularyViewMode === 'grid'
       ) &&
+      (
+        data.language === undefined ||
+        data.language === null ||
+        data.language === 'vi' ||
+        data.language === 'en'
+      ) &&
       isRecord(data.flashcards) &&
       typeof data.flashcards.removeCorrectCards === 'boolean'
     );

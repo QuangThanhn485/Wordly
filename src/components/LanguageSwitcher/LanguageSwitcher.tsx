@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconButton, Tooltip, useTheme } from '@mui/material';
 import { Languages } from 'lucide-react';
+import { updatePreferences } from '@/data';
 
 interface LanguageSwitcherProps {
   size?: 'small' | 'medium';
@@ -17,6 +18,10 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
 
   const toggleLanguage = () => {
     const newLang = i18n.language === 'en' ? 'vi' : 'en';
+    updatePreferences((current) => ({
+      ...current,
+      language: newLang,
+    }));
     i18n.changeLanguage(newLang);
   };
 

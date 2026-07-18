@@ -1,9 +1,11 @@
 import {
+  createDatabaseBackup,
   DATABASE_KEYS,
   initializeDatabase,
   listDatabaseKeys,
   readDatabaseValue,
   removeDatabaseValue,
+  restoreDatabaseBackup,
   writeDatabaseValue,
 } from '@/data';
 import type { FolderNode, TopicItem, VocabItem } from '../types';
@@ -230,6 +232,17 @@ export const normalizeVocabularyItems = (
       previous.vnMeaning === vnMeaning &&
       previous.pronunciation === pronunciation;
 
+    const importedCreatedAt =
+      typeof candidate.createdAt === 'number' &&
+      Number.isFinite(candidate.createdAt)
+        ? candidate.createdAt
+        : timestamp;
+    const importedUpdatedAt =
+      typeof candidate.updatedAt === 'number' &&
+      Number.isFinite(candidate.updatedAt)
+        ? candidate.updatedAt
+        : timestamp;
+
     return [{
       id,
       word,
@@ -239,12 +252,12 @@ export const normalizeVocabularyItems = (
       createdAt:
         typeof previous?.createdAt === 'number'
           ? previous.createdAt
-          : typeof candidate.createdAt === 'number'
-            ? candidate.createdAt
-          : timestamp,
+          : importedCreatedAt,
       updatedAt:
         unchanged && typeof previous.updatedAt === 'number'
           ? previous.updatedAt
+          : !previous
+            ? importedUpdatedAt
           : timestamp,
     }];
   });
@@ -371,6 +384,32 @@ export const saveVocabularyTopics = (
   Object.entries(vocabularyByTopicId).forEach(([topicId, vocabulary]) => {
     saveVocabularyTopic(topicId, vocabulary);
   });
+};
+
+export const saveVocabularyImportAtomically = (
+  tree: FolderNode,
+  vocabularyByTopicId: Record<string, VocabItem[]>,
+): Record<string, VocabItem[]> => {
+  const timestamp = Date.now();
+  const normalizedVocabulary: Record<string, VocabItem[]> = {};
+  Object.entries(vocabularyByTopicId).forEach(([topicId, vocabulary]) => {
+    normalizedVocabulary[topicId] = normalizeVocabularyItems(
+      vocabulary,
+      timestamp,
+    );
+  });
+
+  const snapshot = createDatabaseBackup(timestamp);
+  try {
+    Object.entries(normalizedVocabulary).forEach(([topicId, vocabulary]) => {
+      saveVocabularyTopic(topicId, vocabulary);
+    });
+    saveTreeToStorage(tree);
+    return normalizedVocabulary;
+  } catch (error) {
+    restoreDatabaseBackup(snapshot);
+    throw error;
+  }
 };
 
 export const clearVocabularyTopics = (): number => {
