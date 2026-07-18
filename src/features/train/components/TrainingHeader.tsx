@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 type TrainingHeaderProps = {
   title: string;
   subtitle?: ReactNode;
+  icon?: ReactNode;
   completed: number;
   total: number;
   controls: ReactNode;
@@ -13,6 +14,7 @@ type TrainingHeaderProps = {
 export const TrainingHeader = ({
   title,
   subtitle,
+  icon,
   completed,
   total,
   controls,
@@ -54,35 +56,60 @@ export const TrainingHeader = ({
           boxSizing: 'border-box',
         }}
       >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            noWrap
-            sx={{
-              fontSize: { xs: '0.875rem', sm: '0.9375rem' },
-              lineHeight: 1.25,
-              fontWeight: 700,
-              letterSpacing: 0,
-            }}
-          >
-            {title}
-          </Typography>
-          {subtitle && (
-            <Typography
-              component="div"
-              noWrap
-              color="text.secondary"
+        <Box
+          sx={{
+            minWidth: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.125,
+          }}
+        >
+          {icon && (
+            <Box
               sx={{
-                display: { xs: 'none', sm: 'block' },
-                mt: 0.25,
-                minWidth: 0,
-                fontSize: '0.75rem',
-                lineHeight: 1.2,
+                width: 32,
+                height: 32,
+                flexShrink: 0,
+                display: 'grid',
+                placeItems: 'center',
+                borderRadius: 1,
+                color: 'primary.main',
+                bgcolor: 'action.hover',
+              }}
+            >
+              {icon}
+            </Box>
+          )}
+          <Box sx={{ minWidth: 0 }}>
+            <Typography
+              noWrap
+              sx={{
+                fontSize: { xs: '0.875rem', sm: '0.9375rem' },
+                lineHeight: 1.25,
+                fontWeight: 700,
                 letterSpacing: 0,
               }}
             >
-              {subtitle}
+              {title}
             </Typography>
-          )}
+            {subtitle && (
+              <Typography
+                component="div"
+                noWrap
+                color="text.secondary"
+                sx={{
+                  display: 'block',
+                  mt: 0.25,
+                  minWidth: 0,
+                  fontSize: '0.75rem',
+                  lineHeight: 1.2,
+                  letterSpacing: 0,
+                }}
+              >
+                {subtitle}
+              </Typography>
+            )}
+          </Box>
         </Box>
 
         <Box sx={{ minWidth: 0 }}>

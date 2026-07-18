@@ -11,9 +11,12 @@ const cardBase = (theme: Theme) => ({
   display: 'flex',
   alignItems: 'stretch',
   justifyContent: 'stretch',
-  borderRadius: { xs: 3, sm: 3.5, md: 4 },
+  borderRadius: 1,
   overflow: 'hidden',
-  boxShadow: 'none',
+  boxShadow:
+    theme.palette.mode === 'dark'
+      ? '0 4px 14px rgba(0, 0, 0, 0.2)'
+      : '0 4px 14px rgba(15, 23, 42, 0.06)',
   border: '1px solid',
   borderColor:
     theme.palette.mode === 'dark'
@@ -26,14 +29,12 @@ const cardBase = (theme: Theme) => ({
 const cardFront = (theme: Theme) => {
   const isDark = theme.palette.mode === 'dark';
   const accent = theme.palette.primary.main;
-  const innerRingInset = isDark ? 1 : 2;
-
   return {
     ...cardBase(theme),
     color: theme.palette.text.primary,
     backgroundColor: isDark ? theme.palette.background.paper : alpha(accent, 0.015),
-    borderWidth: isDark ? 1 : 2,
-    borderColor: alpha(accent, isDark ? 0.45 : 0.55),
+    borderWidth: 1,
+    borderColor: alpha(accent, isDark ? 0.42 : 0.32),
     backgroundImage: 'none',
     '& .MuiCardContent-root': {
       position: 'relative',
@@ -45,20 +46,10 @@ const cardFront = (theme: Theme) => {
       top: 0,
       left: 0,
       right: 0,
-      height: 8,
+      height: 4,
       pointerEvents: 'none',
       backgroundColor: alpha(accent, isDark ? 0.26 : 0.18),
-      opacity: isDark ? 0.95 : 0.7,
-      zIndex: 1,
-    },
-    '&::after': {
-      content: '""',
-      position: 'absolute',
-      inset: innerRingInset,
-      borderRadius: 'inherit',
-      pointerEvents: 'none',
-      border: `1px solid ${isDark ? alpha(theme.palette.common.white, 0.08) : alpha(theme.palette.common.black, 0.08)}`,
-      opacity: isDark ? 0.35 : 0.9,
+      opacity: isDark ? 0.9 : 0.75,
       zIndex: 1,
     },
   };
@@ -73,7 +64,7 @@ const cardBackRotate = (theme: Theme) => {
     transform: 'rotateY(180deg)',
     color: theme.palette.text.primary,
     textAlign: 'center' as const,
-    borderWidth: 2,
+    borderWidth: 1,
     backgroundColor: isDark ? theme.palette.background.paper : alpha(accent, 0.015),
     borderColor: alpha(accent, isDark ? 0.72 : 0.55),
     backgroundImage: 'none',
@@ -87,26 +78,10 @@ const cardBackRotate = (theme: Theme) => {
       top: 0,
       left: 0,
       right: 0,
-      height: 8,
+      height: 4,
       pointerEvents: 'none',
       backgroundColor: alpha(accent, isDark ? 0.22 : 0.16),
-      opacity: isDark ? 0.9 : 0.65,
-    },
-    '&::after': {
-      content: '"✓"',
-      position: 'absolute',
-      inset: 0,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      pointerEvents: 'none',
-      fontWeight: 900,
-      fontSize: { xs: 132, sm: 152, md: 176 },
-      lineHeight: 1,
-      letterSpacing: '-0.06em',
-      color: alpha(accent, isDark ? 0.14 : 0.08),
-      transform: 'rotate(-12deg) translateY(2px)',
-      zIndex: 1,
+      opacity: isDark ? 0.85 : 0.7,
     },
   };
 };
@@ -123,11 +98,11 @@ const boxRotate = (flipped: boolean) => ({
 
 const cardContainer = {
   width: '100%',
-  height: { xs: 168, sm: 210, md: 236 },
+  height: { xs: 168, sm: 204, md: 224 },
   perspective: 1200,
   cursor: 'pointer',
   mx: 'auto',
-  my: { xs: 0.25, sm: 1 }, // Reduced margin on mobile
+  my: 0,
   userSelect: 'none' as const,
   touchAction: 'manipulation' as const,
   WebkitTapHighlightColor: 'transparent',
@@ -141,8 +116,8 @@ const shakeKF = keyframes`
 `;
 
 const solvedBadgeSx = (theme: Theme) => ({
-  borderRadius: 999,
-  fontWeight: 700,
+  borderRadius: 1,
+  fontWeight: 600,
   border: '1px solid',
   borderColor: alpha(theme.palette.success.main, theme.palette.mode === 'dark' ? 0.5 : 0.35),
   bgcolor: alpha(theme.palette.success.main, theme.palette.mode === 'dark' ? 0.18 : 0.12),

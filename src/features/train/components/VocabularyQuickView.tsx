@@ -32,11 +32,13 @@ interface VocabularyItem {
 interface VocabularyQuickViewProps {
   vocabularyList: VocabularyItem[];
   currentTopicId?: string | null;
+  triggerVariant?: 'edge' | 'inline';
 }
 
 export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
   vocabularyList,
   currentTopicId,
+  triggerVariant = 'edge',
 }) => {
   const [open, setOpen] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<{ anchorEl: HTMLElement; item: VocabularyItem } | null>(null);
@@ -75,34 +77,57 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
 
   return (
     <>
-      {/* Floating Action Button - Pinned to right edge */}
-      <Tooltip title={t('quickView.title')} placement="left">
-        <Fab
-          color="default"
-          aria-label={t('quickView.openAriaLabel')}
-          onClick={handleToggle}
-          sx={{
-            position: 'fixed',
-            right: 0,
-            top: { xs: 180, sm: 180 },
-            zIndex: (theme) => theme.zIndex.speedDial,
-            width: 56,
-            height: 56,
-            borderRadius: '24px 0 0 24px',
-            boxShadow: 'none',
-            border: '1px solid',
-            borderColor: alpha(theme.palette.primary.main, isDark ? 0.55 : 0.35),
-            bgcolor: alpha(theme.palette.background.paper, isDark ? 0.92 : 0.98),
-            color: theme.palette.primary.main,
-            backdropFilter: 'blur(8px)',
-            '&:hover': {
-              bgcolor: alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08),
-            },
-          }}
-        >
-          <ListIcon size={24} />
-        </Fab>
-      </Tooltip>
+      {triggerVariant === 'inline' ? (
+        <Tooltip title={t('quickView.title')}>
+          <IconButton
+            color="default"
+            size="small"
+            aria-label={t('quickView.openAriaLabel')}
+            onClick={handleToggle}
+            sx={{
+              color: 'text.secondary',
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              '&:hover': {
+                color: 'primary.main',
+                borderColor: 'divider',
+                bgcolor: 'action.hover',
+              },
+            }}
+          >
+            <ListIcon size={17} />
+          </IconButton>
+        </Tooltip>
+      ) : (
+        <Tooltip title={t('quickView.title')} placement="left">
+          <Fab
+            color="default"
+            aria-label={t('quickView.openAriaLabel')}
+            onClick={handleToggle}
+            sx={{
+              position: 'fixed',
+              right: 0,
+              top: { xs: 180, sm: 180 },
+              zIndex: (theme) => theme.zIndex.speedDial,
+              width: 56,
+              height: 56,
+              borderRadius: '24px 0 0 24px',
+              boxShadow: 'none',
+              border: '1px solid',
+              borderColor: alpha(theme.palette.primary.main, isDark ? 0.55 : 0.35),
+              bgcolor: alpha(theme.palette.background.paper, isDark ? 0.92 : 0.98),
+              color: theme.palette.primary.main,
+              backdropFilter: 'blur(8px)',
+              '&:hover': {
+                bgcolor: alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08),
+              },
+            }}
+          >
+            <ListIcon size={24} />
+          </Fab>
+        </Tooltip>
+      )}
 
       {/* Drawer/Modal for Vocabulary List */}
       <Drawer

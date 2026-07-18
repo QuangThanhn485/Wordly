@@ -9,3 +9,9 @@ export type {
   WriteTrainingSettings,
 } from './FlashcardsSettingsPanel';
 export { TrainingHeader } from './TrainingHeader';
+export {
+  TrainingToolbar,
+  WriteTrainingToolbar,
+} from './WriteTrainingToolbar';
+export type { TrainingMode } from './WriteTrainingToolbar';
+export { AnswerReviewPanel } from './AnswerReviewPanel';

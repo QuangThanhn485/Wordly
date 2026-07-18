@@ -2,10 +2,10 @@
 // This file wraps the original FlashcardsListening component
 
 import {
+  Alert,
   Box,
   Typography,
   Skeleton,
-  Chip,
   Button,
   useTheme,
   useMediaQuery,
@@ -17,13 +17,10 @@ import {
   DialogActions,
 } from '@mui/material';
 import {
-  MapPin,
-  AlertCircle,
+  Headphones,
   Volume2,
   HelpCircle,
   Play,
-  ArrowLeftRight,
-  RotateCcw,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -34,6 +31,7 @@ import { WordCard } from '@/features/train/train-listen';
 import {
   FlashcardsSettingsPanel,
   TrainingHeader,
+  TrainingToolbar,
   VocabularyQuickView,
   useFlashcardsSettings,
 } from '@/features/train/components';
@@ -79,12 +77,6 @@ function shuffleArray<T>(array: T[]): T[] {
   }
   return shuffled;
 }
-
-const GRID_PADDING_TOP = {
-  xs: '10px',
-  sm: '10px',
-  md: '10px'
-};
 
 const CARD_FLIP_FEEDBACK_MS = 620;
 const CARD_EXIT_ANIMATION_MS = 320;
@@ -344,8 +336,8 @@ const FlashcardsListeningPage = () => {
     [flipped, setRemoveCorrectCards]
   );
 
-  const handleLanguageToggle = () => {
-    setLanguage((prev) => (prev === 'vi' ? 'en' : 'vi'));
+  const handleLanguageChange = (mode: 'vi-en' | 'en-vi') => {
+    setLanguage(mode === 'vi-en' ? 'vi' : 'en');
   };
 
   const handleStart = useCallback(() => {
@@ -580,14 +572,12 @@ const FlashcardsListeningPage = () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [hasStarted, showHintModal, target, allFlipped, handleShowAnswer]);
-  
-  const topBarLabel = allFlipped
-    ? 'Completed!'
-    : !hasStarted
-      ? ''
-      : isLoading || !target
-        ? 'Loading...'
-        : '';
+
+  const headerSubtitle = allFlipped
+    ? t('common.completed')
+    : hasStarted
+      ? t('flashcardsListening.activeState')
+      : t('flashcardsListening.readyState');
 
   return (
     <Box
@@ -602,48 +592,23 @@ const FlashcardsListeningPage = () => {
     >
       <TrainingHeader
         title={t('flashcardsListening.title')}
-        subtitle={topBarLabel || t('flashcardsListening.instruction')}
+        subtitle={headerSubtitle}
+        icon={<Headphones size={18} />}
         completed={score}
         total={total}
         controls={(
-          <Box
-            sx={{
-              flex: 1,
-              minWidth: 0,
-              maxWidth: '100%',
-              display: 'flex',
-              flexDirection: { xs: 'column', sm: 'row' },
-              alignItems: { xs: 'stretch', sm: 'center' },
-              justifyContent: 'space-between',
-              gap: 1,
-              flexWrap: 'wrap',
-            }}
-          >
-            <Button
-              variant="outlined"
-              color="primary"
-              size="small"
-              onClick={handleLanguageToggle}
-              startIcon={<ArrowLeftRight size={16} />}
-              sx={{ minWidth: 112 }}
-            >
-              {language === 'vi' ? t('direction.viEn') : t('direction.enVi')}
-            </Button>
-
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 0.5,
-                alignItems: 'center',
-                width: 'auto',
-                minWidth: 0,
-                alignSelf: { xs: 'stretch', sm: 'auto' },
-                justifyContent: { xs: 'flex-start', sm: 'flex-start' },
-                flexWrap: 'wrap',
-              }}
-            >
-              {!hasStarted ? (
+          <TrainingToolbar
+            mode={language === 'vi' ? 'vi-en' : 'en-vi'}
+            remaining={Math.max(0, total - score)}
+            mistakes={mistakes}
+            disabled={pendingCorrectFeedbackCount > 0}
+            restartDisabled={pendingCorrectFeedbackCount > 0}
+            onModeChange={handleLanguageChange}
+            onRestart={handleRestart}
+            sessionActions={
+              !hasStarted ? (
                 <Button
+                  type="button"
                   variant="contained"
                   color="primary"
                   size="small"
@@ -657,8 +622,9 @@ const FlashcardsListeningPage = () => {
                 <>
                   <Tooltip title={t('flashcardsListening.replay')}>
                     <IconButton
+                      aria-label={t('flashcardsListening.replay')}
                       onClick={handleReplayAudio}
-                      disabled={allFlipped}
+                      disabled={allFlipped || pendingCorrectFeedbackCount > 0}
                       color="primary"
                       size="small"
                     >
@@ -671,8 +637,9 @@ const FlashcardsListeningPage = () => {
                     })}
                   >
                     <IconButton
+                      aria-label={t('buttons.hint')}
                       onClick={handleShowAnswer}
-                      disabled={allFlipped}
+                      disabled={allFlipped || pendingCorrectFeedbackCount > 0}
                       color="primary"
                       size="small"
                     >
@@ -680,146 +647,123 @@ const FlashcardsListeningPage = () => {
                     </IconButton>
                   </Tooltip>
                 </>
-              )}
-              <Chip
-                icon={<MapPin size={15} />}
-                label={`${score} / ${total}`}
-                variant="outlined"
-                size="small"
-              />
-              <Chip
-                icon={<AlertCircle size={15} />}
-                label={t('topBar.mistakes', { count: mistakes })}
-                variant="outlined"
-                size="small"
-                sx={{
-                  borderColor: 'error.main',
-                  color: 'error.main',
-                  bgcolor: `${theme.palette.error.main}12`,
-                }}
-              />
-              <IconButton
-                color="primary"
-                size="small"
-                onClick={handleRestart}
-                aria-label={t('buttons.restart')}
-                sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
-              >
-                <RotateCcw size={16} />
-              </IconButton>
-              <Button
-                variant="outlined"
-                color="primary"
-                size="small"
-                startIcon={<RotateCcw size={16} />}
-                onClick={handleRestart}
-                sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
-              >
-                {t('buttons.restart')}
-              </Button>
-            </Box>
-          </Box>
+              )
+            }
+            actions={(
+              <>
+                <VocabularyQuickView
+                  vocabularyList={items}
+                  currentTopicId={sourceTopicId || currentTopicId}
+                  triggerVariant="inline"
+                />
+                <FlashcardsSettingsPanel
+                  removeCorrectCards={settings.removeCorrectCards}
+                  onRemoveCorrectCardsChange={handleRemoveCorrectCardsChange}
+                  triggerVariant="inline"
+                />
+              </>
+            )}
+          />
         )}
       />
 
       <Box
         sx={{
-          width: '100%',
-          maxWidth: { xs: '100%', sm: '1536px' },
-          mx: 'auto',
-          px: { xs: 2, sm: 3, md: 4 },
-          pb: { xs: 1.5, sm: 2, md: 3 },
           flex: 1,
-          boxSizing: 'border-box',
+          width: '100%',
+          bgcolor: 'background.default',
         }}
       >
-        {isLoading ? (
         <Box
           sx={{
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: 'repeat(1, 1fr)',
-              sm: 'repeat(2, 1fr)',
-              md: 'repeat(3, 1fr)',
-              lg: 'repeat(4, 1fr)',
-            },
-            gap: { xs: 2, sm: 2.5, md: 3 },
-            pb: { xs: 12, sm: 14 },
-            pt: GRID_PADDING_TOP,
+            width: '100%',
+            maxWidth: 1280,
+            mx: 'auto',
+            px: { xs: 1.5, sm: 3, md: 4 },
+            py: { xs: 1.5, sm: 2.5 },
+            boxSizing: 'border-box',
           }}
         >
-          {[...Array(8)].map((_, idx) => (
-            <Skeleton key={idx} variant="rounded" height={isMobile ? 168 : isTablet ? 210 : 236} sx={{ borderRadius: 2 }} />
-          ))}
-        </Box>
-      ) : items.length === 0 ? (
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '50vh',
-            py: 4,
-          }}
-        >
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            No vocabulary found
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {currentTopicId ? t('errors.noWords') : t('errors.selectTopic')}
-          </Typography>
-        </Box>
-      ) : (
-        <Box
-          sx={{
-            display: 'grid',
-            gap: { xs: 1.5, sm: 2.5, md: 3 },
-            gridTemplateColumns: {
-              xs: 'repeat(1, minmax(0, 1fr))',
-              sm: 'repeat(2, minmax(0, 1fr))',
-              md: 'repeat(3, minmax(0, 1fr))',
-              lg: 'repeat(4, minmax(0, 1fr))',
-            },
-            alignItems: 'stretch',
-            pb: { xs: 12, sm: 14 },
-            pt: GRID_PADDING_TOP,
-          }}
-        >
-          {items.map((it, idx) => {
-            if (hiddenCorrectCards[idx]) return null;
-
-            const isRemoving = !!removingCorrectCards[idx];
-
-            return (
-              <Box
-                key={`${it.en}-${idx}`}
-                sx={{
-                  pointerEvents:
-                    isLoading || items.length === 0 || !hasStarted || isRemoving ? 'none' : 'auto',
-                  opacity: isRemoving ? 0 : isLoading || items.length === 0 ? 0.6 : 1,
-                  transform: isRemoving ? 'scale(0.92) translateY(-8px)' : 'scale(1) translateY(0)',
-                  transformOrigin: 'center',
-                  maxHeight: isRemoving ? 0 : { xs: 180, sm: 232, md: 260 },
-                  overflow: 'hidden',
-                  transition:
-                    'opacity 280ms ease, transform 280ms ease, max-height 320ms ease',
-                }}
-              >
-                <WordCard
-                  en={it.en}
-                  vi={it.vi}
-                  showLang={language}
-                  flipped={!!flipped[idx]}
-                  onAttempt={() => handleAttempt(idx)}
-                  shouldShake={wrongIdx === idx}
-                  shakeKey={wrongTick}
+          {isLoading ? (
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: 'repeat(1, minmax(0, 1fr))',
+                  sm: 'repeat(auto-fill, minmax(280px, 1fr))',
+                },
+                gap: { xs: 1.25, sm: 2, md: 2.5 },
+              }}
+            >
+              {[...Array(8)].map((_, idx) => (
+                <Skeleton
+                  key={idx}
+                  variant="rounded"
+                  height={isMobile ? 168 : isTablet ? 204 : 224}
+                  sx={{
+                    width: '100%',
+                    borderRadius: 1,
+                  }}
                 />
-              </Box>
-            );
-          })}
+              ))}
+            </Box>
+          ) : items.length === 0 ? (
+            <Alert severity="info">
+              {currentTopicId ? t('errors.noWords') : t('errors.selectTopic')}
+            </Alert>
+          ) : (
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: 'repeat(1, minmax(0, 1fr))',
+                  sm: 'repeat(auto-fill, minmax(280px, 1fr))',
+                },
+                gap: { xs: 1.25, sm: 2, md: 2.5 },
+                alignItems: 'stretch',
+                pb: { xs: 2, sm: 3 },
+              }}
+            >
+              {items.map((it, idx) => {
+                if (hiddenCorrectCards[idx]) return null;
+
+                const isRemoving = !!removingCorrectCards[idx];
+                const isInteractionDisabled =
+                  !hasStarted || isRemoving || pendingCorrectFeedbackCount > 0;
+
+                return (
+                  <Box
+                    key={`${it.en}-${idx}`}
+                    sx={{
+                      width: '100%',
+                      pointerEvents: isInteractionDisabled ? 'none' : 'auto',
+                      opacity: isRemoving ? 0 : hasStarted ? 1 : 0.64,
+                      transform: isRemoving
+                        ? 'scale(0.96) translateY(-6px)'
+                        : 'scale(1) translateY(0)',
+                      transformOrigin: 'center',
+                      maxHeight: isRemoving ? 0 : { xs: 176, sm: 220, md: 240 },
+                      overflow: 'hidden',
+                      transition:
+                        'opacity 280ms ease, transform 280ms ease, max-height 320ms ease',
+                    }}
+                  >
+                    <WordCard
+                      en={it.en}
+                      vi={it.vi}
+                      showLang={language}
+                      flipped={!!flipped[idx]}
+                      onAttempt={() => handleAttempt(idx)}
+                      shouldShake={wrongIdx === idx}
+                      shakeKey={wrongTick}
+                      disabled={isInteractionDisabled}
+                    />
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
         </Box>
-        )}
       </Box>
       
       <Dialog
@@ -829,7 +773,7 @@ const FlashcardsListeningPage = () => {
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: 2,
+            borderRadius: 1,
           },
         }}
       >
@@ -909,15 +853,6 @@ const FlashcardsListeningPage = () => {
         onNextMode={handleCompletionNext}
       />
 
-      <VocabularyQuickView
-        vocabularyList={items}
-        currentTopicId={sourceTopicId || currentTopicId}
-      />
-
-      <FlashcardsSettingsPanel
-        removeCorrectCards={settings.removeCorrectCards}
-        onRemoveCorrectCardsChange={handleRemoveCorrectCardsChange}
-      />
     </Box>
   );
 };

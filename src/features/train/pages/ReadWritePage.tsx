@@ -1,15 +1,10 @@
 // ReadWritePage.tsx
 import {
-  Box,
-  Typography,
-  Skeleton,
-  Chip,
-  Button,
-  IconButton,
-  useTheme,
   Alert,
+  Box,
+  Skeleton,
 } from '@mui/material';
-import { AlertCircle, RotateCcw, ArrowLeftRight } from 'lucide-react';
+import { PencilLine } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -20,6 +15,7 @@ import {
   FlashcardsSettingsPanel,
   TrainingHeader,
   VocabularyQuickView,
+  TrainingToolbar,
   useWriteTrainingSettings,
 } from '@/features/train/components';
 import {
@@ -60,7 +56,6 @@ function pickRandomIndex(arrLength: number, exclude: Set<number>): number {
 }
 
 const ReadWritePage = () => {
-  const theme = useTheme();
   const { t } = useTranslation('train');
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -317,9 +312,9 @@ const ReadWritePage = () => {
     }
   }, [isCompleted, isLoading, items.length, showCompletionModal, sessionMistakes, currentTopicId, mistakesSaved, completionModalShown]);
 
-  const handleModeToggle = () => {
+  const handleModeChange = (nextMode: 'vi-en' | 'en-vi') => {
     clearAdvanceTimeout();
-    setMode((prev) => (prev === 'vi-en' ? 'en-vi' : 'vi-en'));
+    setMode(nextMode);
     setShowHint(false);
     setCurrentWordCompleted(false);
   };
@@ -479,83 +474,34 @@ const ReadWritePage = () => {
       <TrainingHeader
         title={t('readWrite.title')}
         subtitle={t('readWrite.instruction')}
+        icon={<PencilLine size={18} />}
         completed={completedWords.length}
         total={total}
         controls={(
-          <Box
-            sx={{
-              flex: 1,
-              minWidth: 0,
-              maxWidth: '100%',
-              display: 'flex',
-              flexDirection: { xs: 'column', sm: 'row' },
-              alignItems: { xs: 'stretch', sm: 'center' },
-              justifyContent: 'space-between',
-              gap: 1,
-              flexWrap: 'wrap',
-            }}
-          >
-            <Button
-              variant="outlined"
-              color="primary"
-              size="small"
-              disabled={currentWordCompleted}
-              onClick={handleModeToggle}
-              startIcon={<ArrowLeftRight size={16} />}
-              sx={{ minWidth: 112 }}
-            >
-              {mode === 'vi-en' ? t('direction.viEn') : t('direction.enVi')}
-            </Button>
-
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 0.75,
-                alignItems: 'center',
-                width: 'auto',
-                minWidth: 0,
-                alignSelf: { xs: 'stretch', sm: 'auto' },
-                justifyContent: 'flex-start',
-                flexWrap: 'wrap',
-              }}
-            >
-              <Chip
-                label={t('topBar.remaining', { remaining })}
-                variant="outlined"
-                size="small"
-              />
-              <Chip
-                icon={<AlertCircle size={15} />}
-                label={t('topBar.mistakes', { count: mistakes })}
-                variant="outlined"
-                size="small"
-                sx={{
-                  borderColor: 'error.main',
-                  color: 'error.main',
-                  bgcolor: `${theme.palette.error.main}12`,
-                }}
-              />
-              <IconButton
-                color="primary"
-                size="small"
-                onClick={handleRestart}
-                aria-label={t('buttons.restart')}
-                sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
-              >
-                <RotateCcw size={16} />
-              </IconButton>
-              <Button
-                variant="outlined"
-                color="primary"
-                size="small"
-                startIcon={<RotateCcw size={16} />}
-                onClick={handleRestart}
-                sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
-              >
-                {t('buttons.restart')}
-              </Button>
-            </Box>
-          </Box>
+          <TrainingToolbar
+            mode={mode}
+            remaining={remaining}
+            mistakes={mistakes}
+            disabled={currentWordCompleted}
+            onModeChange={handleModeChange}
+            onRestart={handleRestart}
+            actions={(
+              <>
+                <VocabularyQuickView
+                  vocabularyList={items}
+                  currentTopicId={sourceTopicId || currentTopicId}
+                  triggerVariant="inline"
+                />
+                <FlashcardsSettingsPanel
+                  answerReviewDurationMs={settings.answerReviewDurationMs}
+                  onAnswerReviewDurationChange={setAnswerReviewDurationMs}
+                  disableAutoAdvance={settings.disableAutoAdvance}
+                  onDisableAutoAdvanceChange={setDisableAutoAdvance}
+                  triggerVariant="inline"
+                />
+              </>
+            )}
+          />
         )}
       />
 
@@ -565,29 +511,30 @@ const ReadWritePage = () => {
           flex: 1,
           width: '100%',
           bgcolor: 'background.default',
+          display: 'flex',
         }}
       >
         <Box
           sx={{
             width: '100%',
-            maxWidth: { xs: '100%', sm: '1200px' },
+            maxWidth: 1040,
             mx: 'auto',
-            px: { xs: 2, sm: 3, md: 4 },
-            py: { xs: 2, sm: 3, md: 4 },
+            px: { xs: 1.5, sm: 3, md: 4 },
+            py: { xs: 1.5, sm: 3 },
             boxSizing: 'border-box',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: currentWord ? { xs: 'flex-start', md: 'center' } : 'flex-start',
-            minHeight: '100%',
+            minHeight: { xs: 'auto', md: 'calc(100vh - 104px)' },
           }}
         >
           {isLoading ? (
-            <Box sx={{ width: '100%', maxWidth: 760 }}>
-              <Skeleton variant="rounded" height={420} sx={{ borderRadius: { xs: 2, sm: 2.5 } }} />
+            <Box sx={{ width: '100%', maxWidth: 820 }}>
+              <Skeleton variant="rounded" height={440} sx={{ borderRadius: 1 }} />
             </Box>
           ) : items.length === 0 ? (
-            <Alert severity="warning" sx={{ width: '100%', maxWidth: 760 }}>
+            <Alert severity="warning" sx={{ width: '100%', maxWidth: 820 }}>
               {t('errors.selectTopic')}
             </Alert>
           ) : currentWord ? (
@@ -604,8 +551,9 @@ const ReadWritePage = () => {
               shouldShake={shouldShake}
               shakeKey={shakeKey}
               hasError={hasError}
-              showNextButton={settings.disableAutoAdvance}
               onNext={advanceToNextWord}
+              autoAdvanceDisabled={settings.disableAutoAdvance}
+              answerReviewDurationMs={settings.answerReviewDurationMs}
             />
           ) : null}
         </Box>
@@ -621,18 +569,6 @@ const ReadWritePage = () => {
         onNextMode={handleCompletionNext}
       />
 
-      {/* Vocabulary Quick View */}
-      <VocabularyQuickView
-        vocabularyList={items}
-        currentTopicId={sourceTopicId || currentTopicId}
-      />
-
-      <FlashcardsSettingsPanel
-        answerReviewDurationMs={settings.answerReviewDurationMs}
-        onAnswerReviewDurationChange={setAnswerReviewDurationMs}
-        disableAutoAdvance={settings.disableAutoAdvance}
-        onDisableAutoAdvanceChange={setDisableAutoAdvance}
-      />
     </Box>
   );
 };

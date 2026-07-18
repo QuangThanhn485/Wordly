@@ -24,12 +24,21 @@
     "mistakes": "Mistakes: {{count}}",
     "mistakesShort": "M: {{count}}"
   },
+  "toolbar": {
+    "direction": "Training direction",
+    "switchDirection": "Switch training direction",
+    "remainingValue": "{{count}} left",
+    "mistakesValue": "{{count}} wrong",
+    "restartTitle": "Restart this training session?",
+    "restartDescription": "All progress and mistakes from the current session will be reset."
+  },
   "flashcards": {
     "tapToAnswer": "Tap a card to answer",
     "cardAriaLabel": "Flashcard for {{word}}"
   },
   "flashcardsReading": {
     "title": "Flashcards Reading",
+    "targetLabel": "Find the matching card",
     "instruction": "Look at the word and try to remember its meaning",
     "showMeaning": "Show Meaning",
     "hideMeaning": "Hide Meaning",
@@ -41,6 +50,9 @@
   },
   "flashcardsListening": {
     "title": "Flashcards Listening",
+    "audioPrompt": "Audio question",
+    "readyState": "Ready to start",
+    "activeState": "Select the card that matches the audio",
     "instruction": "Listen to the pronunciation and identify the word",
     "playAudio": "Play Audio",
     "replay": "Replay",
@@ -62,6 +74,9 @@
     "theAnswerIs": "The answer is"
   },
   "readWriteCard": {
+    "taskTitle": "Translate and enter the answer",
+    "taskViEn": "Turn the Vietnamese meaning into the English word",
+    "taskEnVi": "Turn the English word into its Vietnamese meaning",
     "placeholderViEn": "Type the English word...",
     "placeholderEnVi": "Type the Vietnamese meaning...",
     "audio": "Play pronunciation",
@@ -85,15 +100,27 @@
   },
   "listenWriteCard": {
     "title": "Listen & Write",
+    "taskTitle": "Listen and enter the answer",
+    "taskViEn": "Listen to the English word and type what you hear",
+    "taskEnVi": "Listen to the English word and enter its Vietnamese meaning",
     "placeholderViEn": "Type the English word...",
     "placeholderEnVi": "Type the Vietnamese meaning...",
     "startSpeak": "Start pronunciation",
     "replay": "Replay audio",
+    "audioWaiting": "Ready to listen",
+    "audioReady": "Ready to answer",
     "played": "Played the English word",
     "hint": "Hint",
     "check": "Check",
     "correct": "Correct!",
     "wrongHelper": "Wrong! Try again."
+  },
+  "review": {
+    "correctTitle": "Correct answer",
+    "correctDescription": "Review the word and meaning before continuing.",
+    "replay": "Replay pronunciation",
+    "manualAdvance": "Paused on the result. Select Next when you are ready.",
+    "autoAdvance": "Advancing automatically in {{seconds}} seconds."
   },
   "completion": {
     "title": "Training Complete!",
@@ -120,6 +147,7 @@
     "restart": "Restart",
     "nextMode": "Next Training Mode",
     "nextQuestion": "Next",
+    "cancel": "Cancel",
     "hint": "Hint",
     "close": "Close"
   },

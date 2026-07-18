@@ -1,31 +1,31 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Box,
+  Button,
   Card,
-  Divider,
+  IconButton,
   InputAdornment,
   Stack,
   TextField,
-  Button,
+  Tooltip,
   Typography,
   useTheme,
-  IconButton,
-  Tooltip,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import {
-  ArrowRight,
-  CheckCircle as CheckCircleIcon,
-  Lightbulb as LightbulbIcon,
-  RotateCcw as ReplayIcon,
-  Volume2 as VolumeUpIcon,
-  Play as PlayArrowIcon,
-} from 'lucide-react';
 import { keyframes } from '@mui/system';
-import { speakEnglish } from '@/utils/speechUtils';
+import {
+  Headphones,
+  Lightbulb,
+  Play,
+  RotateCcw,
+  Send,
+  Volume2,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { AnswerReviewPanel } from '@/features/train/components';
+import { speakEnglish } from '@/utils/speechUtils';
 
-const shakeKF = keyframes`
+const shake = keyframes`
   10%, 90% { transform: translate3d(-1px, 0, 0); }
   20%, 80% { transform: translate3d(2px, 0, 0); }
   30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
@@ -33,22 +33,23 @@ const shakeKF = keyframes`
 `;
 
 interface WordInputCardProps {
-  question: string; // The English word (always EN for listening)
-  answer: string; // The correct answer (VI or EN depending on mode)
+  question: string;
+  answer: string;
   englishWord: string;
   vietnameseMeaning: string;
-  mode: 'vi-en' | 'en-vi'; // Training mode
+  mode: 'vi-en' | 'en-vi';
   onAnswer: (userAnswer: string) => void;
   onHint: () => void;
-  onStart: () => void; // Callback when start button is clicked
+  onStart: () => void;
+  onNext: () => void;
   showHint?: boolean;
   isCompleted?: boolean;
   shouldShake?: boolean;
   shakeKey?: number;
-  hasError?: boolean; // Whether there's an error (wrong answer)
-  hasStarted?: boolean; // Whether user has clicked start button for current word
-  showNextButton?: boolean;
-  onNext?: () => void;
+  hasError?: boolean;
+  hasStarted?: boolean;
+  autoAdvanceDisabled?: boolean;
+  answerReviewDurationMs?: number;
 }
 
 export const WordInputCard: React.FC<WordInputCardProps> = ({
@@ -60,373 +61,381 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   onAnswer,
   onHint,
   onStart,
+  onNext,
   showHint = false,
   isCompleted = false,
   shouldShake = false,
   shakeKey = 0,
   hasError = false,
   hasStarted = false,
-  showNextButton = false,
-  onNext,
+  autoAdvanceDisabled = false,
+  answerReviewDurationMs = 3000,
 }) => {
   const { t } = useTranslation('train');
   const theme = useTheme();
-  const [userInput, setUserInput] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [hasPlayed, setHasPlayed] = useState(false);
-  const hintBackground =
-    theme.palette.mode === 'dark'
-      ? alpha(theme.palette.info.main, 0.15)
-      : theme.palette.info.light;
-  const hintBorder = alpha(theme.palette.info.main, theme.palette.mode === 'dark' ? 0.6 : 1);
-  const hintText = theme.palette.mode === 'dark' ? theme.palette.info.light : theme.palette.info.dark;
-
-  // Reset hasPlayed when question changes or when hasStarted becomes false
-  useEffect(() => {
-    if (question && !isCompleted) {
-      if (!hasStarted) {
-        setHasPlayed(false);
-      }
-    }
-  }, [question, isCompleted, hasStarted]);
-
-  // Focus input when audio has played
-  useEffect(() => {
-    if (!isCompleted && inputRef.current && hasPlayed && hasStarted) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 500);
-    }
-  }, [question, isCompleted, hasPlayed, hasStarted]);
-
-  // Reset input when question changes
-  useEffect(() => {
-    setUserInput('');
-  }, [question]);
-
-  // Focus input when error occurs (shake)
-  useEffect(() => {
-    if (shouldShake && inputRef.current) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }, 400);
-    }
-  }, [shouldShake, shakeKey]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userInput.trim()) return;
-
-    onAnswer(userInput.trim());
-    setUserInput('');
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSubmit(e);
-    }
-  };
-
-  // For listen-write mode:
-  // - mode 'vi-en': hear EN, type EN (answer is EN)
-  // - mode 'en-vi': hear EN, type VI (answer is VI)
-  const answerLabel = mode === 'vi-en' ? t('common.english') : t('common.vietnamese');
-  const placeholder =
-    mode === 'vi-en' ? t('listenWriteCard.placeholderViEn') : t('listenWriteCard.placeholderEnVi');
   const isDark = theme.palette.mode === 'dark';
-  const accent = isCompleted
-    ? theme.palette.success.main
-    : hasError && shouldShake
-      ? theme.palette.error.main
-      : theme.palette.primary.main;
+  const [userInput, setUserInput] = useState('');
+  const [hasPlayed, setHasPlayed] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const answerLabel = mode === 'vi-en'
+    ? t('common.english')
+    : t('common.vietnamese');
+  const placeholder = mode === 'vi-en'
+    ? t('listenWriteCard.placeholderViEn')
+    : t('listenWriteCard.placeholderEnVi');
+  const taskDescription = mode === 'vi-en'
+    ? t('listenWriteCard.taskViEn')
+    : t('listenWriteCard.taskEnVi');
+  const accent = hasError && shouldShake
+    ? theme.palette.error.main
+    : theme.palette.primary.main;
+
+  useEffect(() => {
+    setUserInput('');
+    if (!hasStarted) setHasPlayed(false);
+  }, [hasStarted, question]);
+
+  useEffect(() => {
+    if (isCompleted || !hasStarted || !inputRef.current) return;
+    const timeout = window.setTimeout(() => inputRef.current?.focus(), 300);
+    return () => window.clearTimeout(timeout);
+  }, [hasPlayed, hasStarted, isCompleted, question]);
+
+  useEffect(() => {
+    if (!shouldShake || !inputRef.current) return;
+    const timeout = window.setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 400);
+    return () => window.clearTimeout(timeout);
+  }, [shakeKey, shouldShake]);
 
   const handlePlayAudio = () => {
     if (!question) return;
-
     if (!hasStarted) {
       onStart();
-      setHasPlayed(true);
-      return;
+    } else {
+      speakEnglish(question, { lang: 'en-US' });
     }
-
-    speakEnglish(question, { lang: 'en-US' });
     setHasPlayed(true);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const value = userInput.trim();
+    if (!value || !hasStarted) return;
+    onAnswer(value);
+    setUserInput('');
   };
 
   return (
     <Card
       sx={{
         width: '100%',
-        maxWidth: { xs: '100%', sm: 680, md: 760 },
+        maxWidth: 820,
         mx: 'auto',
-        mb: 3,
-        animation:
-          shouldShake && !isCompleted
-            ? `${shakeKF} 0.35s cubic-bezier(.36,.07,.19,.97) both`
-            : 'none',
-        boxShadow: 'none',
-        borderRadius: 1,
+        overflow: 'hidden',
         border: '1px solid',
         borderColor: isCompleted
-          ? alpha(theme.palette.success.main, isDark ? 0.6 : 0.4)
-          : alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
-        overflow: 'hidden',
-        transition: 'border-color 160ms ease, transform 160ms ease',
+          ? alpha(theme.palette.success.main, isDark ? 0.48 : 0.3)
+          : alpha(theme.palette.divider, isDark ? 0.34 : 0.78),
+        borderRadius: 1,
+        bgcolor: 'background.paper',
+        boxShadow: isDark
+          ? '0 12px 30px rgba(0, 0, 0, 0.22)'
+          : '0 10px 28px rgba(20, 35, 55, 0.08)',
+        animation:
+          shouldShake && !isCompleted
+            ? `${shake} 0.35s cubic-bezier(.36,.07,.19,.97) both`
+            : 'none',
+        transition: 'border-color 160ms ease, box-shadow 160ms ease',
         '&:focus-within': {
-          borderColor: alpha(accent, isDark ? 0.55 : 0.45),
+          borderColor: alpha(accent, isDark ? 0.62 : 0.46),
+          boxShadow: isDark
+            ? `0 12px 30px ${alpha(accent, 0.12)}`
+            : `0 10px 28px ${alpha(accent, 0.11)}`,
         },
       }}
     >
-      {/* Header */}
       <Box
         sx={{
+          minHeight: 64,
           px: { xs: 2, sm: 2.5 },
-          py: { xs: 1.75, sm: 2 },
+          py: 1.25,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
           borderBottom: '1px solid',
-          borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.65),
-          bgcolor: alpha(accent, isDark ? 0.08 : 0.06),
-          position: 'relative',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 4,
-            bgcolor: alpha(accent, isDark ? 0.75 : 0.55),
-          },
+          borderColor: 'divider',
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box
+          sx={{
+            minWidth: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.25,
+          }}
+        >
           <Box
             sx={{
-              width: 44,
-              height: 44,
-              borderRadius: 999,
+              width: 36,
+              height: 36,
+              flexShrink: 0,
               display: 'grid',
               placeItems: 'center',
-              flexShrink: 0,
-              border: '1px solid',
-              borderColor: alpha(accent, isDark ? 0.55 : 0.35),
-              bgcolor: alpha(accent, isDark ? 0.16 : 0.1),
-              color: accent,
+              borderRadius: 1,
+              color: isCompleted ? 'success.main' : 'primary.main',
+              bgcolor: alpha(
+                isCompleted
+                  ? theme.palette.success.main
+                  : theme.palette.primary.main,
+                isDark ? 0.15 : 0.08,
+              ),
             }}
           >
-            {isCompleted ? <CheckCircleIcon size={22} /> : <VolumeUpIcon size={22} />}
+            {isCompleted ? <Volume2 size={19} /> : <Headphones size={19} />}
           </Box>
-
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle1" fontWeight={700} sx={{ letterSpacing: 0 }} noWrap>
-              {t('listenWriteCard.title')}
+          <Box sx={{ minWidth: 0 }}>
+            <Typography
+              sx={{
+                fontSize: '0.9375rem',
+                lineHeight: 1.3,
+                fontWeight: 700,
+              }}
+            >
+              {t('listenWriteCard.taskTitle')}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-              {isCompleted ? t('listenWriteCard.correct') : hasStarted ? t('listenWriteCard.played') : t('listenWriteCard.startSpeak')}
+            <Typography
+              noWrap
+              color="text.secondary"
+              sx={{ mt: 0.125, fontSize: '0.75rem', lineHeight: 1.3 }}
+            >
+              {taskDescription}
             </Typography>
           </Box>
         </Box>
+
+        <Box
+          sx={{
+            flexShrink: 0,
+            px: 1,
+            py: 0.5,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1,
+            color: 'text.secondary',
+            bgcolor: 'action.hover',
+            fontSize: '0.6875rem',
+            lineHeight: 1,
+            fontWeight: 700,
+          }}
+        >
+          {mode === 'vi-en' ? 'EN -> EN' : 'EN -> VI'}
+        </Box>
       </Box>
 
-      <Box sx={{ p: { xs: 2, sm: 2.5 } }}>
-        {/* Audio Controls */}
-        <Stack spacing={2}>
-          <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'center', flexWrap: 'wrap' }}>
-            <Button
-              variant="contained"
-              color="primary"
-              size="medium"
-              startIcon={!hasStarted ? <PlayArrowIcon size={18} /> : <ReplayIcon size={18} />}
+      {isCompleted ? (
+        <AnswerReviewPanel
+          englishWord={englishWord}
+          vietnameseMeaning={vietnameseMeaning}
+          autoAdvanceDisabled={autoAdvanceDisabled}
+          reviewDurationMs={answerReviewDurationMs}
+          onNext={onNext}
+        />
+      ) : (
+        <>
+          <Box
+            sx={{
+              minHeight: { xs: 174, sm: 204 },
+              px: { xs: 2, sm: 3 },
+              py: { xs: 2.5, sm: 3 },
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              bgcolor: alpha(
+                theme.palette.background.default,
+                isDark ? 0.22 : 0.48,
+              ),
+            }}
+          >
+            <IconButton
               onClick={handlePlayAudio}
               disabled={!question}
+              aria-label={
+                hasStarted
+                  ? t('listenWriteCard.replay')
+                  : t('buttons.start')
+              }
               sx={{
-                borderRadius: 1,
-                py: 0.75,
-                px: 1.5,
-                fontWeight: 700,
-                flex: { xs: '1 1 240px', sm: '0 0 auto' },
-              }}
-            >
-              {!hasStarted ? t('buttons.start') : t('listenWriteCard.replay')}
-            </Button>
-          </Box>
-
-          <Divider sx={{ borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.65) }} />
-
-        {/* Input Section */}
-        {!isCompleted ? (
-          <Box component="form" onSubmit={handleSubmit}>
-            <TextField
-              inputRef={inputRef}
-              fullWidth
-              label={answerLabel}
-              placeholder={placeholder}
-              value={userInput}
-              onChange={(e) => {
-                setUserInput(e.target.value);
-              }}
-              onKeyPress={handleKeyPress}
-              error={hasError && shouldShake}
-              helperText={hasError && shouldShake ? t('listenWriteCard.wrongHelper') : ' '}
-              variant="outlined"
-              size="medium"
-              autoFocus={hasPlayed && hasStarted}
-              disabled={isCompleted || !hasStarted}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end" sx={{ mr: 0.75 }}>
-                    <Tooltip title={t('listenWriteCard.hint')}>
-                      <span>
-                        <IconButton
-                          onClick={onHint}
-                          disabled={!hasStarted}
-                          edge="end"
-                          sx={{
-                            borderRadius: 2,
-                            border: '1px solid',
-                            borderColor: alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
-                            color: 'text.secondary',
-                            '&:hover': {
-                              bgcolor: alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08),
-                              color: 'text.primary',
-                            },
-                            '&.Mui-disabled': {
-                              borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.5),
-                              color: alpha(theme.palette.text.primary, 0.35),
-                            },
-                          }}
-                        >
-                          <LightbulbIcon size={18} />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </InputAdornment>
+                width: 72,
+                height: 72,
+                color: 'primary.contrastText',
+                bgcolor: 'primary.main',
+                border: '6px solid',
+                borderColor: alpha(
+                  theme.palette.primary.main,
+                  isDark ? 0.18 : 0.11,
                 ),
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2,
-                  fontSize: { xs: '1rem', sm: '1.1rem' },
-                  bgcolor: alpha(theme.palette.background.paper, isDark ? 0.1 : 0.65),
+                boxShadow: `0 6px 18px ${alpha(theme.palette.primary.main, 0.22)}`,
+                '&:hover': {
+                  bgcolor: 'primary.dark',
+                },
+                '&.Mui-disabled': {
+                  color: 'action.disabled',
+                  bgcolor: 'action.disabledBackground',
+                  boxShadow: 'none',
                 },
               }}
-            />
+            >
+              {hasStarted ? <RotateCcw size={27} /> : <Play size={28} />}
+            </IconButton>
 
-            {/* Hint Display */}
+            <Typography
+              sx={{
+                mt: 1.5,
+                color: 'text.primary',
+                fontSize: '0.9375rem',
+                lineHeight: 1.35,
+                fontWeight: 700,
+              }}
+            >
+              {hasStarted
+                ? t('listenWriteCard.audioReady')
+                : t('listenWriteCard.audioWaiting')}
+            </Typography>
+            <Typography
+              color="text.secondary"
+              sx={{ mt: 0.375, fontSize: '0.75rem', lineHeight: 1.35 }}
+            >
+              {hasStarted
+                ? t('listenWriteCard.played')
+                : t('listenWriteCard.startSpeak')}
+            </Typography>
+          </Box>
+
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            sx={{
+              px: { xs: 2, sm: 3 },
+              py: { xs: 2, sm: 2.5 },
+              borderTop: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              alignItems="flex-start"
+            >
+              <TextField
+                inputRef={inputRef}
+                fullWidth
+                label={answerLabel}
+                placeholder={placeholder}
+                value={userInput}
+                onChange={(event) => setUserInput(event.target.value)}
+                error={hasError && shouldShake}
+                helperText={
+                  hasError && shouldShake
+                    ? t('listenWriteCard.wrongHelper')
+                    : ' '
+                }
+                variant="outlined"
+                size="medium"
+                autoComplete="off"
+                disabled={!hasStarted}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Tooltip title={t('listenWriteCard.hint')}>
+                        <span>
+                          <IconButton
+                            size="small"
+                            edge="end"
+                            onClick={onHint}
+                            disabled={!hasStarted}
+                            aria-label={t('listenWriteCard.hint')}
+                            sx={{ color: 'text.secondary' }}
+                          >
+                            <Lightbulb size={18} />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1,
+                    bgcolor: alpha(
+                      theme.palette.background.paper,
+                      isDark ? 0.7 : 1,
+                    ),
+                  },
+                  '& .MuiInputBase-input': {
+                    fontSize: '1rem',
+                    fontWeight: 500,
+                  },
+                }}
+              />
+
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                disabled={!userInput.trim() || !hasStarted}
+                endIcon={<Send size={16} />}
+                sx={{
+                  width: { xs: '100%', sm: 'auto' },
+                  minWidth: { sm: 132 },
+                  minHeight: 56,
+                  borderRadius: 1,
+                  px: 2,
+                  fontSize: '0.875rem',
+                  lineHeight: 1.2,
+                  fontWeight: 700,
+                  boxShadow: 'none',
+                }}
+              >
+                {t('listenWriteCard.check')}
+              </Button>
+            </Stack>
+
             {showHint && (
               <Box
                 sx={{
-                  mt: 1.25,
-                  p: 1.5,
-                  bgcolor: hintBackground,
-                  borderRadius: 2,
-                  border: `1px solid ${hintBorder}`,
-                  color: hintText,
+                  mt: 0.75,
+                  px: 1.5,
+                  py: 1.25,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 0.875,
+                  border: '1px solid',
+                  borderColor: alpha(theme.palette.info.main, isDark ? 0.42 : 0.26),
+                  borderRadius: 1,
+                  color: isDark
+                    ? theme.palette.info.light
+                    : theme.palette.info.dark,
+                  bgcolor: alpha(theme.palette.info.main, isDark ? 0.12 : 0.06),
                 }}
               >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    fontWeight: 700,
-                    color: hintText,
-                    '& svg': { color: hintText, stroke: hintText },
-                  }}
-                >
-                  <LightbulbIcon size={18} />
-                  <Box component="span" sx={{ minWidth: 0 }}>
-                    <Box component="span" sx={{ fontWeight: 700 }}>
-                      {answerLabel}:
-                    </Box>{' '}
-                    {answer}
-                  </Box>
+                <Lightbulb size={17} style={{ marginTop: 1, flexShrink: 0 }} />
+                <Typography sx={{ fontSize: '0.8125rem', lineHeight: 1.45 }}>
+                  <Box component="span" sx={{ fontWeight: 700 }}>
+                    {answerLabel}:
+                  </Box>{' '}
+                  {answer}
                 </Typography>
               </Box>
             )}
-
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              fullWidth
-              size="medium"
-              disabled={!userInput.trim() || !hasStarted}
-              sx={{
-                mt: 1.5,
-                py: 0.875,
-                borderRadius: 1,
-                fontSize: '0.875rem',
-                fontWeight: 700,
-              }}
-            >
-              {t('listenWriteCard.check')}
-            </Button>
           </Box>
-        ) : (
-          <Box sx={{ textAlign: 'center', py: { xs: 1.5, sm: 2 } }}>
-            <Box
-              sx={{
-                mx: 'auto',
-                mb: 1.5,
-                width: 56,
-                height: 56,
-                borderRadius: 999,
-                display: 'grid',
-                placeItems: 'center',
-                border: '1px solid',
-                borderColor: alpha(theme.palette.success.main, isDark ? 0.55 : 0.35),
-                bgcolor: alpha(theme.palette.success.main, isDark ? 0.16 : 0.1),
-                color: theme.palette.success.main,
-              }}
-            >
-              <CheckCircleIcon size={28} />
-            </Box>
-            <Typography variant="subtitle1" color="success.main" fontWeight={700}>
-              {t('listenWriteCard.correct')}
-            </Typography>
-            <Stack spacing={0.75} sx={{ mt: 1.5 }}>
-              <Typography variant="body2" color="text.secondary">
-                <Box component="span" sx={{ fontWeight: 700 }}>
-                  {t('common.english')}:
-                </Box>{' '}
-                <Box component="span" sx={{ color: 'text.primary', fontWeight: 700 }}>
-                  {englishWord}
-                </Box>
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                <Box component="span" sx={{ fontWeight: 700 }}>
-                  {t('common.vietnamese')}:
-                </Box>{' '}
-                <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                  {vietnameseMeaning}
-                </Box>
-              </Typography>
-            </Stack>
-            {showNextButton && onNext && (
-              <Button
-                type="button"
-                variant="contained"
-                color="primary"
-                size="medium"
-                endIcon={<ArrowRight size={17} />}
-                onClick={onNext}
-                autoFocus
-                sx={{
-                  mt: 2,
-                  minWidth: 160,
-                  borderRadius: 1,
-                  fontSize: '0.875rem',
-                  fontWeight: 700,
-                }}
-              >
-                {t('buttons.nextQuestion')}
-              </Button>
-            )}
-          </Box>
-        )}
-        </Stack>
-      </Box>
+        </>
+      )}
     </Card>
   );
 };

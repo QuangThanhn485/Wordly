@@ -1,30 +1,30 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
+  Button,
   Card,
-  Divider,
+  IconButton,
   InputAdornment,
   Stack,
   TextField,
-  Button,
+  Tooltip,
   Typography,
   useTheme,
-  IconButton,
-  Tooltip,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
+import { keyframes } from '@mui/system';
 import {
-  ArrowRight,
   BookOpen,
-  CheckCircle as CheckCircleIcon,
-  Lightbulb as LightbulbIcon,
+  Languages,
+  Lightbulb,
+  Send,
   Volume2,
 } from 'lucide-react';
-import { keyframes } from '@mui/system';
-import { speakEnglish } from '@/utils/speechUtils';
 import { useTranslation } from 'react-i18next';
+import { AnswerReviewPanel } from '@/features/train/components';
+import { speakEnglish } from '@/utils/speechUtils';
 
-const shakeKF = keyframes`
+const shake = keyframes`
   10%, 90% { transform: translate3d(-1px, 0, 0); }
   20%, 80% { transform: translate3d(2px, 0, 0); }
   30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
@@ -32,20 +32,21 @@ const shakeKF = keyframes`
 `;
 
 interface WordInputCardProps {
-  question: string; // The word to display (EN or VI)
-  answer: string; // The correct answer (VI or EN)
+  question: string;
+  answer: string;
   englishWord: string;
   vietnameseMeaning: string;
-  mode: 'vi-en' | 'en-vi'; // Training mode
+  mode: 'vi-en' | 'en-vi';
   onAnswer: (userAnswer: string) => void;
   onHint: () => void;
+  onNext: () => void;
   showHint?: boolean;
   isCompleted?: boolean;
   shouldShake?: boolean;
   shakeKey?: number;
-  hasError?: boolean; // Whether there's an error (wrong answer)
-  showNextButton?: boolean;
-  onNext?: () => void;
+  hasError?: boolean;
+  autoAdvanceDisabled?: boolean;
+  answerReviewDurationMs?: number;
 }
 
 export const WordInputCard: React.FC<WordInputCardProps> = ({
@@ -56,13 +57,14 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   mode,
   onAnswer,
   onHint,
+  onNext,
   showHint = false,
   isCompleted = false,
   shouldShake = false,
   shakeKey = 0,
   hasError = false,
-  showNextButton = false,
-  onNext,
+  autoAdvanceDisabled = false,
+  answerReviewDurationMs = 3000,
 }) => {
   const { t } = useTranslation('train');
   const theme = useTheme();
@@ -70,510 +72,443 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   const [userInput, setUserInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const isViToEnMode = mode === 'vi-en';
-  const canPlayAudio = isViToEnMode && !isCompleted;
-  const hintBackground =
-    theme.palette.mode === 'dark'
-      ? alpha(theme.palette.info.main, 0.15)
-      : theme.palette.info.light;
-  const hintBorder = alpha(theme.palette.info.main, theme.palette.mode === 'dark' ? 0.6 : 1);
-  const hintText = theme.palette.mode === 'dark' ? theme.palette.info.light : theme.palette.info.dark;
+  const answerLabel = isViToEnMode
+    ? t('common.english')
+    : t('common.vietnamese');
+  const questionLabel = isViToEnMode
+    ? t('common.vietnamese')
+    : t('common.english');
+  const placeholder = isViToEnMode
+    ? t('readWriteCard.placeholderViEn')
+    : t('readWriteCard.placeholderEnVi');
+  const taskDescription = isViToEnMode
+    ? t('readWriteCard.taskViEn')
+    : t('readWriteCard.taskEnVi');
+  const accent = hasError && shouldShake
+    ? theme.palette.error.main
+    : theme.palette.primary.main;
 
   const letterHints = useMemo(() => {
     if (!isViToEnMode) return [];
-    const words = answer
+    return answer
       .split(/\s+/)
       .map((word) => word.trim())
-      .filter(Boolean);
-
-    return words.map((word) => {
-      const letters = word.split('').filter((char) => /[A-Za-z]/.test(char));
-      if (letters.length === 0) {
-        return [];
-      }
-      const shuffled = [...letters];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      return shuffled;
-    });
+      .filter(Boolean)
+      .map((word) => {
+        const letters = word.split('').filter((char) => /[A-Za-z]/.test(char));
+        const shuffled = [...letters];
+        for (let index = shuffled.length - 1; index > 0; index -= 1) {
+          const target = Math.floor(Math.random() * (index + 1));
+          [shuffled[index], shuffled[target]] = [
+            shuffled[target],
+            shuffled[index],
+          ];
+        }
+        return shuffled;
+      });
   }, [answer, isViToEnMode]);
 
   const letterHighlights = useMemo<boolean[][]>(() => {
     if (!isViToEnMode || letterHints.length === 0) return [];
-
     const inputWords = userInput
       .split(/\s+/)
       .map((word) => word.replace(/[^A-Za-z]/g, '').toLowerCase());
 
     return letterHints.map((letters, wordIndex) => {
-      const typedWord = inputWords[wordIndex] ?? '';
       const typedCounts: Record<string, number> = {};
-      typedWord.split('').forEach((letter) => {
+      (inputWords[wordIndex] ?? '').split('').forEach((letter) => {
         typedCounts[letter] = (typedCounts[letter] || 0) + 1;
       });
-
       return letters.map((letter) => {
         const normalized = letter.toLowerCase();
-        if (typedCounts[normalized]) {
-          typedCounts[normalized] -= 1;
-          return true;
-        }
-        return false;
+        if (!typedCounts[normalized]) return false;
+        typedCounts[normalized] -= 1;
+        return true;
       });
     });
   }, [isViToEnMode, letterHints, userInput]);
 
-  const hasLetterHints = isViToEnMode && letterHints.some((letters) => letters.length > 0);
-  const handleSpeakAnswer = () => {
-    if (!canPlayAudio) return;
-    speakEnglish(answer, { lang: 'en-US' });
-  };
+  const hasLetterHints = letterHints.some((letters) => letters.length > 0);
 
-  // Focus input when question changes
-  useEffect(() => {
-    if (!isCompleted && inputRef.current) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
-    }
-  }, [question, isCompleted]);
-
-  // Reset input when question changes
   useEffect(() => {
     setUserInput('');
   }, [question]);
 
-  // Focus input when error occurs (shake)
   useEffect(() => {
-    if (shouldShake && inputRef.current) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }, 400);
-    }
-  }, [shouldShake, shakeKey]);
+    if (isCompleted || !inputRef.current) return;
+    const timeout = window.setTimeout(() => inputRef.current?.focus(), 100);
+    return () => window.clearTimeout(timeout);
+  }, [isCompleted, question]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userInput.trim()) return;
+  useEffect(() => {
+    if (!shouldShake || !inputRef.current) return;
+    const timeout = window.setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 400);
+    return () => window.clearTimeout(timeout);
+  }, [shakeKey, shouldShake]);
 
-    onAnswer(userInput.trim());
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const value = userInput.trim();
+    if (!value) return;
+    onAnswer(value);
     setUserInput('');
   };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSubmit(e);
-    }
-  };
-
-  const questionLabel = mode === 'vi-en' ? 'VI' : 'EN';
-  const answerLabel = mode === 'vi-en' ? t('common.english') : t('common.vietnamese');
-  const placeholder =
-    mode === 'vi-en' ? t('readWriteCard.placeholderViEn') : t('readWriteCard.placeholderEnVi');
-  const accent = isCompleted
-    ? theme.palette.success.main
-    : hasError && shouldShake
-      ? theme.palette.error.main
-      : theme.palette.primary.main;
-  const subtitle = isCompleted
-    ? t('readWriteCard.correct')
-    : mode === 'vi-en'
-      ? t('readWriteCard.placeholderViEn')
-      : t('readWriteCard.placeholderEnVi');
 
   return (
     <Card
       sx={{
         width: '100%',
-        maxWidth: { xs: '100%', sm: 680, md: 760 },
+        maxWidth: 820,
         mx: 'auto',
-        mb: 3,
-        animation:
-          shouldShake && !isCompleted
-            ? `${shakeKF} 0.35s cubic-bezier(.36,.07,.19,.97) both`
-            : 'none',
-        boxShadow: 'none',
-        borderRadius: 1,
+        overflow: 'hidden',
         border: '1px solid',
         borderColor: isCompleted
-          ? alpha(theme.palette.success.main, isDark ? 0.6 : 0.4)
-          : alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
-        overflow: 'hidden',
-        transition: 'border-color 160ms ease',
+          ? alpha(theme.palette.success.main, isDark ? 0.48 : 0.3)
+          : alpha(theme.palette.divider, isDark ? 0.34 : 0.78),
+        borderRadius: 1,
+        bgcolor: 'background.paper',
+        boxShadow: isDark
+          ? '0 12px 30px rgba(0, 0, 0, 0.22)'
+          : '0 10px 28px rgba(20, 35, 55, 0.08)',
+        animation:
+          shouldShake && !isCompleted
+            ? `${shake} 0.35s cubic-bezier(.36,.07,.19,.97) both`
+            : 'none',
+        transition: 'border-color 160ms ease, box-shadow 160ms ease',
         '&:focus-within': {
-          borderColor: alpha(accent, isDark ? 0.55 : 0.45),
+          borderColor: alpha(accent, isDark ? 0.62 : 0.46),
+          boxShadow: isDark
+            ? `0 12px 30px ${alpha(accent, 0.12)}`
+            : `0 10px 28px ${alpha(accent, 0.11)}`,
         },
       }}
     >
-      {/* Header */}
       <Box
         sx={{
+          minHeight: 64,
           px: { xs: 2, sm: 2.5 },
-          py: { xs: 1.75, sm: 2 },
+          py: 1.25,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
           borderBottom: '1px solid',
-          borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.65),
-          bgcolor: alpha(accent, isDark ? 0.08 : 0.06),
-          position: 'relative',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 4,
-            bgcolor: alpha(accent, isDark ? 0.75 : 0.55),
-          },
+          borderColor: 'divider',
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box
+          sx={{
+            minWidth: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.25,
+          }}
+        >
           <Box
             sx={{
-              width: 44,
-              height: 44,
-              borderRadius: 999,
+              width: 36,
+              height: 36,
+              flexShrink: 0,
               display: 'grid',
               placeItems: 'center',
-              flexShrink: 0,
-              border: '1px solid',
-              borderColor: alpha(accent, isDark ? 0.55 : 0.35),
-              bgcolor: alpha(accent, isDark ? 0.16 : 0.1),
-              color: accent,
+              borderRadius: 1,
+              color: isCompleted ? 'success.main' : 'primary.main',
+              bgcolor: alpha(
+                isCompleted
+                  ? theme.palette.success.main
+                  : theme.palette.primary.main,
+                isDark ? 0.15 : 0.08,
+              ),
             }}
           >
-            {isCompleted ? <CheckCircleIcon size={22} /> : <BookOpen size={22} />}
+            {isCompleted ? <BookOpen size={19} /> : <Languages size={19} />}
           </Box>
-
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle1" fontWeight={700} sx={{ letterSpacing: 0 }} noWrap>
-              {t('readWrite.title')}
+          <Box sx={{ minWidth: 0 }}>
+            <Typography
+              sx={{
+                fontSize: '0.9375rem',
+                lineHeight: 1.3,
+                fontWeight: 700,
+              }}
+            >
+              {t('readWriteCard.taskTitle')}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-              {subtitle}
+            <Typography
+              noWrap
+              color="text.secondary"
+              sx={{ mt: 0.125, fontSize: '0.75rem', lineHeight: 1.3 }}
+            >
+              {taskDescription}
             </Typography>
           </Box>
         </Box>
+
+        <Box
+          sx={{
+            flexShrink: 0,
+            px: 1,
+            py: 0.5,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1,
+            color: 'text.secondary',
+            bgcolor: 'action.hover',
+            fontSize: '0.6875rem',
+            lineHeight: 1,
+            fontWeight: 700,
+          }}
+        >
+          {isViToEnMode ? 'VI -> EN' : 'EN -> VI'}
+        </Box>
       </Box>
 
-      <Box sx={{ p: { xs: 2, sm: 2.5 } }}>
-        <Stack spacing={2}>
-          {/* Question Display */}
-          <Box sx={{ textAlign: 'center' }}>
-            <Box
+      {isCompleted ? (
+        <AnswerReviewPanel
+          englishWord={englishWord}
+          vietnameseMeaning={vietnameseMeaning}
+          autoAdvanceDisabled={autoAdvanceDisabled}
+          reviewDurationMs={answerReviewDurationMs}
+          onNext={onNext}
+        />
+      ) : (
+        <>
+          <Box
+            sx={{
+              minHeight: { xs: 142, sm: 170 },
+              px: { xs: 2, sm: 3 },
+              py: { xs: 2.5, sm: 3 },
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              bgcolor: alpha(
+                theme.palette.background.default,
+                isDark ? 0.22 : 0.48,
+              ),
+            }}
+          >
+            <Typography
+              color="text.secondary"
               sx={{
-                mx: 'auto',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                px: 1.25,
-                py: 0.5,
-                borderRadius: 999,
-                border: '1px solid',
-                borderColor: alpha(theme.palette.divider, isDark ? 0.22 : 0.55),
-                bgcolor: alpha(theme.palette.background.paper, isDark ? 0.08 : 0.6),
-                color: 'text.secondary',
+                fontSize: '0.6875rem',
+                lineHeight: 1.2,
                 fontWeight: 700,
-                fontSize: '0.75rem',
-                letterSpacing: '0.18em',
                 textTransform: 'uppercase',
               }}
             >
               {questionLabel}
-            </Box>
-
+            </Typography>
             <Typography
-              variant="h4"
               sx={{
-                mt: 1.25,
+                mt: 1,
+                maxWidth: 680,
+                color: 'text.primary',
+                fontSize: { xs: '1.625rem', sm: '2rem' },
+                lineHeight: 1.25,
                 fontWeight: 700,
-                fontSize: { xs: '1.6rem', sm: '2.1rem', md: '2.5rem' },
-                lineHeight: 1.15,
                 letterSpacing: 0,
                 wordBreak: 'break-word',
-                color: 'text.primary',
               }}
             >
               {question}
             </Typography>
 
-            {canPlayAudio && (
-              <Box sx={{ mt: 1.25, display: 'flex', justifyContent: 'center' }}>
-                <Tooltip title={t('readWriteCard.audio')}>
-                  <span>
-                    <IconButton
-                      size="small"
-                      onClick={handleSpeakAnswer}
-                      sx={{
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
-                        color: 'text.secondary',
-                        '&:hover': {
-                          bgcolor: alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08),
-                          color: 'text.primary',
-                        },
-                      }}
-                    >
-                      <Volume2 size={18} />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              </Box>
+            {isViToEnMode && (
+              <Tooltip title={t('readWriteCard.audio')}>
+                <IconButton
+                  size="small"
+                  onClick={() => speakEnglish(answer, { lang: 'en-US' })}
+                  aria-label={t('readWriteCard.audio')}
+                  sx={{
+                    mt: 1.25,
+                    color: 'primary.main',
+                    border: '1px solid',
+                    borderColor: alpha(theme.palette.primary.main, isDark ? 0.35 : 0.24),
+                    bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.05),
+                  }}
+                >
+                  <Volume2 size={17} />
+                </IconButton>
+              </Tooltip>
             )}
           </Box>
 
-        {hasLetterHints && (
           <Box
+            component="form"
+            onSubmit={handleSubmit}
             sx={{
-              p: { xs: 1.5, sm: 2 },
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.65),
-              bgcolor: alpha(theme.palette.background.paper, isDark ? 0.04 : 0.7),
+              px: { xs: 2, sm: 3 },
+              py: { xs: 2, sm: 2.5 },
+              borderTop: '1px solid',
+              borderColor: 'divider',
             }}
           >
-            <Typography
-              variant="caption"
-              sx={{
-                textTransform: 'uppercase',
-                fontSize: { xs: '0.75rem', sm: '0.85rem' },
-                mb: 1.25,
-                color: 'text.secondary',
-                letterSpacing: '0.12em',
-                fontWeight: 700,
-              }}
+            {hasLetterHints && (
+              <Box sx={{ mb: 1.75 }}>
+                <Typography
+                  color="text.secondary"
+                  sx={{
+                    mb: 0.875,
+                    fontSize: '0.6875rem',
+                    lineHeight: 1.2,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {t('readWriteCard.letterHintTitle')}
+                </Typography>
+                <Stack spacing={0.75}>
+                  {letterHints.map((letters, wordIndex) => (
+                    <Box
+                      key={`hint-${wordIndex}`}
+                      sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}
+                    >
+                      {letters.map((letter, letterIndex) => {
+                        const highlighted =
+                          letterHighlights[wordIndex]?.[letterIndex];
+                        return (
+                          <Box
+                            key={`letter-${wordIndex}-${letterIndex}`}
+                            sx={{
+                              width: 30,
+                              height: 32,
+                              display: 'grid',
+                              placeItems: 'center',
+                              border: '1px solid',
+                              borderColor: highlighted
+                                ? alpha(theme.palette.success.main, isDark ? 0.58 : 0.4)
+                                : 'divider',
+                              borderRadius: 1,
+                              bgcolor: highlighted
+                                ? alpha(theme.palette.success.main, isDark ? 0.15 : 0.08)
+                                : 'transparent',
+                              color: highlighted ? 'success.main' : 'text.secondary',
+                              fontSize: '0.8125rem',
+                              lineHeight: 1,
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              transition: 'all 160ms ease',
+                            }}
+                          >
+                            {letter}
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  ))}
+                </Stack>
+              </Box>
+            )}
+
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              alignItems="flex-start"
             >
-              {t('readWriteCard.letterHintTitle')}
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-              {letterHints.map((letters, wordIndex) => {
-                if (letters.length === 0) return null;
-                return (
-                  <Box
-                    key={`hint-${wordIndex}`}
-                    sx={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 0.75,
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {letters.map((letter, letterIndex) => {
-                      const highlighted = letterHighlights[wordIndex]?.[letterIndex];
-                      return (
-                        <Box
-                          key={`letter-${wordIndex}-${letterIndex}`}
-                          sx={{
-                            width: 38,
-                            height: 46,
-                            borderRadius: 1.75,
-                            border: '1px solid',
-                            borderColor: highlighted
-                              ? alpha(theme.palette.success.main, isDark ? 0.7 : 0.55)
-                              : alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
-                            bgcolor: highlighted
-                              ? alpha(theme.palette.success.main, isDark ? 0.18 : 0.12)
-                              : alpha(theme.palette.background.paper, isDark ? 0.08 : 0.6),
-                            color: highlighted ? 'success.main' : 'text.primary',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 700,
-                            fontSize: '1.05rem',
-                            textTransform: 'uppercase',
-                            transition: 'all 0.2s ease',
-                            minWidth: 38,
-                          }}
-                        >
-                          {letter.toUpperCase()}
-                        </Box>
-                      );
-                    })}
-                  </Box>
-                );
-              })}
-            </Box>
-          </Box>
-        )}
-
-        {/* Input Section */}
-        {!isCompleted ? (
-          <Box component="form" onSubmit={handleSubmit}>
-            <Divider sx={{ mb: 2, borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.65) }} />
-
-            <TextField
-              inputRef={inputRef}
-              fullWidth
-              label={answerLabel}
-              placeholder={placeholder}
-              value={userInput}
-              onChange={(e) => {
-                setUserInput(e.target.value);
-              }}
-              onKeyPress={handleKeyPress}
-              error={hasError && shouldShake}
-              helperText={hasError && shouldShake ? t('readWriteCard.wrongHelper') : ' '}
-              variant="outlined"
-              size="medium"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2,
-                  fontSize: { xs: '1rem', sm: '1.1rem' },
-                  bgcolor: alpha(theme.palette.background.paper, isDark ? 0.1 : 0.65),
-                },
-              }}
-              autoFocus
-              disabled={isCompleted}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end" sx={{ mr: 0.75 }}>
-                    <Tooltip title={t('readWriteCard.hint')}>
-                      <span>
+              <TextField
+                inputRef={inputRef}
+                fullWidth
+                label={answerLabel}
+                placeholder={placeholder}
+                value={userInput}
+                onChange={(event) => setUserInput(event.target.value)}
+                error={hasError && shouldShake}
+                helperText={
+                  hasError && shouldShake
+                    ? t('readWriteCard.wrongHelper')
+                    : ' '
+                }
+                variant="outlined"
+                size="medium"
+                autoComplete="off"
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Tooltip title={t('readWriteCard.hint')}>
                         <IconButton
-                          onClick={onHint}
-                          disabled={isCompleted}
+                          size="small"
                           edge="end"
-                          sx={{
-                            borderRadius: 2,
-                            border: '1px solid',
-                            borderColor: alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
-                            color: 'text.secondary',
-                            '&:hover': {
-                              bgcolor: alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08),
-                              color: 'text.primary',
-                            },
-                            '&.Mui-disabled': {
-                              borderColor: alpha(theme.palette.divider, isDark ? 0.18 : 0.5),
-                              color: alpha(theme.palette.text.primary, 0.35),
-                            },
-                          }}
+                          onClick={onHint}
+                          aria-label={t('readWriteCard.hint')}
+                          sx={{ color: 'text.secondary' }}
                         >
-                          <LightbulbIcon size={18} />
+                          <Lightbulb size={18} />
                         </IconButton>
-                      </span>
-                    </Tooltip>
-                  </InputAdornment>
-                ),
-              }}
-            />
+                      </Tooltip>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1,
+                    bgcolor: alpha(
+                      theme.palette.background.paper,
+                      isDark ? 0.7 : 1,
+                    ),
+                  },
+                  '& .MuiInputBase-input': {
+                    fontSize: '1rem',
+                    fontWeight: 500,
+                  },
+                }}
+              />
 
-            {/* Hint Display */}
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                disabled={!userInput.trim()}
+                endIcon={<Send size={16} />}
+                sx={{
+                  width: { xs: '100%', sm: 'auto' },
+                  minWidth: { sm: 132 },
+                  minHeight: 56,
+                  borderRadius: 1,
+                  px: 2,
+                  fontSize: '0.875rem',
+                  lineHeight: 1.2,
+                  fontWeight: 700,
+                  boxShadow: 'none',
+                }}
+              >
+                {t('readWriteCard.check')}
+              </Button>
+            </Stack>
+
             {showHint && (
               <Box
                 sx={{
-                  mt: 1.25,
-                  p: 1.5,
-                  bgcolor: hintBackground,
-                  borderRadius: 2,
-                  border: `1px solid ${hintBorder}`,
-                  color: hintText,
+                  mt: 0.75,
+                  px: 1.5,
+                  py: 1.25,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 0.875,
+                  border: '1px solid',
+                  borderColor: alpha(theme.palette.info.main, isDark ? 0.42 : 0.26),
+                  borderRadius: 1,
+                  color: isDark
+                    ? theme.palette.info.light
+                    : theme.palette.info.dark,
+                  bgcolor: alpha(theme.palette.info.main, isDark ? 0.12 : 0.06),
                 }}
               >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    fontWeight: 700,
-                    color: hintText,
-                    '& svg': { color: hintText, stroke: hintText },
-                  }}
-                >
-                  <LightbulbIcon size={18} />
-                  <Box component="span" sx={{ minWidth: 0 }}>
-                    <Box component="span" sx={{ fontWeight: 700 }}>
-                      {answerLabel}:
-                    </Box>{' '}
-                    {answer}
-                  </Box>
+                <Lightbulb size={17} style={{ marginTop: 1, flexShrink: 0 }} />
+                <Typography sx={{ fontSize: '0.8125rem', lineHeight: 1.45 }}>
+                  <Box component="span" sx={{ fontWeight: 700 }}>
+                    {answerLabel}:
+                  </Box>{' '}
+                  {answer}
                 </Typography>
               </Box>
             )}
-
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              fullWidth
-              size="medium"
-              disabled={!userInput.trim()}
-              sx={{
-                mt: 1.5,
-                py: 0.875,
-                borderRadius: 1,
-                fontSize: '0.875rem',
-                fontWeight: 700,
-              }}
-            >
-              {t('readWriteCard.check')}
-            </Button>
           </Box>
-        ) : (
-          <Box sx={{ textAlign: 'center', py: { xs: 1.5, sm: 2 } }}>
-            <Box
-              sx={{
-                mx: 'auto',
-                mb: 1.5,
-                width: 56,
-                height: 56,
-                borderRadius: 999,
-                display: 'grid',
-                placeItems: 'center',
-                border: '1px solid',
-                borderColor: alpha(theme.palette.success.main, isDark ? 0.55 : 0.35),
-                bgcolor: alpha(theme.palette.success.main, isDark ? 0.16 : 0.1),
-                color: theme.palette.success.main,
-              }}
-            >
-              <CheckCircleIcon size={28} />
-            </Box>
-            <Typography variant="subtitle1" color="success.main" fontWeight={700}>
-              {t('readWriteCard.correct')}
-            </Typography>
-            <Stack spacing={0.75} sx={{ mt: 1.5 }}>
-              <Typography variant="body2" color="text.secondary">
-                <Box component="span" sx={{ fontWeight: 700 }}>
-                  {t('common.english')}:
-                </Box>{' '}
-                <Box component="span" sx={{ color: 'text.primary', fontWeight: 700 }}>
-                  {englishWord}
-                </Box>
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                <Box component="span" sx={{ fontWeight: 700 }}>
-                  {t('common.vietnamese')}:
-                </Box>{' '}
-                <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                  {vietnameseMeaning}
-                </Box>
-              </Typography>
-            </Stack>
-            {showNextButton && onNext && (
-              <Button
-                type="button"
-                variant="contained"
-                color="primary"
-                size="medium"
-                endIcon={<ArrowRight size={17} />}
-                onClick={onNext}
-                autoFocus
-                sx={{
-                  mt: 2,
-                  minWidth: 160,
-                  borderRadius: 1,
-                  fontSize: '0.875rem',
-                  fontWeight: 700,
-                }}
-              >
-                {t('buttons.nextQuestion')}
-              </Button>
-            )}
-          </Box>
-        )}
-        </Stack>
-      </Box>
+        </>
+      )}
     </Card>
   );
 };

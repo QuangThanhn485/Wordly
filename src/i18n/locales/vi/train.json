@@ -24,12 +24,21 @@
     "mistakes": "Lỗi sai: {{count}}",
     "mistakesShort": "Sai: {{count}}"
   },
+  "toolbar": {
+    "direction": "H\u01b0\u1edbng luy\u1ec7n t\u1eadp",
+    "switchDirection": "\u0110\u1ed5i h\u01b0\u1edbng luy\u1ec7n t\u1eadp",
+    "remainingValue": "C\u00f2n {{count}}",
+    "mistakesValue": "Sai {{count}}",
+    "restartTitle": "L\u00e0m l\u1ea1i b\u00e0i luy\u1ec7n t\u1eadp?",
+    "restartDescription": "To\u00e0n b\u1ed9 ti\u1ebfn tr\u00ecnh v\u00e0 s\u1ed1 l\u1ed7i c\u1ee7a phi\u00ean hi\u1ec7n t\u1ea1i s\u1ebd \u0111\u01b0\u1ee3c \u0111\u1eb7t l\u1ea1i."
+  },
   "flashcards": {
     "tapToAnswer": "Chạm vào thẻ để trả lời",
     "cardAriaLabel": "Thẻ từ cho {{word}}"
   },
   "flashcardsReading": {
     "title": "Flashcards Reading",
+    "targetLabel": "T\u00ecm th\u1ebb ph\u00f9 h\u1ee3p",
     "instruction": "Nhìn từ và thử nhớ nghĩa của nó",
     "showMeaning": "Hiện nghĩa",
     "hideMeaning": "Ẩn nghĩa",
@@ -41,6 +50,9 @@
   },
   "flashcardsListening": {
     "title": "Flashcards Listening",
+    "audioPrompt": "C\u00e2u h\u1ecfi \u00e2m thanh",
+    "readyState": "S\u1eb5n s\u00e0ng b\u1eaft \u0111\u1ea7u",
+    "activeState": "\u0110ang ch\u1ecdn th\u1ebb ph\u00f9 h\u1ee3p v\u1edbi \u00e2m thanh",
     "instruction": "Nghe phát âm và nhận diện từ",
     "playAudio": "Phát âm thanh",
     "replay": "Phát lại",
@@ -62,6 +74,9 @@
     "theAnswerIs": "Đáp án là"
   },
   "readWriteCard": {
+    "taskTitle": "D\u1ecbch v\u00e0 nh\u1eadp \u0111\u00e1p \u00e1n",
+    "taskViEn": "Chuy\u1ec3n ngh\u0129a ti\u1ebfng Vi\u1ec7t th\u00e0nh t\u1eeb ti\u1ebfng Anh",
+    "taskEnVi": "Chuy\u1ec3n t\u1eeb ti\u1ebfng Anh th\u00e0nh ngh\u0129a ti\u1ebfng Vi\u1ec7t",
     "placeholderViEn": "Nhập từ tiếng Anh...",
     "placeholderEnVi": "Nhập nghĩa tiếng Việt...",
     "audio": "Nghe phát âm",
@@ -85,15 +100,27 @@
   },
   "listenWriteCard": {
     "title": "Nghe và viết",
+    "taskTitle": "Nghe v\u00e0 nh\u1eadp \u0111\u00e1p \u00e1n",
+    "taskViEn": "Nghe t\u1eeb ti\u1ebfng Anh v\u00e0 vi\u1ebft l\u1ea1i t\u1eeb \u0111\u00f3",
+    "taskEnVi": "Nghe t\u1eeb ti\u1ebfng Anh v\u00e0 nh\u1eadp ngh\u0129a ti\u1ebfng Vi\u1ec7t",
     "placeholderViEn": "Nhập từ tiếng Anh...",
     "placeholderEnVi": "Nhập nghĩa tiếng Việt...",
     "startSpeak": "Bắt đầu phát âm",
     "replay": "Phát lại âm thanh",
+    "audioWaiting": "S\u1eb5n s\u00e0ng nghe",
+    "audioReady": "S\u1eb5n s\u00e0ng tr\u1ea3 l\u1eddi",
     "played": "Đã phát âm từ tiếng Anh",
     "hint": "Gợi ý",
     "check": "Kiểm tra",
     "correct": "Đúng rồi!",
     "wrongHelper": "Sai rồi! Hãy thử lại."
+  },
+  "review": {
+    "correctTitle": "\u0110\u00e1p \u00e1n ch\u00ednh x\u00e1c",
+    "correctDescription": "Xem l\u1ea1i t\u1eeb v\u00e0 ngh\u0129a tr\u01b0\u1edbc khi ti\u1ebfp t\u1ee5c.",
+    "replay": "Nghe l\u1ea1i ph\u00e1t \u00e2m",
+    "manualAdvance": "\u0110ang d\u1eebng \u1edf k\u1ebft qu\u1ea3, nh\u1ea5n Ti\u1ebfp theo khi b\u1ea1n s\u1eb5n s\u00e0ng.",
+    "autoAdvance": "T\u1ef1 chuy\u1ec3n sau {{seconds}} gi\u00e2y."
   },
   "completion": {
     "title": "Hoàn thành luyện tập!",
@@ -120,6 +147,7 @@
     "restart": "Làm lại",
     "nextMode": "Chế độ kế tiếp",
     "nextQuestion": "Tiếp theo",
+    "cancel": "H\u1ee7y",
     "hint": "Gợi ý",
     "close": "Đóng"
   },

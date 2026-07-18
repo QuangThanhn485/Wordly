@@ -1,14 +1,14 @@
 // FlashcardsReadingPage.tsx
 import {
+  Alert,
   Box,
   Skeleton,
-  Chip,
-  Button,
-  IconButton,
+  Typography,
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import { MapPin, AlertCircle, ArrowLeftRight, RotateCcw } from 'lucide-react';
+import { alpha } from '@mui/material/styles';
+import { BookOpen } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -18,6 +18,7 @@ import { WordCard } from '@/features/train/train-start';
 import {
   FlashcardsSettingsPanel,
   TrainingHeader,
+  TrainingToolbar,
   VocabularyQuickView,
   useFlashcardsSettings,
 } from '@/features/train/components';
@@ -64,13 +65,6 @@ function shuffleArray<T>(array: T[]): T[] {
   }
   return shuffled;
 }
-
-// Padding-top cho cards grid - điều chỉnh tại đây để thay đổi khoảng cách giữa sticky bar và cards
-const GRID_PADDING_TOP = {
-  xs: '10px', // Mobile: chỉ cần gap nhỏ, sticky bar sẽ tự stick không che mất card
-  sm: '10px', // Tablet: chỉ cần gap nhỏ
-  md: '10px'  // Desktop: chỉ cần gap nhỏ
-};
 
 const CARD_FLIP_FEEDBACK_MS = 620;
 const CARD_EXIT_ANIMATION_MS = 320;
@@ -304,9 +298,8 @@ const FlashcardsReadingPage = () => {
     [flipped, setRemoveCorrectCards]
   );
 
-  const handleLanguageToggle = () => {
-    setLanguage((prev) => (prev === 'vi' ? 'en' : 'vi'));
-      // Note: Session will be auto-saved via useEffect
+  const handleLanguageChange = (mode: 'vi-en' | 'en-vi') => {
+    setLanguage(mode === 'vi-en' ? 'vi' : 'en');
   };
 
   const scrollToCard = useCallback((idx: number) => {
@@ -545,16 +538,15 @@ const FlashcardsReadingPage = () => {
   const target = (items.length > 0 && targetIdx >= 0 && targetIdx < items.length && !isLoading) 
     ? items[targetIdx] 
     : null;
-  
-  // Determine what to show in top bar and cards based on language mode
-  // Hide top bar label when completed (100% flipped)
-  const topBarLabel = allFlipped
-    ? 'Completed!'  // Show completion message
-    : isLoading || !target
-      ? 'Loading...'  // Show loading state
-      : language === 'vi'
-        ? (target.vi || '—')  // VI-EN mode: show Vietnamese in top bar
-        : (target.en || '—'); // EN-VI mode: show English in top bar
+
+  const targetPrompt = target
+    ? language === 'vi'
+      ? target.vi
+      : target.en
+    : '';
+  const targetDisplay = allFlipped
+    ? t('common.completed')
+    : targetPrompt || '...';
 
   return (
     <Box
@@ -564,177 +556,189 @@ const FlashcardsReadingPage = () => {
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        // Không set overflow - để window scroll tự nhiên cho sticky
         boxSizing: 'border-box',
       }}
     >
       <TrainingHeader
         title={t('flashcardsReading.title')}
-        subtitle={topBarLabel}
+        subtitle={t('flashcardsReading.instruction')}
+        icon={<BookOpen size={18} />}
         completed={score}
         total={total}
         controls={(
-          <Box
-            sx={{
-              flex: 1,
-              minWidth: 0,
-              maxWidth: '100%',
-              display: 'flex',
-              flexDirection: { xs: 'column', sm: 'row' },
-              alignItems: { xs: 'stretch', sm: 'center' },
-              justifyContent: 'space-between',
-              gap: 1,
-              flexWrap: 'wrap',
-            }}
-          >
-            <Button
-              variant="outlined"
-              color="primary"
-              size="small"
-              onClick={handleLanguageToggle}
-              startIcon={<ArrowLeftRight size={16} />}
-              sx={{ minWidth: 112 }}
-            >
-              {language === 'vi' ? t('direction.viEn') : t('direction.enVi')}
-            </Button>
-
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 0.75,
-                alignItems: 'center',
-                width: 'auto',
-                minWidth: 0,
-                alignSelf: { xs: 'stretch', sm: 'auto' },
-                justifyContent: 'flex-start',
-                flexWrap: 'wrap',
-              }}
-            >
-              <Chip
-                icon={<MapPin size={15} />}
-                label={`${score} / ${total}`}
-                variant="outlined"
-                size="small"
-              />
-              <Chip
-                icon={<AlertCircle size={15} />}
-                label={t('topBar.mistakes', { count: mistakes })}
-                variant="outlined"
-                size="small"
+          <TrainingToolbar
+            mode={language === 'vi' ? 'vi-en' : 'en-vi'}
+            remaining={Math.max(0, total - score)}
+            mistakes={mistakes}
+            disabled={pendingCorrectFeedbackCount > 0}
+            restartDisabled={pendingCorrectFeedbackCount > 0}
+            onModeChange={handleLanguageChange}
+            onRestart={handleRestart}
+            centerContent={(
+              <Box
+                role="status"
+                aria-label={targetDisplay}
+                title={targetDisplay}
                 sx={{
-                  borderColor: 'error.main',
-                  color: 'error.main',
-                  bgcolor: `${theme.palette.error.main}12`,
+                  width: '100%',
+                  minWidth: 0,
+                  minHeight: 32,
+                  px: { xs: 1, sm: 1.5 },
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid',
+                  borderColor: alpha(
+                    theme.palette.primary.main,
+                    theme.palette.mode === 'dark' ? 0.52 : 0.34,
+                  ),
+                  borderRadius: 1,
+                  bgcolor: alpha(
+                    theme.palette.primary.main,
+                    theme.palette.mode === 'dark' ? 0.14 : 0.07,
+                  ),
+                  color: 'primary.main',
+                  overflow: 'hidden',
                 }}
-              />
-              <IconButton
-                color="primary"
-                size="small"
-                onClick={handleRestart}
-                aria-label={t('buttons.restart')}
-                sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
               >
-                <RotateCcw size={16} />
-              </IconButton>
-              <Button
-                variant="outlined"
-                color="primary"
-                size="small"
-                startIcon={<RotateCcw size={16} />}
-                onClick={handleRestart}
-                sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
-              >
-                {t('buttons.restart')}
-              </Button>
-            </Box>
-          </Box>
+                <Typography
+                  noWrap
+                  sx={{
+                    minWidth: 0,
+                    color: 'text.primary',
+                    fontSize: {
+                      xs: '0.9375rem',
+                      sm: '1rem',
+                      md: '1.0625rem',
+                    },
+                    lineHeight: 1.2,
+                    fontWeight: 700,
+                    letterSpacing: 0,
+                  }}
+                >
+                  {targetDisplay}
+                </Typography>
+              </Box>
+            )}
+            actions={(
+              <>
+                <VocabularyQuickView
+                  vocabularyList={items}
+                  currentTopicId={sourceTopicId || currentTopicId}
+                  triggerVariant="inline"
+                />
+                <FlashcardsSettingsPanel
+                  removeCorrectCards={settings.removeCorrectCards}
+                  onRemoveCorrectCardsChange={handleRemoveCorrectCardsChange}
+                  triggerVariant="inline"
+                />
+              </>
+            )}
+          />
         )}
       />
 
-      {/* Main Content */}
       <Box
         sx={{
-          width: '100%',
-          maxWidth: { xs: '100%', sm: '1536px' },
-          mx: 'auto',
-          px: { xs: 2, sm: 3, md: 4 },
-          pb: { xs: 1.5, sm: 2, md: 3 },
           flex: 1,
-          boxSizing: 'border-box',
+          width: '100%',
+          bgcolor: 'background.default',
         }}
       >
-        {isLoading ? (
         <Box
           sx={{
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: 'repeat(1, 1fr)',
-              sm: 'repeat(2, 1fr)',
-              md: 'repeat(3, 1fr)',
-              lg: 'repeat(4, 1fr)',
-            },
-            gap: { xs: 2, sm: 2.5, md: 3 },
-            pb: { xs: 12, sm: 14 },
-            pt: GRID_PADDING_TOP, // Padding để tránh sticky bar che mất card đầu tiên
+            width: '100%',
+            maxWidth: 1280,
+            mx: 'auto',
+            px: { xs: 1.5, sm: 3, md: 4 },
+            py: { xs: 1.5, sm: 2.5 },
+            boxSizing: 'border-box',
           }}
         >
-          {[...Array(8)].map((_, idx) => (
-            <Skeleton key={idx} variant="rounded" height={isMobile ? 168 : isTablet ? 210 : 236} sx={{ borderRadius: 2 }} />
-          ))}
-        </Box>
-      ) : (
-        <Box
-          sx={{
-            display: 'grid',
-            gap: { xs: 1.5, sm: 2.5, md: 3 }, // Reduced gap on mobile
-            gridTemplateColumns: {
-              xs: 'repeat(1, minmax(0, 1fr))',
-              sm: 'repeat(2, minmax(0, 1fr))',
-              md: 'repeat(3, minmax(0, 1fr))',
-              lg: 'repeat(4, minmax(0, 1fr))',
-            },
-            alignItems: 'stretch',
-            pb: { xs: 12, sm: 14 },
-            pt: GRID_PADDING_TOP, // Padding để tránh sticky bar che mất card đầu tiên
-          }}
-        >
-          {items.map((it, idx) => {
-            if (hiddenCorrectCards[idx]) return null;
-
-            const isRemoving = !!removingCorrectCards[idx];
-
-            return (
-              <Box
-                key={`${it.en}-${idx}`}
-                ref={(element: HTMLDivElement | null) => {
-                  cardRefs.current[idx] = element;
-                }}
-                sx={{
-                  pointerEvents: isLoading || items.length === 0 || isRemoving ? 'none' : 'auto',
-                  opacity: isRemoving ? 0 : isLoading || items.length === 0 ? 0.6 : 1,
-                  transform: isRemoving ? 'scale(0.92) translateY(-8px)' : 'scale(1) translateY(0)',
-                  transformOrigin: 'center',
-                  maxHeight: isRemoving ? 0 : { xs: 180, sm: 232, md: 260 },
-                  overflow: 'hidden',
-                  transition:
-                    'opacity 280ms ease, transform 280ms ease, max-height 320ms ease',
-                }}
-              >
-                <WordCard
-                  en={it.en}
-                  vi={it.vi}
-                  showLang={language}
-                  flipped={!!flipped[idx]}
-                  onAttempt={() => handleAttempt(idx)}
-                  shouldShake={wrongIdx === idx}
-                  shakeKey={wrongTick}
-                  showMeaning={showMeaningIdx === idx || showHintIdx === idx}
+          {isLoading ? (
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: 'repeat(1, minmax(0, 1fr))',
+                  sm: 'repeat(auto-fill, minmax(280px, 1fr))',
+                },
+                gap: { xs: 1.25, sm: 2, md: 2.5 },
+              }}
+            >
+              {[...Array(8)].map((_, idx) => (
+                <Skeleton
+                  key={idx}
+                  variant="rounded"
+                  height={isMobile ? 168 : isTablet ? 204 : 224}
+                  sx={{
+                    width: '100%',
+                    borderRadius: 1,
+                  }}
                 />
-              </Box>
-            );
-          })}
+              ))}
+            </Box>
+          ) : items.length === 0 ? (
+            <Alert severity="info">
+              {currentTopicId ? t('errors.noWords') : t('errors.selectTopic')}
+            </Alert>
+          ) : (
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: 'repeat(1, minmax(0, 1fr))',
+                  sm: 'repeat(auto-fill, minmax(280px, 1fr))',
+                },
+                gap: { xs: 1.25, sm: 2, md: 2.5 },
+                alignItems: 'stretch',
+                pb: { xs: 2, sm: 3 },
+              }}
+            >
+              {items.map((it, idx) => {
+                if (hiddenCorrectCards[idx]) return null;
+
+                const isRemoving = !!removingCorrectCards[idx];
+                const isInteractionDisabled =
+                  isRemoving || pendingCorrectFeedbackCount > 0;
+
+                return (
+                  <Box
+                    key={`${it.en}-${idx}`}
+                    ref={(element: HTMLDivElement | null) => {
+                      cardRefs.current[idx] = element;
+                    }}
+                    sx={{
+                      width: '100%',
+                      pointerEvents: isInteractionDisabled ? 'none' : 'auto',
+                      opacity: isRemoving ? 0 : 1,
+                      transform: isRemoving
+                        ? 'scale(0.96) translateY(-6px)'
+                        : 'scale(1) translateY(0)',
+                      transformOrigin: 'center',
+                      maxHeight: isRemoving ? 0 : { xs: 176, sm: 220, md: 240 },
+                      overflow: 'hidden',
+                      transition:
+                        'opacity 280ms ease, transform 280ms ease, max-height 320ms ease',
+                    }}
+                  >
+                    <WordCard
+                      en={it.en}
+                      vi={it.vi}
+                      showLang={language}
+                      flipped={!!flipped[idx]}
+                      onAttempt={() => handleAttempt(idx)}
+                      shouldShake={wrongIdx === idx}
+                      shakeKey={wrongTick}
+                      showMeaning={showMeaningIdx === idx || showHintIdx === idx}
+                      disabled={isInteractionDisabled}
+                    />
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
         </Box>
-        )}
       </Box>
       
       {/* Completion Modal */}
@@ -747,16 +751,6 @@ const FlashcardsReadingPage = () => {
         onNextMode={handleCompletionNext}
       />
 
-      {/* Vocabulary Quick View */}
-      <VocabularyQuickView
-        vocabularyList={items}
-        currentTopicId={sourceTopicId || currentTopicId}
-      />
-
-      <FlashcardsSettingsPanel
-        removeCorrectCards={settings.removeCorrectCards}
-        onRemoveCorrectCardsChange={handleRemoveCorrectCardsChange}
-      />
     </Box>
   );
 };

@@ -22,6 +22,7 @@ interface WordCardProps {
   onAttempt: () => void;
   shouldShake?: boolean;
   shakeKey?: number;
+  disabled?: boolean;
 }
 
 export const WordCard: React.FC<WordCardProps> = ({
@@ -33,6 +34,7 @@ export const WordCard: React.FC<WordCardProps> = ({
   onAttempt,
   shouldShake = false,
   shakeKey = 0,
+  disabled = false,
 }) => {
   const theme = useTheme();
   const { t } = useTranslation('train');
@@ -40,8 +42,11 @@ export const WordCard: React.FC<WordCardProps> = ({
   const frontAccent = theme.palette.primary.main;
   return (
     <Box
-      onClick={onAttempt}
+      onClick={() => {
+        if (!disabled) onAttempt();
+      }}
       onKeyDown={(e) => {
+        if (disabled) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           onAttempt();
@@ -54,7 +59,8 @@ export const WordCard: React.FC<WordCardProps> = ({
             ? `${shakeKF} 0.35s cubic-bezier(.36,.07,.19,.97) both`
             : 'none',
         outline: 'none',
-        borderRadius: { xs: 3, sm: 3.5, md: 4 },
+        borderRadius: 1,
+        cursor: disabled ? 'default' : 'pointer',
         '&:focus-visible': {
           outline: `2px solid ${alpha(frontAccent, isDark ? 0.55 : 0.45)}`,
           outlineOffset: 4,
@@ -63,7 +69,8 @@ export const WordCard: React.FC<WordCardProps> = ({
       data-shake-seq={shakeKey}
       role="button"
       aria-label={t('flashcards.cardAriaLabel', { word: en })}
-      tabIndex={0}
+      aria-disabled={disabled}
+      tabIndex={disabled ? -1 : 0}
     >
       <Box sx={boxRotate(flipped)}>
         <Card elevation={0} sx={cardFront(theme)}>
@@ -71,12 +78,12 @@ export const WordCard: React.FC<WordCardProps> = ({
             sx={{
               width: '100%',
               height: '100%',
-              p: { xs: 2, sm: 2.5, md: 3 },
+              p: { xs: 1.5, sm: 2, md: 2.25 },
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'space-between',
-              '&:last-child': { pb: { xs: 2, sm: 2.5, md: 3 } },
+              '&:last-child': { pb: { xs: 1.5, sm: 2, md: 2.25 } },
             }}
           >
             <Typography
@@ -85,17 +92,12 @@ export const WordCard: React.FC<WordCardProps> = ({
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                px: 1,
-                py: 0.25,
-                borderRadius: 999,
-                border: `1px solid ${alpha(frontAccent, isDark ? 0.45 : 0.3)}`,
-                bgcolor: alpha(frontAccent, isDark ? 0.16 : 0.08),
-                color: isDark ? theme.palette.primary.light : theme.palette.primary.dark,
-                fontWeight: 800,
-                letterSpacing: 1.4,
+                color: 'text.secondary',
+                fontWeight: 700,
+                letterSpacing: 0,
                 lineHeight: 1,
                 userSelect: 'none',
-                fontSize: { xs: '0.625rem', sm: '0.6875rem' },
+                fontSize: '0.6875rem',
               }}
             >
               {showLang === 'vi' ? 'EN' : 'VI'}
@@ -115,12 +117,16 @@ export const WordCard: React.FC<WordCardProps> = ({
               <Typography
                 variant="h5"
                 align="center"
-                fontWeight={800}
+                fontWeight={700}
                 sx={{
-                  fontSize: { xs: '1.35rem', sm: '1.6rem', md: '1.85rem' },
-                  lineHeight: 1.15,
-                  letterSpacing: '-0.02em',
+                  fontSize: { xs: '1.25rem', sm: '1.45rem', md: '1.625rem' },
+                  lineHeight: 1.2,
+                  letterSpacing: 0,
+                  width: '100%',
+                  maxWidth: '100%',
+                  whiteSpace: 'normal',
                   wordBreak: 'break-word',
+                  overflowWrap: 'anywhere',
                   color: 'inherit',
                 }}
               >
@@ -128,9 +134,9 @@ export const WordCard: React.FC<WordCardProps> = ({
               </Typography>
               <Box
                 sx={{
-                  width: { xs: '42%', sm: '36%' },
-                  height: 2,
-                  borderRadius: 999,
+                  width: { xs: '36%', sm: '30%' },
+                  height: '1px',
+                  borderRadius: 1,
                   bgcolor: alpha(frontAccent, isDark ? 0.35 : 0.25),
                   mt: { xs: 1, sm: 1.25 },
                 }}
@@ -143,8 +149,8 @@ export const WordCard: React.FC<WordCardProps> = ({
               sx={{
                 userSelect: 'none',
                 color: 'text.secondary',
-                fontWeight: 600,
-                letterSpacing: 0.2,
+                fontWeight: 500,
+                letterSpacing: 0,
                 fontSize: { xs: '0.75rem', sm: '0.8125rem' },
                 opacity: isDark ? 0.9 : 0.8,
               }}
@@ -159,12 +165,12 @@ export const WordCard: React.FC<WordCardProps> = ({
             sx={{
               width: '100%',
               height: '100%',
-              p: { xs: 2, sm: 2.5, md: 3 },
+              p: { xs: 1.5, sm: 2, md: 2.25 },
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'flex-start',
-              '&:last-child': { pb: { xs: 2, sm: 2.5, md: 3 } },
+              '&:last-child': { pb: { xs: 1.5, sm: 2, md: 2.25 } },
             }}
           >
             <Chip icon={<CheckCircleIcon size={16} />} label={t('common.correct')} size="small" sx={solvedBadgeSx(theme)} />
@@ -173,16 +179,16 @@ export const WordCard: React.FC<WordCardProps> = ({
               sx={{
                 width: '100%',
                 display: 'grid',
-                gap: { xs: 1.1, sm: 1.25 },
-                mt: { xs: 1.25, sm: 1.5 },
+                gap: { xs: 0.5, sm: 0.75 },
+                mt: { xs: 0.75, sm: 1 },
               }}
             >
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
                 <Typography
                   variant="overline"
                   sx={{
-                    letterSpacing: 1.4,
-                    fontWeight: 800,
+                    letterSpacing: 0,
+                    fontWeight: 600,
                     color: 'text.secondary',
                     userSelect: 'none',
                     fontSize: { xs: '0.625rem', sm: '0.6875rem' },
@@ -193,10 +199,14 @@ export const WordCard: React.FC<WordCardProps> = ({
                 <Typography
                   variant="h6"
                   align="center"
-                  fontWeight={800}
+                  fontWeight={700}
                   sx={{
+                    overflowWrap: 'anywhere',
+                    letterSpacing: 0,
+                    width: '100%',
+                    maxWidth: '100%',
+                    whiteSpace: 'normal',
                     wordBreak: 'break-word',
-                    letterSpacing: '-0.01em',
                     fontSize: { xs: '1rem', sm: '1.05rem' },
                     color: 'inherit',
                   }}
@@ -211,8 +221,8 @@ export const WordCard: React.FC<WordCardProps> = ({
                 <Typography
                   variant="overline"
                   sx={{
-                    letterSpacing: 1.4,
-                    fontWeight: 800,
+                    letterSpacing: 0,
+                    fontWeight: 600,
                     color: 'text.secondary',
                     userSelect: 'none',
                     fontSize: { xs: '0.625rem', sm: '0.6875rem' },
@@ -225,8 +235,12 @@ export const WordCard: React.FC<WordCardProps> = ({
                   align="center"
                   sx={{
                     fontSize: { xs: '0.95rem', sm: '1.05rem' },
-                    fontWeight: 800,
+                    fontWeight: 600,
+                    width: '100%',
+                    maxWidth: '100%',
+                    whiteSpace: 'normal',
                     wordBreak: 'break-word',
+                    overflowWrap: 'anywhere',
                     color: 'inherit',
                   }}
                 >
