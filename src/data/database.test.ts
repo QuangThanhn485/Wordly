@@ -17,6 +17,10 @@ const preferences: AppPreferences = {
   flashcards: {
     removeCorrectCards: true,
   },
+  writeTraining: {
+    answerReviewDurationMs: 3000,
+    disableAutoAdvance: true,
+  },
 };
 
 describe('key-value database', () => {
@@ -59,6 +63,20 @@ describe('key-value database', () => {
     expect(first.revision).toBe(1);
     expect(second.revision).toBe(2);
     expect(readDatabaseRecord(DATABASE_KEYS.meta)?.revision).toBe(1);
+  });
+
+  it('defaults auto advance safely for preferences saved before the option existed', () => {
+    writeDatabaseValue(DATABASE_KEYS.preferences, {
+      ...preferences,
+      writeTraining: {
+        answerReviewDurationMs: 4500,
+      },
+    });
+
+    expect(loadPreferences().writeTraining).toEqual({
+      answerReviewDurationMs: 4500,
+      disableAutoAdvance: false,
+    });
   });
 
   it('restores a validated snapshot and rejects invalid data', () => {

@@ -16,14 +16,27 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { MapPin, AlertCircle, Volume2, HelpCircle, Play, ArrowLeftRight } from 'lucide-react';
+import {
+  MapPin,
+  AlertCircle,
+  Volume2,
+  HelpCircle,
+  Play,
+  ArrowLeftRight,
+  RotateCcw,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTrainWords } from '@/features/train/train-listen';
 import { getNextTrainingMode } from '@/features/train/utils/trainingModes';
 import { WordCard } from '@/features/train/train-listen';
-import { FlashcardsSettingsPanel, VocabularyQuickView, useFlashcardsSettings } from '@/features/train/components';
+import {
+  FlashcardsSettingsPanel,
+  TrainingHeader,
+  VocabularyQuickView,
+  useFlashcardsSettings,
+} from '@/features/train/components';
 import { 
   saveTrainingSession, 
   loadTrainingSession, 
@@ -587,177 +600,127 @@ const FlashcardsListeningPage = () => {
         boxSizing: 'border-box',
       }}
     >
-      <Box
-        sx={{
-          position: 'sticky',
-          top: { xs: '56px', sm: '64px', md: 0 },
-          zIndex: (t) => t.zIndex.appBar - 1,
-          bgcolor: 'background.paper',
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          px: { xs: 1.5, sm: 3 },
-          py: { xs: 0.75, sm: 1.5 },
-          width: '100%',
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          justifyContent: 'space-between',
-          gap: { xs: 1, sm: 2 },
-          boxShadow: 'none',
-          flexShrink: 0,
-        }}
-      >
-        {topBarLabel && (
-          <Typography
-            variant="h6"
-            fontWeight="bold"
-            color="primary"
+      <TrainingHeader
+        title={t('flashcardsListening.title')}
+        subtitle={topBarLabel || t('flashcardsListening.instruction')}
+        completed={score}
+        total={total}
+        controls={(
+          <Box
             sx={{
-              fontSize: { xs: '0.875rem', sm: '1.05rem', md: '1.2rem' },
-              lineHeight: 1.3,
+              flex: 1,
+              minWidth: 0,
+              maxWidth: '100%',
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: { xs: 'stretch', sm: 'center' },
+              justifyContent: 'space-between',
+              gap: 1,
+              flexWrap: 'wrap',
             }}
           >
-            {topBarLabel}
-          </Typography>
-        )}
-
-        <Button
-          variant="outlined"
-          color="primary"
-          size={isMobile ? 'small' : 'medium'}
-          onClick={handleLanguageToggle}
-          startIcon={<ArrowLeftRight size={isMobile ? 16 : 18} />}
-          sx={{
-            width: { xs: '100%', sm: 'auto' },
-            fontSize: { xs: '0.7rem', sm: '0.875rem' },
-            px: { xs: 1.5, sm: 2.5 },
-            py: { xs: 0.75, sm: 1 },
-            minWidth: { xs: 'auto', sm: 140 },
-            fontWeight: 600,
-          }}
-        >
-          {language === 'vi' ? t('direction.viEn') : t('direction.enVi')}
-        </Button>
-
-        <Box
-          sx={{
-            display: 'flex',
-            gap: { xs: 0.5, sm: 1.5 },
-            width: { xs: '100%', sm: 'auto' },
-            justifyContent: { xs: 'flex-start', sm: 'flex-start' },
-            alignItems: 'center',
-            flexWrap: { xs: 'wrap', sm: 'nowrap' },
-            maxWidth: '100%',
-            boxSizing: 'border-box',
-          }}
-        >
-          {!hasStarted ? (
             <Button
-              variant="contained"
+              variant="outlined"
               color="primary"
-              size={isMobile ? 'small' : 'medium'}
-              onClick={handleStart}
-              startIcon={<Play size={isMobile ? 14 : 16} />}
-              disabled={isLoading || items.length === 0}
-              sx={{ 
-                minWidth: { xs: 'auto', sm: 100 },
-                fontSize: { xs: '0.65rem', sm: '0.875rem' },
-                px: { xs: 1, sm: 2 },
-                py: { xs: 0.5, sm: 1 },
-                height: { xs: 24, sm: 'auto' },
-                flexShrink: 1,
-                flex: { xs: '0 1 auto', sm: '0 0 auto' },
-                whiteSpace: 'nowrap',
+              size="small"
+              onClick={handleLanguageToggle}
+              startIcon={<ArrowLeftRight size={16} />}
+              sx={{ minWidth: 112 }}
+            >
+              {language === 'vi' ? t('direction.viEn') : t('direction.enVi')}
+            </Button>
+
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 0.5,
+                alignItems: 'center',
+                width: 'auto',
+                minWidth: 0,
+                alignSelf: { xs: 'stretch', sm: 'auto' },
+                justifyContent: { xs: 'flex-start', sm: 'flex-start' },
+                flexWrap: 'wrap',
               }}
             >
-              {t('buttons.start')}
-            </Button>
-          ) : (
-            <>
-              <Tooltip title={t('flashcardsListening.replay')}>
-                <IconButton
-                  onClick={handleReplayAudio}
-                  disabled={allFlipped}
+              {!hasStarted ? (
+                <Button
+                  variant="contained"
                   color="primary"
-                  size={isMobile ? 'small' : 'medium'}
-                  sx={{ 
-                    flexShrink: 0,
-                    padding: { xs: 0.5, sm: 1 },
-                  }}
+                  size="small"
+                  onClick={handleStart}
+                  startIcon={<Play size={15} />}
+                  disabled={isLoading || items.length === 0}
                 >
-                  <Volume2 size={isMobile ? 16 : 24} />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title={t('flashcardsListening.hintTooltip', { shortcut: 'Ctrl+X' })}>
-                <IconButton
-                  onClick={handleShowAnswer}
-                  disabled={allFlipped}
-                  color="primary"
-                  size={isMobile ? 'small' : 'medium'}
-                  sx={{ 
-                    flexShrink: 0,
-                    padding: { xs: 0.5, sm: 1 },
-                  }}
-                >
-                  <HelpCircle size={isMobile ? 16 : 24} />
-                </IconButton>
-              </Tooltip>
-            </>
-          )}
-          <Chip
-            icon={<MapPin size={16} />}
-            label={`${score} / ${total}`}
-            variant="outlined"
-            size={isMobile ? 'small' : 'medium'}
-            sx={{ 
-              borderRadius: 1, 
-              borderColor: theme.palette.divider, 
-              bgcolor: 'background.default',
-              fontSize: { xs: '0.65rem', sm: '0.875rem' },
-              height: { xs: 24, sm: 32 },
-              '& .MuiChip-label': { px: { xs: 0.5, sm: 1.5 }, fontSize: { xs: '0.65rem', sm: '0.875rem' } },
-              '& .MuiChip-icon': { fontSize: { xs: '0.875rem', sm: '1rem' }, ml: { xs: 0.5, sm: 1 } },
-              flexShrink: 1,
-              flex: { xs: '0 1 auto', sm: '0 0 auto' },
-            }}
-          />
-          <Chip
-            icon={<AlertCircle size={16} color="error" />}
-            label={t(isMobile ? 'topBar.mistakesShort' : 'topBar.mistakes', { count: mistakes })}
-            variant="outlined"
-            size={isMobile ? 'small' : 'medium'}
-            sx={{
-              borderRadius: 1,
-              borderColor: theme.palette.error.light,
-              color: 'error.main',
-              bgcolor: theme.palette.error.light + '20',
-              fontSize: { xs: '0.65rem', sm: '0.875rem' },
-              height: { xs: 24, sm: 32 },
-              '& .MuiChip-label': { px: { xs: 0.5, sm: 1.5 }, fontSize: { xs: '0.65rem', sm: '0.875rem' } },
-              '& .MuiChip-icon': { fontSize: { xs: '0.875rem', sm: '1rem' }, ml: { xs: 0.5, sm: 1 } },
-              flexShrink: 1,
-              flex: { xs: '0 1 auto', sm: '0 0 auto' },
-            }}
-          />
-          <Button
-            variant="outlined"
-            color="primary"
-            size={isMobile ? 'small' : 'medium'}
-            onClick={handleRestart}
-            sx={{ 
-              minWidth: { xs: 'auto', sm: 80 },
-              fontSize: { xs: '0.65rem', sm: '0.875rem' },
-              px: { xs: 0.75, sm: 2 },
-              py: { xs: 0.5, sm: 1 },
-              height: { xs: 24, sm: 'auto' },
-              flexShrink: 1,
-              flex: { xs: '0 1 auto', sm: '0 0 auto' },
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {t('buttons.restart')}
-          </Button>
-        </Box>
-      </Box>
+                  {t('buttons.start')}
+                </Button>
+              ) : (
+                <>
+                  <Tooltip title={t('flashcardsListening.replay')}>
+                    <IconButton
+                      onClick={handleReplayAudio}
+                      disabled={allFlipped}
+                      color="primary"
+                      size="small"
+                    >
+                      <Volume2 size={17} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip
+                    title={t('flashcardsListening.hintTooltip', {
+                      shortcut: 'Ctrl+X',
+                    })}
+                  >
+                    <IconButton
+                      onClick={handleShowAnswer}
+                      disabled={allFlipped}
+                      color="primary"
+                      size="small"
+                    >
+                      <HelpCircle size={17} />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              )}
+              <Chip
+                icon={<MapPin size={15} />}
+                label={`${score} / ${total}`}
+                variant="outlined"
+                size="small"
+              />
+              <Chip
+                icon={<AlertCircle size={15} />}
+                label={t('topBar.mistakes', { count: mistakes })}
+                variant="outlined"
+                size="small"
+                sx={{
+                  borderColor: 'error.main',
+                  color: 'error.main',
+                  bgcolor: `${theme.palette.error.main}12`,
+                }}
+              />
+              <IconButton
+                color="primary"
+                size="small"
+                onClick={handleRestart}
+                aria-label={t('buttons.restart')}
+                sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
+              >
+                <RotateCcw size={16} />
+              </IconButton>
+              <Button
+                variant="outlined"
+                color="primary"
+                size="small"
+                startIcon={<RotateCcw size={16} />}
+                onClick={handleRestart}
+                sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+              >
+                {t('buttons.restart')}
+              </Button>
+            </Box>
+          </Box>
+        )}
+      />
 
       <Box
         sx={{

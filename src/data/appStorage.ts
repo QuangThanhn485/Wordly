@@ -12,6 +12,10 @@ export type AppPreferences = {
   flashcards: {
     removeCorrectCards: boolean;
   };
+  writeTraining: {
+    answerReviewDurationMs: number;
+    disableAutoAdvance: boolean;
+  };
 };
 
 export type TrainingSessionMode =
@@ -32,6 +36,10 @@ const DEFAULT_PREFERENCES: AppPreferences = {
   language: null,
   flashcards: {
     removeCorrectCards: false,
+  },
+  writeTraining: {
+    answerReviewDurationMs: 3000,
+    disableAutoAdvance: false,
   },
 };
 
@@ -54,6 +62,10 @@ export const loadPreferences = (): AppPreferences => {
     flashcards: {
       ...DEFAULT_PREFERENCES.flashcards,
       ...stored.flashcards,
+    },
+    writeTraining: {
+      ...DEFAULT_PREFERENCES.writeTraining,
+      ...stored.writeTraining,
     },
   };
 

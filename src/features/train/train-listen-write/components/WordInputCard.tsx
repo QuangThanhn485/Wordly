@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
+  ArrowRight,
   CheckCircle as CheckCircleIcon,
   Lightbulb as LightbulbIcon,
   RotateCcw as ReplayIcon,
@@ -34,6 +35,8 @@ const shakeKF = keyframes`
 interface WordInputCardProps {
   question: string; // The English word (always EN for listening)
   answer: string; // The correct answer (VI or EN depending on mode)
+  englishWord: string;
+  vietnameseMeaning: string;
   mode: 'vi-en' | 'en-vi'; // Training mode
   onAnswer: (userAnswer: string) => void;
   onHint: () => void;
@@ -44,11 +47,15 @@ interface WordInputCardProps {
   shakeKey?: number;
   hasError?: boolean; // Whether there's an error (wrong answer)
   hasStarted?: boolean; // Whether user has clicked start button for current word
+  showNextButton?: boolean;
+  onNext?: () => void;
 }
 
 export const WordInputCard: React.FC<WordInputCardProps> = ({
   question,
   answer,
+  englishWord,
+  vietnameseMeaning,
   mode,
   onAnswer,
   onHint,
@@ -59,6 +66,8 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   shakeKey = 0,
   hasError = false,
   hasStarted = false,
+  showNextButton = false,
+  onNext,
 }) => {
   const { t } = useTranslation('train');
   const theme = useTheme();
@@ -157,7 +166,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
             ? `${shakeKF} 0.35s cubic-bezier(.36,.07,.19,.97) both`
             : 'none',
         boxShadow: 'none',
-        borderRadius: { xs: 2, sm: 2.5 },
+        borderRadius: 1,
         border: '1px solid',
         borderColor: isCompleted
           ? alpha(theme.palette.success.main, isDark ? 0.6 : 0.4)
@@ -208,7 +217,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
           </Box>
 
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle1" fontWeight={950} sx={{ letterSpacing: '-0.01em' }} noWrap>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ letterSpacing: 0 }} noWrap>
               {t('listenWriteCard.title')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
@@ -225,15 +234,15 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
             <Button
               variant="contained"
               color="primary"
-              size="large"
+              size="medium"
               startIcon={!hasStarted ? <PlayArrowIcon size={18} /> : <ReplayIcon size={18} />}
               onClick={handlePlayAudio}
               disabled={!question}
               sx={{
-                borderRadius: 2,
-                py: 1.1,
-                px: 2.25,
-                fontWeight: 900,
+                borderRadius: 1,
+                py: 0.75,
+                px: 1.5,
+                fontWeight: 700,
                 flex: { xs: '1 1 240px', sm: '0 0 auto' },
               }}
             >
@@ -327,7 +336,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 >
                   <LightbulbIcon size={18} />
                   <Box component="span" sx={{ minWidth: 0 }}>
-                    <Box component="span" sx={{ fontWeight: 900 }}>
+                    <Box component="span" sx={{ fontWeight: 700 }}>
                       {answerLabel}:
                     </Box>{' '}
                     {answer}
@@ -341,14 +350,14 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
               variant="contained"
               color="primary"
               fullWidth
-              size="large"
+              size="medium"
               disabled={!userInput.trim() || !hasStarted}
               sx={{
                 mt: 1.5,
-                py: 1.25,
-                borderRadius: 2,
-                fontSize: { xs: '0.875rem', sm: '1rem' },
-                fontWeight: 900,
+                py: 0.875,
+                borderRadius: 1,
+                fontSize: '0.875rem',
+                fontWeight: 700,
               }}
             >
               {t('listenWriteCard.check')}
@@ -360,8 +369,8 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
               sx={{
                 mx: 'auto',
                 mb: 1.5,
-                width: 72,
-                height: 72,
+                width: 56,
+                height: 56,
                 borderRadius: 999,
                 display: 'grid',
                 placeItems: 'center',
@@ -371,14 +380,49 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 color: theme.palette.success.main,
               }}
             >
-              <CheckCircleIcon size={34} />
+              <CheckCircleIcon size={28} />
             </Box>
-            <Typography variant="h6" color="success.main" fontWeight={950} gutterBottom>
+            <Typography variant="subtitle1" color="success.main" fontWeight={700}>
               {t('listenWriteCard.correct')}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 800 }}>
-              {answerLabel}: {answer}
-            </Typography>
+            <Stack spacing={0.75} sx={{ mt: 1.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                <Box component="span" sx={{ fontWeight: 700 }}>
+                  {t('common.english')}:
+                </Box>{' '}
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: 700 }}>
+                  {englishWord}
+                </Box>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <Box component="span" sx={{ fontWeight: 700 }}>
+                  {t('common.vietnamese')}:
+                </Box>{' '}
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                  {vietnameseMeaning}
+                </Box>
+              </Typography>
+            </Stack>
+            {showNextButton && onNext && (
+              <Button
+                type="button"
+                variant="contained"
+                color="primary"
+                size="medium"
+                endIcon={<ArrowRight size={17} />}
+                onClick={onNext}
+                autoFocus
+                sx={{
+                  mt: 2,
+                  minWidth: 160,
+                  borderRadius: 1,
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                }}
+              >
+                {t('buttons.nextQuestion')}
+              </Button>
+            )}
           </Box>
         )}
         </Stack>

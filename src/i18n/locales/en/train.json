@@ -19,6 +19,7 @@
   },
   "topBar": {
     "progress": "Progress: {{completed}} / {{total}} ({{percent}}%)",
+    "progressCompact": "{{completed}} / {{total}} ({{percent}}%)",
     "remaining": "Remaining: {{remaining}}",
     "mistakes": "Mistakes: {{count}}",
     "mistakesShort": "M: {{count}}"
@@ -118,6 +119,7 @@
     "exit": "Exit",
     "restart": "Restart",
     "nextMode": "Next Training Mode",
+    "nextQuestion": "Next",
     "hint": "Hint",
     "close": "Close"
   },
@@ -138,6 +140,13 @@
   "settings": {
     "title": "Settings",
     "openAriaLabel": "Open settings",
-    "removeCorrectCards": "Remove correctly answered cards from the screen"
+    "removeCorrectCards": "Remove correctly answered cards from the screen",
+    "disableAutoAdvance": "Disable automatic question advance",
+    "disableAutoAdvanceDescription": "Keep the correct answer visible until you select Next.",
+    "answerReviewDuration": "Answer review time",
+    "answerReviewDurationDescription": "How long to show the English word and Vietnamese meaning after a correct answer.",
+    "answerReviewDurationInput": "Enter answer review time in seconds",
+    "secondUnit": "sec",
+    "seconds": "{{value}} seconds"
   }
 }

@@ -5,9 +5,8 @@ import {
   Skeleton,
   Chip,
   Button,
-  LinearProgress,
+  IconButton,
   useTheme,
-  useMediaQuery,
   Alert,
 } from '@mui/material';
 import { AlertCircle, RotateCcw, ArrowLeftRight } from 'lucide-react';
@@ -17,7 +16,12 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTrainWords } from '@/features/train/train-read-write';
 import { getNextTrainingMode } from '@/features/train/utils/trainingModes';
 import { WordInputCard } from '@/features/train/train-read-write';
-import { VocabularyQuickView } from '@/features/train/components';
+import {
+  FlashcardsSettingsPanel,
+  TrainingHeader,
+  VocabularyQuickView,
+  useWriteTrainingSettings,
+} from '@/features/train/components';
 import {
   saveTrainingSession,
   loadTrainingSession,
@@ -57,7 +61,6 @@ function pickRandomIndex(arrLength: number, exclude: Set<number>): number {
 
 const ReadWritePage = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { t } = useTranslation('train');
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -69,6 +72,11 @@ const ReadWritePage = () => {
   const recordTopicId = sourceTopicId || currentTopicId;
   const skipMistakeLogging = trainingSource === 'top-mistakes';
   const [sessionRestored, setSessionRestored] = useState(false); // Track if we've attempted to restore session
+  const {
+    settings,
+    setAnswerReviewDurationMs,
+    setDisableAutoAdvance,
+  } = useWriteTrainingSettings();
 
   // Restore a saved session unless the URL explicitly selects another topic.
   useEffect(() => {
@@ -128,6 +136,59 @@ const ReadWritePage = () => {
 
   const prevTopicIdRef = useRef<string | null>(null);
   const prevTrainingSourceRef = useRef<string | null>(null);
+  const advanceTimeoutRef = useRef<number | null>(null);
+
+  const clearAdvanceTimeout = useCallback(() => {
+    if (advanceTimeoutRef.current !== null) {
+      window.clearTimeout(advanceTimeoutRef.current);
+      advanceTimeoutRef.current = null;
+    }
+  }, []);
+
+  const advanceToNextWord = useCallback(() => {
+    clearAdvanceTimeout();
+    setCompletedWords((previous) =>
+      previous.includes(currentWordIndex)
+        ? previous
+        : [...previous, currentWordIndex],
+    );
+    const exclude = new Set<number>(completedWords);
+    exclude.add(currentWordIndex);
+    setCurrentWordIndex(pickRandomIndex(items.length, exclude));
+    setCurrentWordCompleted(false);
+    setShowHint(false);
+    setHasError(false);
+  }, [
+    clearAdvanceTimeout,
+    completedWords,
+    currentWordIndex,
+    items.length,
+  ]);
+
+  useEffect(() => clearAdvanceTimeout, [clearAdvanceTimeout]);
+  useEffect(() => {
+    clearAdvanceTimeout();
+  }, [currentTopicId, trainingSource, clearAdvanceTimeout]);
+
+  useEffect(() => {
+    if (!currentWordCompleted || settings.disableAutoAdvance) {
+      clearAdvanceTimeout();
+      return;
+    }
+
+    clearAdvanceTimeout();
+    advanceTimeoutRef.current = window.setTimeout(
+      advanceToNextWord,
+      settings.answerReviewDurationMs,
+    );
+    return clearAdvanceTimeout;
+  }, [
+    advanceToNextWord,
+    clearAdvanceTimeout,
+    currentWordCompleted,
+    settings.answerReviewDurationMs,
+    settings.disableAutoAdvance,
+  ]);
 
   // Load saved session when items are ready
   useEffect(() => {
@@ -257,6 +318,7 @@ const ReadWritePage = () => {
   }, [isCompleted, isLoading, items.length, showCompletionModal, sessionMistakes, currentTopicId, mistakesSaved, completionModalShown]);
 
   const handleModeToggle = () => {
+    clearAdvanceTimeout();
     setMode((prev) => (prev === 'vi-en' ? 'en-vi' : 'vi-en'));
     setShowHint(false);
     setCurrentWordCompleted(false);
@@ -275,26 +337,10 @@ const ReadWritePage = () => {
       const isCorrect = normalize(userAnswer) === normalize(correctAnswer);
 
       if (isCorrect) {
-        // Correct answer
+        clearAdvanceTimeout();
         setCurrentWordCompleted(true);
         setScore((s) => s + 1);
         speakEnglish(currentWord.en, { lang: 'en-US' });
-
-        // Mark as completed
-        if (!completedWords.includes(currentWordIndex)) {
-          setCompletedWords((prev) => [...prev, currentWordIndex]);
-        }
-
-        // Move to next word after a short delay
-        setTimeout(() => {
-          const exclude = new Set<number>(completedWords);
-          exclude.add(currentWordIndex);
-          const nextIndex = pickRandomIndex(items.length, exclude);
-          setCurrentWordIndex(nextIndex);
-          setCurrentWordCompleted(false);
-          setShowHint(false);
-          setHasError(false);
-        }, 1500);
       } else {
         // Wrong answer
         setHasError(true);
@@ -317,7 +363,14 @@ const ReadWritePage = () => {
         }, 400);
       }
     },
-    [items, currentWordIndex, mode, completedWords, isLoading, currentWordCompleted]
+    [
+      items,
+      currentWordIndex,
+      mode,
+      isLoading,
+      currentWordCompleted,
+      clearAdvanceTimeout,
+    ],
   );
 
   const handleHint = useCallback(() => {
@@ -325,6 +378,7 @@ const ReadWritePage = () => {
   }, []);
 
   const handleRestart = useCallback(() => {
+    clearAdvanceTimeout();
     setCurrentWordIndex(pickRandomIndex(items.length, new Set()));
     setCompletedWords([]);
     setScore(0);
@@ -339,7 +393,7 @@ const ReadWritePage = () => {
     if (currentTopicId) {
       clearTrainingSession();
     }
-  }, [items.length, currentTopicId]);
+  }, [items.length, currentTopicId, clearAdvanceTimeout]);
 
   const saveMistakesAndAction = useCallback(
     (action: 'exit' | 'restart' | 'next') => {
@@ -388,8 +442,6 @@ const ReadWritePage = () => {
       ? items[currentWordIndex]
       : null;
 
-  // Calculate progress
-  const progress = total > 0 ? (completedWords.length / total) * 100 : 0;
   const remaining = total - completedWords.length;
 
   // Determine question and answer based on mode
@@ -424,101 +476,88 @@ const ReadWritePage = () => {
         boxSizing: 'border-box',
       }}
     >
-      {/* Sticky Top Bar */}
-      <Box
-        sx={{
-          position: 'sticky',
-          top: { xs: '56px', sm: '64px', md: 0 },
-          zIndex: (t) => t.zIndex.appBar - 1,
-          bgcolor: 'background.paper',
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          px: { xs: 1.5, sm: 3 },
-          py: { xs: 1, sm: 1.5 },
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 1.5,
-          boxShadow: 'none',
-          flexShrink: 0,
-        }}
-      >
-        {/* Progress Bar */}
-        <Box sx={{ width: '100%' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                {t('topBar.progress', { completed: completedWords.length, total, percent: Math.round(progress) })}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                {t('topBar.remaining', { remaining })}
-              </Typography>
-            </Box>
-          <LinearProgress
-            variant="determinate"
-            value={progress}
+      <TrainingHeader
+        title={t('readWrite.title')}
+        subtitle={t('readWrite.instruction')}
+        completed={completedWords.length}
+        total={total}
+        controls={(
+          <Box
             sx={{
-              height: 8,
-              borderRadius: 1,
-              bgcolor: 'background.default',
-            }}
-          />
-        </Box>
-
-        {/* Controls Row */}
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
-            alignItems: { xs: 'stretch', sm: 'center' },
-            justifyContent: 'space-between',
-            gap: { xs: 1, sm: 2 },
-          }}
-        >
-          <Button
-            variant="outlined"
-            color="primary"
-            size={isMobile ? 'small' : 'medium'}
-            onClick={handleModeToggle}
-            startIcon={<ArrowLeftRight size={isMobile ? 16 : 18} />}
-            sx={{
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              px: { xs: 1.5, sm: 2 },
-              py: { xs: 0.75, sm: 1 },
-              minWidth: { xs: 'auto', sm: 140 },
-              fontWeight: 600,
+              flex: 1,
+              minWidth: 0,
+              maxWidth: '100%',
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: { xs: 'stretch', sm: 'center' },
+              justifyContent: 'space-between',
+              gap: 1,
+              flexWrap: 'wrap',
             }}
           >
-            {mode === 'vi-en' ? t('direction.viEn') : t('direction.enVi')}
-          </Button>
-
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-            <Chip
-              icon={<AlertCircle size={16} color="error" />}
-              label={t('topBar.mistakes', { count: mistakes })}
-              variant="outlined"
-              size={isMobile ? 'small' : 'medium'}
-              sx={{
-                borderColor: theme.palette.error.light,
-                color: 'error.main',
-                bgcolor: theme.palette.error.light + '20',
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              }}
-            />
             <Button
               variant="outlined"
               color="primary"
-              size={isMobile ? 'small' : 'medium'}
-              startIcon={<RotateCcw size={20} />}
-              onClick={handleRestart}
+              size="small"
+              disabled={currentWordCompleted}
+              onClick={handleModeToggle}
+              startIcon={<ArrowLeftRight size={16} />}
+              sx={{ minWidth: 112 }}
+            >
+              {mode === 'vi-en' ? t('direction.viEn') : t('direction.enVi')}
+            </Button>
+
+            <Box
               sx={{
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                whiteSpace: 'nowrap',
+                display: 'flex',
+                gap: 0.75,
+                alignItems: 'center',
+                width: 'auto',
+                minWidth: 0,
+                alignSelf: { xs: 'stretch', sm: 'auto' },
+                justifyContent: 'flex-start',
+                flexWrap: 'wrap',
               }}
             >
-              {t('buttons.restart')}
-            </Button>
+              <Chip
+                label={t('topBar.remaining', { remaining })}
+                variant="outlined"
+                size="small"
+              />
+              <Chip
+                icon={<AlertCircle size={15} />}
+                label={t('topBar.mistakes', { count: mistakes })}
+                variant="outlined"
+                size="small"
+                sx={{
+                  borderColor: 'error.main',
+                  color: 'error.main',
+                  bgcolor: `${theme.palette.error.main}12`,
+                }}
+              />
+              <IconButton
+                color="primary"
+                size="small"
+                onClick={handleRestart}
+                aria-label={t('buttons.restart')}
+                sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
+              >
+                <RotateCcw size={16} />
+              </IconButton>
+              <Button
+                variant="outlined"
+                color="primary"
+                size="small"
+                startIcon={<RotateCcw size={16} />}
+                onClick={handleRestart}
+                sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+              >
+                {t('buttons.restart')}
+              </Button>
+            </Box>
           </Box>
-        </Box>
-      </Box>
+        )}
+      />
 
       {/* Main Content */}
       <Box
@@ -555,6 +594,8 @@ const ReadWritePage = () => {
             <WordInputCard
               question={question}
               answer={answer}
+              englishWord={currentWord.en}
+              vietnameseMeaning={currentWord.vi}
               mode={mode}
               onAnswer={handleAnswer}
               onHint={handleHint}
@@ -563,6 +604,8 @@ const ReadWritePage = () => {
               shouldShake={shouldShake}
               shakeKey={shakeKey}
               hasError={hasError}
+              showNextButton={settings.disableAutoAdvance}
+              onNext={advanceToNextWord}
             />
           ) : null}
         </Box>
@@ -582,6 +625,13 @@ const ReadWritePage = () => {
       <VocabularyQuickView
         vocabularyList={items}
         currentTopicId={sourceTopicId || currentTopicId}
+      />
+
+      <FlashcardsSettingsPanel
+        answerReviewDurationMs={settings.answerReviewDurationMs}
+        onAnswerReviewDurationChange={setAnswerReviewDurationMs}
+        disableAutoAdvance={settings.disableAutoAdvance}
+        onDisableAutoAdvanceChange={setDisableAutoAdvance}
       />
     </Box>
   );

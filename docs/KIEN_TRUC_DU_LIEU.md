@@ -42,7 +42,7 @@ Namespace hiện tại là `wordly:v3`.
 | `wordly:v3:training:sets` | Các tập từ tạm thời, ví dụ top lỗi | Ghi khi tạo lại tập luyện |
 | `wordly:v3:training:sessions` | Session của bốn chế độ luyện tập | Ghi khi tiến độ luyện tập đổi |
 | `wordly:v3:learning:mistakes` | Thống kê lỗi học tập | Ghi khi hoàn thành/cập nhật lỗi |
-| `wordly:v3:preferences` | Theme, ngôn ngữ, chế độ xem, cài đặt flashcard | Ghi khi cài đặt đổi |
+| `wordly:v3:preferences` | Theme, ngôn ngữ, chế độ xem, cài đặt flashcard và thời gian xem kết quả | Ghi khi cài đặt đổi |
 | `wordly:v3:system:backup` | Thời điểm backup gần nhất | Ghi khi tạo/khôi phục backup |
 
 `topicId` được `encodeURIComponent` trước khi ghép vào key. Tên hiển thị không nằm trong key nên có thể dùng tiếng Việt có dấu, khoảng trắng và đổi tên mà không phải di chuyển dữ liệu.
@@ -189,6 +189,10 @@ Các cài đặt người dùng nằm trong một payload:
   "vocabularyViewMode": "tree",
   "flashcards": {
     "removeCorrectCards": true
+  },
+  "writeTraining": {
+    "answerReviewDurationMs": 3000,
+    "disableAutoAdvance": false
   }
 }
 ```

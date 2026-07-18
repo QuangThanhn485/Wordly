@@ -19,6 +19,7 @@
   },
   "topBar": {
     "progress": "Tiến trình: {{completed}} / {{total}} ({{percent}}%)",
+    "progressCompact": "{{completed}} / {{total}} ({{percent}}%)",
     "remaining": "Còn lại: {{remaining}}",
     "mistakes": "Lỗi sai: {{count}}",
     "mistakesShort": "Sai: {{count}}"
@@ -118,6 +119,7 @@
     "exit": "Thoát",
     "restart": "Làm lại",
     "nextMode": "Chế độ kế tiếp",
+    "nextQuestion": "Tiếp theo",
     "hint": "Gợi ý",
     "close": "Đóng"
   },
@@ -137,6 +139,13 @@
   "settings": {
     "title": "C\u00e0i \u0111\u1eb7t",
     "openAriaLabel": "M\u1edf c\u00e0i \u0111\u1eb7t",
-    "removeCorrectCards": "Lo\u1ea1i b\u1ecf card \u0111\u00e3 tr\u1ea3 l\u1eddi \u0111\u00fang ra kh\u1ecfi m\u00e0n h\u00ecnh"
+    "removeCorrectCards": "Lo\u1ea1i b\u1ecf card \u0111\u00e3 tr\u1ea3 l\u1eddi \u0111\u00fang ra kh\u1ecfi m\u00e0n h\u00ecnh",
+    "disableAutoAdvance": "T\u1eaft t\u1ef1 \u0111\u1ed9ng chuy\u1ec3n c\u00e2u h\u1ecfi",
+    "disableAutoAdvanceDescription": "Sau khi tr\u1ea3 l\u1eddi \u0111\u00fang, gi\u1eef nguy\u00ean k\u1ebft qu\u1ea3 cho \u0111\u1ebfn khi b\u1ea1n nh\u1ea5n Ti\u1ebfp theo.",
+    "answerReviewDuration": "Th\u1eddi gian quan s\u00e1t k\u1ebft qu\u1ea3",
+    "answerReviewDurationDescription": "Th\u1eddi gian hi\u1ec3n th\u1ecb t\u1eeb ti\u1ebfng Anh v\u00e0 ngh\u0129a ti\u1ebfng Vi\u1ec7t sau khi tr\u1ea3 l\u1eddi \u0111\u00fang.",
+    "answerReviewDurationInput": "Nh\u1eadp s\u1ed1 gi\u00e2y quan s\u00e1t k\u1ebft qu\u1ea3",
+    "secondUnit": "gi\u00e2y",
+    "seconds": "{{value}} gi\u00e2y"
   }
 }

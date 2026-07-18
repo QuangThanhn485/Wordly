@@ -287,6 +287,10 @@ describe('normalized vocabulary storage', () => {
       vocabularyViewMode: 'grid',
       language: 'vi',
       flashcards: { removeCorrectCards: true },
+      writeTraining: {
+        answerReviewDurationMs: 4500,
+        disableAutoAdvance: true,
+      },
     }));
     saveTrainingSessionValue('flashcardsReading', {
       topicId: 'topic-food',
@@ -328,6 +332,10 @@ describe('normalized vocabulary storage', () => {
       vocabularyViewMode: 'grid',
       language: 'vi',
       flashcards: { removeCorrectCards: true },
+      writeTraining: {
+        answerReviewDurationMs: 4500,
+        disableAutoAdvance: true,
+      },
     });
     expect(
       loadTrainingSessionValue<{ topicId: string }>('flashcardsReading')

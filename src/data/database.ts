@@ -223,7 +223,21 @@ const isValidRecordData = (key: string, data: unknown): boolean => {
         data.language === 'en'
       ) &&
       isRecord(data.flashcards) &&
-      typeof data.flashcards.removeCorrectCards === 'boolean'
+      typeof data.flashcards.removeCorrectCards === 'boolean' &&
+      (
+        data.writeTraining === undefined ||
+        (
+          isRecord(data.writeTraining) &&
+          typeof data.writeTraining.answerReviewDurationMs === 'number' &&
+          Number.isInteger(data.writeTraining.answerReviewDurationMs) &&
+          data.writeTraining.answerReviewDurationMs >= 1000 &&
+          data.writeTraining.answerReviewDurationMs <= 10000 &&
+          (
+            data.writeTraining.disableAutoAdvance === undefined ||
+            typeof data.writeTraining.disableAutoAdvance === 'boolean'
+          )
+        )
+      )
     );
   }
   if (key === DATABASE_KEYS.backupMetadata) {

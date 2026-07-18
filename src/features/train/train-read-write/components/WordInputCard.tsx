@@ -13,7 +13,13 @@ import {
   Tooltip,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { BookOpen, CheckCircle as CheckCircleIcon, Lightbulb as LightbulbIcon, Volume2 } from 'lucide-react';
+import {
+  ArrowRight,
+  BookOpen,
+  CheckCircle as CheckCircleIcon,
+  Lightbulb as LightbulbIcon,
+  Volume2,
+} from 'lucide-react';
 import { keyframes } from '@mui/system';
 import { speakEnglish } from '@/utils/speechUtils';
 import { useTranslation } from 'react-i18next';
@@ -28,6 +34,8 @@ const shakeKF = keyframes`
 interface WordInputCardProps {
   question: string; // The word to display (EN or VI)
   answer: string; // The correct answer (VI or EN)
+  englishWord: string;
+  vietnameseMeaning: string;
   mode: 'vi-en' | 'en-vi'; // Training mode
   onAnswer: (userAnswer: string) => void;
   onHint: () => void;
@@ -36,11 +44,15 @@ interface WordInputCardProps {
   shouldShake?: boolean;
   shakeKey?: number;
   hasError?: boolean; // Whether there's an error (wrong answer)
+  showNextButton?: boolean;
+  onNext?: () => void;
 }
 
 export const WordInputCard: React.FC<WordInputCardProps> = ({
   question,
   answer,
+  englishWord,
+  vietnameseMeaning,
   mode,
   onAnswer,
   onHint,
@@ -49,6 +61,8 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   shouldShake = false,
   shakeKey = 0,
   hasError = false,
+  showNextButton = false,
+  onNext,
 }) => {
   const { t } = useTranslation('train');
   const theme = useTheme();
@@ -181,7 +195,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
             ? `${shakeKF} 0.35s cubic-bezier(.36,.07,.19,.97) both`
             : 'none',
         boxShadow: 'none',
-        borderRadius: { xs: 2, sm: 2.5 },
+        borderRadius: 1,
         border: '1px solid',
         borderColor: isCompleted
           ? alpha(theme.palette.success.main, isDark ? 0.6 : 0.4)
@@ -232,7 +246,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
           </Box>
 
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle1" fontWeight={950} sx={{ letterSpacing: '-0.01em' }} noWrap>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ letterSpacing: 0 }} noWrap>
               {t('readWrite.title')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
@@ -259,7 +273,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 borderColor: alpha(theme.palette.divider, isDark ? 0.22 : 0.55),
                 bgcolor: alpha(theme.palette.background.paper, isDark ? 0.08 : 0.6),
                 color: 'text.secondary',
-                fontWeight: 900,
+                fontWeight: 700,
                 fontSize: '0.75rem',
                 letterSpacing: '0.18em',
                 textTransform: 'uppercase',
@@ -272,10 +286,10 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
               variant="h4"
               sx={{
                 mt: 1.25,
-                fontWeight: 950,
+                fontWeight: 700,
                 fontSize: { xs: '1.6rem', sm: '2.1rem', md: '2.5rem' },
                 lineHeight: 1.15,
-                letterSpacing: '-0.02em',
+                letterSpacing: 0,
                 wordBreak: 'break-word',
                 color: 'text.primary',
               }}
@@ -327,7 +341,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 mb: 1.25,
                 color: 'text.secondary',
                 letterSpacing: '0.12em',
-                fontWeight: 900,
+                fontWeight: 700,
               }}
             >
               {t('readWriteCard.letterHintTitle')}
@@ -365,7 +379,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontWeight: 900,
+                            fontWeight: 700,
                             fontSize: '1.05rem',
                             textTransform: 'uppercase',
                             transition: 'all 0.2s ease',
@@ -469,7 +483,7 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 >
                   <LightbulbIcon size={18} />
                   <Box component="span" sx={{ minWidth: 0 }}>
-                    <Box component="span" sx={{ fontWeight: 900 }}>
+                    <Box component="span" sx={{ fontWeight: 700 }}>
                       {answerLabel}:
                     </Box>{' '}
                     {answer}
@@ -483,14 +497,14 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
               variant="contained"
               color="primary"
               fullWidth
-              size="large"
+              size="medium"
               disabled={!userInput.trim()}
               sx={{
                 mt: 1.5,
-                py: 1.25,
-                borderRadius: 2,
-                fontSize: { xs: '0.875rem', sm: '1rem' },
-                fontWeight: 900,
+                py: 0.875,
+                borderRadius: 1,
+                fontSize: '0.875rem',
+                fontWeight: 700,
               }}
             >
               {t('readWriteCard.check')}
@@ -502,8 +516,8 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
               sx={{
                 mx: 'auto',
                 mb: 1.5,
-                width: 72,
-                height: 72,
+                width: 56,
+                height: 56,
                 borderRadius: 999,
                 display: 'grid',
                 placeItems: 'center',
@@ -513,14 +527,49 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 color: theme.palette.success.main,
               }}
             >
-              <CheckCircleIcon size={34} />
+              <CheckCircleIcon size={28} />
             </Box>
-            <Typography variant="h6" color="success.main" fontWeight={950} gutterBottom>
+            <Typography variant="subtitle1" color="success.main" fontWeight={700}>
               {t('readWriteCard.correct')}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 800 }}>
-              {answerLabel}: {answer}
-            </Typography>
+            <Stack spacing={0.75} sx={{ mt: 1.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                <Box component="span" sx={{ fontWeight: 700 }}>
+                  {t('common.english')}:
+                </Box>{' '}
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: 700 }}>
+                  {englishWord}
+                </Box>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <Box component="span" sx={{ fontWeight: 700 }}>
+                  {t('common.vietnamese')}:
+                </Box>{' '}
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                  {vietnameseMeaning}
+                </Box>
+              </Typography>
+            </Stack>
+            {showNextButton && onNext && (
+              <Button
+                type="button"
+                variant="contained"
+                color="primary"
+                size="medium"
+                endIcon={<ArrowRight size={17} />}
+                onClick={onNext}
+                autoFocus
+                sx={{
+                  mt: 2,
+                  minWidth: 160,
+                  borderRadius: 1,
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                }}
+              >
+                {t('buttons.nextQuestion')}
+              </Button>
+            )}
           </Box>
         )}
         </Stack>
