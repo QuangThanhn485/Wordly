@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo } from 'react';
-import { Box, Collapse, IconButton, List, ListItemButton, ListItemText, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Collapse, IconButton, List, ListItemButton, Tooltip, Typography } from '@mui/material';
 import {
   Folder as FolderIcon,
   FolderOpen as FolderOpenIcon,
@@ -11,6 +11,11 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { FolderNode, FileLeaf } from '../../types';
 import { removeFileExtension } from '@/utils/fileUtils';
+
+const MAX_VISIBLE_INDENT_LEVEL = 6;
+const TREE_ROW_HEIGHT = 40;
+
+const getRowPaddingLeft = (level: number): number => 8 + Math.min(level, MAX_VISIBLE_INDENT_LEVEL) * 16;
 
 // ===== Sort Helper =====
 /**
@@ -66,82 +71,98 @@ export const FileItem = memo(function FileItem({
   selected?: boolean;
   forceShowMenu?: boolean;
 }) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
-  const showMenuButton = forceShowMenu || isMobile;
   const { t } = useTranslation('vocabulary');
+  const displayName = removeFileExtension(node.name);
 
   return (
-    <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+    <Box
+      sx={{
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        minWidth: 0,
+        mx: 0.5,
+        mb: 0.25,
+        '&:hover .tree-menu-button, &:focus-within .tree-menu-button': {
+          opacity: 1,
+          pointerEvents: 'auto',
+        },
+      }}
+    >
       <ListItemButton
         selected={selected}
         sx={{
-          pl: 4 + level * 2,
-          pr: showMenuButton ? 4 : 2,
+          minWidth: 0,
+          minHeight: TREE_ROW_HEIGHT,
+          height: TREE_ROW_HEIGHT,
+          pl: `${getRowPaddingLeft(level)}px`,
+          pr: '40px',
+          py: 0,
+          borderRadius: 1,
           position: 'relative',
           flex: 1,
-          '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
+          '&:hover': { backgroundColor: 'action.hover' },
           '&.Mui-selected': {
-            backgroundColor: 'rgba(25, 118, 210, 0.12)',
+            backgroundColor: 'action.selected',
             '&:hover': {
-              backgroundColor: 'rgba(25, 118, 210, 0.16)',
+              backgroundColor: 'action.selected',
             },
           },
-          '&::before':
-            level > 0
-              ? {
-                  content: '""',
-                  position: 'absolute',
-                  left: 20 + (level - 1) * 20,
-                  top: 0,
-                  bottom: 0,
-                  width: '1px',
-                  backgroundColor: '#e0e0e0',
-                }
-              : undefined,
         }}
         onClick={onClick}
-        onContextMenu={isMobile ? undefined : onContext} // Disable context menu on mobile, use button instead
-        aria-label={t('actions.fileAriaLabel', { name: removeFileExtension(node.name) })}
+        onContextMenu={forceShowMenu ? undefined : onContext}
+        aria-label={t('actions.fileAriaLabel', { name: displayName })}
       >
-        <FileIcon size={16} style={{ marginRight: 8, color: 'inherit' }} />
-        <ListItemText 
-          primary={
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              <Typography variant="body2">{removeFileExtension(node.name)}</Typography>
-              {vocabCount !== undefined && (
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    color: 'text.secondary', 
-                    ml: 1,
-                    fontWeight: 500
-                  }}
-                >
-                  ({vocabCount})
-                </Typography>
-              )}
-            </Box>
-          } 
-        />
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: '18px 18px minmax(0, 1fr) auto',
+            alignItems: 'center',
+            columnGap: 0.75,
+            width: '100%',
+            minWidth: 0,
+          }}
+        >
+          <Box aria-hidden sx={{ width: 18, height: 18 }} />
+          <FileIcon size={17} aria-hidden />
+          <Tooltip title={displayName} placement="right" enterDelay={500}>
+            <Typography variant="body2" noWrap sx={{ minWidth: 0, fontWeight: selected ? 600 : 400 }}>
+              {displayName}
+            </Typography>
+          </Tooltip>
+          {vocabCount !== undefined && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ ml: 0.5, fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
+            >
+              {vocabCount}
+            </Typography>
+          )}
+        </Box>
       </ListItemButton>
-      {showMenuButton && (
+      <Tooltip title={t('actions.fileMenuAriaLabel', { name: displayName })} placement="right">
         <IconButton
+          className="tree-menu-button"
           size="small"
           onClick={(e) => {
             e.stopPropagation();
             onContext(e);
           }}
-          sx={{ 
+          sx={{
             position: 'absolute',
-            right: 4,
-            opacity: 1,
+            right: 6,
+            width: 28,
+            height: 28,
+            opacity: forceShowMenu ? 1 : 0,
+            pointerEvents: forceShowMenu ? 'auto' : 'none',
+            transition: 'opacity 120ms ease',
           }}
-          aria-label={t('actions.fileMenuAriaLabel', { name: removeFileExtension(node.name) })}
+          aria-label={t('actions.fileMenuAriaLabel', { name: displayName })}
         >
-          <MoreIcon fontSize="small" />
+          <MoreIcon size={17} />
         </IconButton>
-      )}
+      </Tooltip>
     </Box>
   );
 });
@@ -170,9 +191,6 @@ const FolderItemComponent = function FolderItem({
   vocabCountMap?: Record<string, number>; // fileName -> count
   selectedFileId?: string | null; // Currently selected file ID
 }) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
-  const showMenuButton = forceShowMenu || isMobile;
   const { t } = useTranslation('vocabulary');
 
   // Optimize: check if isFolderOpen is a Set (direct lookup) or function
@@ -200,76 +218,87 @@ const FolderItemComponent = function FolderItem({
 
   return (
     <>
-      <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+      <Box
+        sx={{
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          minWidth: 0,
+          mx: 0.5,
+          mb: 0.25,
+          '&:hover .tree-menu-button, &:focus-within .tree-menu-button': {
+            opacity: 1,
+            pointerEvents: 'auto',
+          },
+        }}
+      >
         <ListItemButton
           onClick={handleToggle}
-          onContextMenu={isMobile ? undefined : (e) => onContext('folder', path, e)} // Disable context menu on mobile
+          onContextMenu={forceShowMenu ? undefined : (e) => onContext('folder', path, e)}
           sx={{
-            pl: 2 + level * 2,
-            pr: showMenuButton ? 4 : 2,
+            minWidth: 0,
+            minHeight: TREE_ROW_HEIGHT,
+            height: TREE_ROW_HEIGHT,
+            pl: `${getRowPaddingLeft(level)}px`,
+            pr: '40px',
+            py: 0,
+            borderRadius: 1,
             position: 'relative',
             flex: 1,
-            '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
-            '&::before':
-              level > 0
-                ? {
-                    content: '""',
-                    position: 'absolute',
-                    left: 20 + (level - 1) * 20,
-                    top: 0,
-                    bottom: 0,
-                    width: '1px',
-                    backgroundColor: '#e0e0e0',
-                  }
-                : undefined,
+            '&:hover': { backgroundColor: 'action.hover' },
           }}
           aria-expanded={open}
           aria-label={t('actions.folderToggleAriaLabel', { name: node.label })}
         >
-          {open ? <FolderOpenIcon size={20} style={{ marginRight: 8, color: 'inherit' }} /> : <FolderIcon size={20} style={{ marginRight: 8, color: 'inherit' }} />}
-          <ListItemText primary={<Typography variant="body1" sx={{ fontWeight: 500 }}>{node.label}</Typography>} />
-          {open ? <ExpandLessIcon size={18} /> : <ExpandMoreIcon size={18} />}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: '18px 18px minmax(0, 1fr)',
+              alignItems: 'center',
+              columnGap: 0.75,
+              width: '100%',
+              minWidth: 0,
+            }}
+          >
+            {open ? <ExpandLessIcon size={17} aria-hidden /> : <ExpandMoreIcon size={17} aria-hidden />}
+            {open ? <FolderOpenIcon size={18} aria-hidden /> : <FolderIcon size={18} aria-hidden />}
+            <Tooltip title={node.label} placement="right" enterDelay={500}>
+              <Typography variant="body2" noWrap sx={{ minWidth: 0, fontWeight: 600 }}>
+                {node.label}
+              </Typography>
+            </Tooltip>
+          </Box>
         </ListItemButton>
-        {showMenuButton && (
+        <Tooltip title={t('actions.folderMenuAriaLabel', { name: node.label })} placement="right">
           <IconButton
+            className="tree-menu-button"
             size="small"
             onClick={(e) => {
               e.stopPropagation();
               onContext('folder', path, e);
             }}
-            sx={{ 
+            sx={{
               position: 'absolute',
-              right: 4,
-              opacity: 1,
+              right: 6,
+              width: 28,
+              height: 28,
+              opacity: forceShowMenu ? 1 : 0,
+              pointerEvents: forceShowMenu ? 'auto' : 'none',
+              transition: 'opacity 120ms ease',
             }}
             aria-label={t('actions.folderMenuAriaLabel', { name: node.label })}
           >
-            <MoreIcon fontSize="small" />
+            <MoreIcon size={17} />
           </IconButton>
-        )}
+        </Tooltip>
       </Box>
 
       <Collapse 
         in={open} 
-        timeout={300}
-        unmountOnExit={false}
+        timeout={180}
+        unmountOnExit
       >
-        <List
-          component="div"
-          disablePadding
-          sx={{
-            position: 'relative',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              left: 20 + level * 20,
-              top: 0,
-              bottom: 0,
-              width: '1px',
-              backgroundColor: '#e0e0e0',
-            },
-          }}
-        >
+        <List component="div" disablePadding>
           {sortedChildren.map((child) =>
             child.kind === 'folder' ? (
               <FolderItem

@@ -363,8 +363,11 @@ const Navbar: React.FC = () => {
               display: 'flex',
               justifyContent: open ? 'space-between' : 'center',
               alignItems: 'center',
-              p: 1.5,
-              pb: 1,
+              height: 56,
+              minHeight: 56,
+              px: 1.5,
+              py: 0,
+              boxSizing: 'border-box',
             }}
           >
             {open ? (

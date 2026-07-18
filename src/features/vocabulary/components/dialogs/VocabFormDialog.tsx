@@ -49,11 +49,14 @@ export const VocabFormDialog: React.FC<VocabFormDialogProps> = React.memo(
     const [inputLang, setInputLang] = React.useState<'en' | 'vi'>('en');
     const [searchTerm, setSearchTerm] = React.useState(data.word || '');
 
-    // Sync khi mở dialog / đổi item
+    // Reset the editing context whenever the dialog opens for another item.
     React.useEffect(() => {
+      if (!open) return;
       setLocalData(data);
       setSearchTerm(data.word || '');
-    }, [data]);
+      setInputLang('en');
+      setSuggestions([]);
+    }, [open, data]);
 
     const handleWordChange = useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {

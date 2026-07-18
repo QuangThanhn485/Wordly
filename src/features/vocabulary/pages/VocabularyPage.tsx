@@ -57,8 +57,6 @@ import {
 // Import types
 import type { VocabItem, FolderNode, FileLeaf, SnackState } from '../types';
 
-// Import constants
-import { TOTAL_LEFT_BAND } from '../constants/wordTypes';
 import { getDefaultTree } from '../constants/seedData';
 
 // Import utilities
@@ -77,7 +75,6 @@ import {
   loadVocabFile,
   deleteVocabFile,
   loadVocabCounts,
-  renameVocabCount,
   saveTreeToStorage,
   loadTreeFromStorage,
   syncAllVocabCounts,
@@ -105,21 +102,34 @@ import { VocabDetailPanel } from '../components/VocabDetailPanel';
 // ===== Styled Components =====
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
-    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[100],
-    fontWeight: 'bold',
+    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[200],
+    fontWeight: 700,
     color: theme.palette.mode === 'dark' ? theme.palette.common.white : theme.palette.text.primary,
-    fontSize: theme.breakpoints.down('sm') ? '0.875rem' : '1rem', // Mobile: 14px, Desktop: 16px
+    fontSize: '0.8125rem',
+    lineHeight: 1.25,
+    paddingTop: theme.spacing(1.25),
+    paddingBottom: theme.spacing(1.25),
+    borderBottom: `2px solid ${theme.palette.primary.main}`,
   },
   [`&.${tableCellClasses.body}`]: {
-    fontSize: theme.breakpoints.down('sm') ? '0.875rem' : '1rem', // Mobile: 14px, Desktop: 16px
+    fontSize: '0.875rem',
     color: theme.palette.mode === 'dark' ? theme.palette.common.white : theme.palette.text.primary,
+  },
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(1),
+    fontSize: '0.8125rem',
+  },
+  [`&.${tableCellClasses.paddingCheckbox}`]: {
+    width: 48,
+    paddingLeft: theme.spacing(1),
+    paddingRight: theme.spacing(1),
   },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
-  backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.background.paper,
-  '&:nth-of-type(odd)': {
-    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[700] : theme.palette.action.hover,
+  backgroundColor: theme.palette.background.paper,
+  '&:hover': {
+    backgroundColor: `${theme.palette.action.hover} !important`,
   },
   '&:last-child td, &:last-child th': { border: 0 },
 }));
@@ -147,9 +157,47 @@ const VocabTableRow = React.memo(function VocabTableRow({
   onOpenDetail,
   onOpenMenu,
 }: VocabTableRowProps) {
+  const pendingSpeakRef = React.useRef<number | null>(null);
+
+  React.useEffect(
+    () => () => {
+      if (pendingSpeakRef.current !== null) {
+        window.clearTimeout(pendingSpeakRef.current);
+      }
+    },
+    [],
+  );
+
+  const handleRowClick = useCallback(() => {
+    if (pendingSpeakRef.current !== null) {
+      window.clearTimeout(pendingSpeakRef.current);
+    }
+    pendingSpeakRef.current = window.setTimeout(() => {
+      pendingSpeakRef.current = null;
+      speak(item.word);
+    }, 220);
+  }, [item.word]);
+
+  const handleRowDoubleClick = useCallback(() => {
+    if (pendingSpeakRef.current !== null) {
+      window.clearTimeout(pendingSpeakRef.current);
+      pendingSpeakRef.current = null;
+    }
+    onOpenDetail(item);
+  }, [item, onOpenDetail]);
+
+  const stopRowInteraction = useCallback((event: React.SyntheticEvent) => {
+    event.stopPropagation();
+  }, []);
+
   return (
-    <StyledTableRow hover>
-      <StyledTableCell padding="checkbox">
+    <StyledTableRow
+      hover
+      onClick={handleRowClick}
+      onDoubleClick={handleRowDoubleClick}
+      sx={{ cursor: 'pointer' }}
+    >
+      <StyledTableCell padding="checkbox" onClick={stopRowInteraction} onDoubleClick={stopRowInteraction}>
         <Checkbox
           checked={selected}
           onChange={() => onToggleSelection(item.word)}
@@ -157,16 +205,16 @@ const VocabTableRow = React.memo(function VocabTableRow({
         />
       </StyledTableCell>
       <StyledTableCell
-        sx={{ fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}
-        onClick={() => onOpenDetail(item)}
+        sx={{ width: { xs: '38%', sm: '32%', lg: '24%' }, fontWeight: 500 }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
           <IconButton
             size="small"
             onClick={(event) => {
               event.stopPropagation();
               speak(item.word);
             }}
+            onDoubleClick={stopRowInteraction}
             sx={{
               p: 0.5,
               minWidth: 'auto',
@@ -180,16 +228,23 @@ const VocabTableRow = React.memo(function VocabTableRow({
           >
             <VolumeUpIcon size={18} style={{ color: 'inherit' }} />
           </IconButton>
-          <Box component="span">{item.word}</Box>
+          <Typography
+            component="span"
+            variant="body2"
+            sx={{ minWidth: 0, fontWeight: 600, overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+          >
+            {item.word}
+          </Typography>
         </Box>
       </StyledTableCell>
       <StyledTableCell
-        sx={{ wordBreak: 'break-word', cursor: 'pointer' }}
-        onClick={() => onOpenDetail(item)}
+        sx={{ minWidth: 0, overflowWrap: 'anywhere', wordBreak: 'break-word' }}
       >
         {item.vnMeaning}
       </StyledTableCell>
-      <StyledTableCell sx={{ cursor: 'pointer' }} onClick={() => onOpenDetail(item)}>
+      <StyledTableCell
+        sx={{ display: { xs: 'none', lg: 'table-cell' }, width: 112 }}
+      >
         <Box
           component="span"
           sx={{
@@ -206,15 +261,20 @@ const VocabTableRow = React.memo(function VocabTableRow({
         </Box>
       </StyledTableCell>
       <StyledTableCell
-        sx={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
-        onClick={() => onOpenDetail(item)}
+        sx={{
+          display: { xs: 'none', lg: 'table-cell' },
+          width: 160,
+          overflowWrap: 'anywhere',
+          wordBreak: 'break-word',
+        }}
       >
         / {item.pronunciation} /
       </StyledTableCell>
-      <StyledTableCell align="center">
+      <StyledTableCell align="center" sx={{ width: 56 }}>
         <IconButton
           size={compact ? 'small' : 'medium'}
           onClick={(event) => onOpenMenu(event, item, originalIndex)}
+          onDoubleClick={stopRowInteraction}
           sx={{ '&:hover': { backgroundColor: 'primary.light', color: 'primary.main' } }}
           aria-label={getMenuAriaLabel(item.word)}
         >
@@ -273,6 +333,14 @@ const VocabTableBody = React.memo(function VocabTableBody({
 
 // ===== Helper: localStorage for viewMode =====
 const STORAGE_KEY_VIEW_MODE = 'vocabulary_view_mode';
+const MIN_SIDEBAR_WIDTH = 240;
+const MAX_SIDEBAR_WIDTH = 480;
+const MIN_CONTENT_WIDTH = 360;
+
+const getDefaultSidebarWidth = (): number => {
+  const viewportWidth = typeof window === 'undefined' ? 1280 : window.innerWidth;
+  return Math.round(Math.min(336, Math.max(288, viewportWidth * 0.24)));
+};
 
 const loadViewMode = (): 'tree' | 'grid' => {
   try {
@@ -453,10 +521,12 @@ const VocabularyPage: React.FC = () => {
   const theme = useTheme();
   const isMdDown = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
   const isSmDown = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
-  const sidebarWidth = useMemo(
-    () => (isMdDown ? '100%' : `clamp(220px, calc(${TOTAL_LEFT_BAND}px - var(--nav-w, 240px)), 360px)`),
-    [isMdDown],
-  );
+  const [sidebarWidth, setSidebarWidth] = useState(getDefaultSidebarWidth);
+  const [sidebarResizeStart, setSidebarResizeStart] = useState<{
+    pointerX: number;
+    width: number;
+  } | null>(null);
+  const pageRootRef = useRef<HTMLDivElement | null>(null);
 
   // ===== Context menu state =====
   const [menu, setMenu] = useState<
@@ -489,6 +559,10 @@ const VocabularyPage: React.FC = () => {
   // ===== Dialogs =====
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState('');
+  const [renameTarget, setRenameTarget] = useState<{
+    type: 'folder' | 'file';
+    path: string[];
+  } | null>(null);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newFileOpen, setNewFileOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -536,6 +610,61 @@ const VocabularyPage: React.FC = () => {
     setSidebarOpen((prev) => !prev);
   }, []);
 
+  const clampSidebarWidth = useCallback((width: number): number => {
+    const availableWidth = pageRootRef.current?.getBoundingClientRect().width ?? window.innerWidth;
+    const responsiveMax = Math.max(
+      MIN_SIDEBAR_WIDTH,
+      Math.min(MAX_SIDEBAR_WIDTH, availableWidth - MIN_CONTENT_WIDTH),
+    );
+    return Math.round(Math.min(responsiveMax, Math.max(MIN_SIDEBAR_WIDTH, width)));
+  }, []);
+
+  const startSidebarResize = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      setSidebarResizeStart({
+        pointerX: event.clientX,
+        width: sidebarWidth,
+      });
+    },
+    [sidebarWidth],
+  );
+
+  const handleSidebarResizeKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLElement>) => {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        const direction = event.key === 'ArrowLeft' ? -1 : 1;
+        setSidebarWidth((current) => clampSidebarWidth(current + direction * 16));
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        setSidebarWidth(clampSidebarWidth(getDefaultSidebarWidth()));
+      }
+    },
+    [clampSidebarWidth],
+  );
+
+  React.useEffect(() => {
+    if (!sidebarResizeStart) return;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const nextWidth = sidebarResizeStart.width + event.clientX - sidebarResizeStart.pointerX;
+      setSidebarWidth(clampSidebarWidth(nextWidth));
+    };
+    const stopResize = () => setSidebarResizeStart(null);
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', stopResize, { once: true });
+    window.addEventListener('pointercancel', stopResize, { once: true });
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', stopResize);
+      window.removeEventListener('pointercancel', stopResize);
+    };
+  }, [sidebarResizeStart, clampSidebarWidth]);
+
   const toggleViewMode = useCallback(() => {
     setViewMode((prev) => {
       const next = prev === 'tree' ? 'grid' : 'tree';
@@ -562,39 +691,34 @@ const VocabularyPage: React.FC = () => {
   // ===== Folder collapse/expand state =====
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set([tree.id])); // Root folder is open by default
 
-  // Sync openFolders when tree changes (e.g., after localStorage load)
+  const previousRootIdRef = useRef(tree.id);
+
+  // Open a newly loaded root once, without forcing the current root to stay open.
   React.useEffect(() => {
+    if (previousRootIdRef.current === tree.id) return;
+    previousRootIdRef.current = tree.id;
     setOpenFolders((prev) => {
       const next = new Set(prev);
-      // Ensure root folder is always open
-      if (!next.has(tree.id)) {
-        next.add(tree.id);
-      }
+      next.add(tree.id);
       return next;
     });
   }, [tree.id]);
 
   const handleFolderToggle = useCallback((folderId: string, open: boolean) => {
-    // Optimize: Create new Set and update immediately
     setOpenFolders((prev) => {
       const next = new Set(prev);
       if (open) {
         next.add(folderId);
       } else {
         next.delete(folderId);
-        // Never close root folder
-        if (folderId === tree.id) {
-          next.add(tree.id);
-        }
       }
       return next;
     });
-  }, [tree.id]);
+  }, []);
 
   const collapseAll = useCallback(() => {
-    // Only keep root open, close all other folders (level 1 folders will be visible but collapsed)
-    setOpenFolders(new Set<string>([tree.id]));
-  }, [tree.id]);
+    setOpenFolders(new Set<string>());
+  }, []);
 
   // Optimize: pass Set directly instead of function to avoid function calls on every render
   // Note: Keeping as function for backward compatibility, but can optimize later if needed
@@ -877,58 +1001,68 @@ const VocabularyPage: React.FC = () => {
 
   const startRename = useCallback(() => {
     if (!menu) return;
-    // Use index for faster lookup
     const located = treeIndex.findByPath(menu.path);
     if (!located) return;
     const currentName = located.node.kind === 'folder' ? located.node.label : located.node.name;
     setRenameValue(currentName);
+    setRenameTarget({ type: menu.type, path: [...menu.path] });
     setRenameOpen(true);
-  }, [menu, treeIndex]);
+    closeMenu();
+  }, [menu, treeIndex, closeMenu]);
 
-  const confirmRename = useCallback(() => {
-    if (!menu) return;
-    const located = findNodeByPath(tree, menu.path);
-    if (!located || !located.parent) return;
-    const siblings = located.parent.children.filter((c) => c.id !== located.node.id);
+  const closeRenameDialog = useCallback(() => {
+    setRenameOpen(false);
+    setRenameTarget(null);
+  }, []);
+
+  const confirmRename = useCallback((nextValue: string) => {
+    if (!renameTarget) return;
+    const located = findNodeByPath(tree, renameTarget.path);
+    if (!located) return;
+    const siblings = located.parent
+      ? located.parent.children.filter((c) => c.id !== located.node.id)
+      : [];
     const folderFallback = t('defaults.folder');
     const finalName = ensureUniqueName(
       siblings,
-      renameValue.trim() || (menu.type === 'folder' ? folderFallback : 'file.txt'),
-      menu.type === 'folder',
+      nextValue.trim() || (renameTarget.type === 'folder' ? folderFallback : 'file.txt'),
+      renameTarget.type === 'folder',
     );
 
     updateTree((prevTree) => {
       const copy = structuredClone(prevTree);
-      const located2 = findNodeByPath(copy, menu.path)!;
-      if (menu.type === 'folder' && located2.node.kind === 'folder') (located2.node as FolderNode).label = finalName;
-      else if (menu.type === 'file' && located2.node.kind === 'file') (located2.node as FileLeaf).name = finalName;
+      const located2 = findNodeByPath(copy, renameTarget.path);
+      if (!located2) return prevTree;
+      if (renameTarget.type === 'folder' && located2.node.kind === 'folder') {
+        located2.node.label = finalName;
+      } else if (renameTarget.type === 'file' && located2.node.kind === 'file') {
+        located2.node.name = finalName;
+      }
       return copy;
     });
     
-    // also if file renamed, move vocab content key and count
-    if (menu.type === 'file' && located.node.kind === 'file') {
+    if (renameTarget.type === 'file' && located.node.kind === 'file') {
       const old = located.node.name;
-      if (vocabMap[old]) {
+      if (old !== finalName) {
+        const storedValues = vocabMap[old] ?? loadVocabFile(old) ?? [];
         updateVocabMap((m) => {
-          const { [old]: vals, ...rest } = m;
-          return { ...rest, [finalName]: vals };
+          const values = m[old] ?? storedValues;
+          const rest = { ...m };
+          delete rest[old];
+          return { ...rest, [finalName]: values };
         });
-      }
-      // Rename count key
-      renameVocabCount(old, finalName);
-      // Update count map state
-      setVocabCountMap((prev) => {
-        if (prev[old] !== undefined) {
+        deleteVocabFile(old);
+
+        setVocabCountMap((prev) => {
+          if (prev[old] === undefined) return prev;
           const { [old]: count, ...rest } = prev;
           return { ...rest, [finalName]: count };
-        }
-        return prev;
-      });
-      if (selectedPath && selectedPath.join('/') === menu.path.join('/')) setSelectedPath(menu.path);
+        });
+      }
     }
-    setRenameOpen(false);
+    closeRenameDialog();
     showSnack(t('messages.renamed'));
-  }, [menu, renameValue, treeIndex, vocabMap, selectedPath, updateTree, updateVocabMap, tree]);
+  }, [renameTarget, tree, t, vocabMap, updateTree, updateVocabMap, closeRenameDialog]);
 
   const startNewSubfolder = useCallback(() => {
     if (!menu) return;
@@ -1369,11 +1503,16 @@ const VocabularyPage: React.FC = () => {
   // ===== Render =====
   return (
     <Box
+      ref={pageRootRef}
       sx={{
-        minHeight: { xs: '100vh', md: '100vh' }, // Cho phép mở rộng hơn 100vh trên mobile
-        height: { xs: 'auto', md: '100vh' }, // Auto trên mobile để cho phép mở rộng theo nội dung
+        minHeight: { xs: 'calc(100dvh - 56px)', sm: 'calc(100dvh - 64px)', md: '100dvh' },
+        height: { xs: 'calc(100dvh - 56px)', sm: 'calc(100dvh - 64px)', md: '100dvh' },
         display: 'flex',
         flexDirection: { xs: 'column', md: 'row' },
+        overflow: 'hidden',
+        bgcolor: 'background.default',
+        cursor: sidebarResizeStart ? 'col-resize' : 'default',
+        userSelect: sidebarResizeStart ? 'none' : 'auto',
       }}
     >
       {/* Hidden file input for Import */}
@@ -1389,57 +1528,48 @@ const VocabularyPage: React.FC = () => {
             md: sidebarOpen ? sidebarWidth : 0,
           },
           flexShrink: 0,
-          borderRight: { xs: 'none', md: `1px solid ${theme.palette.divider}` },
+          borderRight: { xs: 'none', md: sidebarOpen ? `1px solid ${theme.palette.divider}` : 'none' },
           borderBottom: { xs: `1px solid ${theme.palette.divider}`, md: 'none' },
-          height: { 
-            xs: mobileViewMode === 'folder' ? 'auto' : 0, // Auto trên mobile để tự mở rộng theo nội dung
-            sm: mobileViewMode === 'folder' ? 'auto' : 0,
-            md: '100%' 
-          },
-          minHeight: {
-            xs: mobileViewMode === 'folder' ? '100vh' : 0, // Ít nhất bằng viewport height
-            sm: mobileViewMode === 'folder' ? '100vh' : 0,
-            md: 'auto',
-          },
+          height: { xs: mobileViewMode === 'folder' ? '100%' : 0, md: '100%' },
+          minHeight: 0,
           borderRadius: 0,
           display: {
             xs: mobileViewMode === 'folder' ? 'flex' : 'none',
             md: 'flex',
           },
           flexDirection: 'column',
-          overflow: { xs: 'visible', md: 'hidden' }, // Mobile: visible để window scroll, Desktop: hidden
-          overflowY: { xs: 'visible', md: 'auto' }, // Mobile: visible, Desktop: auto
-          bgcolor: { 
-            xs: theme.palette.mode === 'dark' ? '#1e1e1e' : 'background.default', 
-            md: theme.palette.mode === 'dark' ? '#1e1e1e' : 'background.paper' 
-          }, // Dark mode: #1e1e1e để nhìn dịu hơn, mobile dùng background.default để khớp với body
-          transition: theme.transitions.create(['width', 'height'], {
-            duration: theme.transitions.duration.standard,
-            easing: theme.transitions.easing.easeInOut,
-          }),
+          overflow: 'hidden',
+          bgcolor: 'background.paper',
+          transition: sidebarResizeStart
+            ? 'none'
+            : theme.transitions.create('width', {
+                duration: theme.transitions.duration.standard,
+                easing: theme.transitions.easing.easeInOut,
+              }),
         }}
       >
         {sidebarOpen && (
           <>
-            {/* Sticky Header - vocabulary title */}
             <Box sx={{ 
-              px: 2, 
-              pt: 3, 
-              pb: 2, 
+              px: 1.5,
+              py: 0,
+              height: 56,
+              minHeight: 56,
+              boxSizing: 'border-box',
               flexShrink: 0,
-              position: 'sticky',
-              top: { xs: '56px', sm: '64px', md: 0 }, // Dưới AppBar trên mobile
-              zIndex: (t) => t.zIndex.appBar - 1, // Dưới AppBar
+              display: 'flex',
+              alignItems: 'center',
               bgcolor: 'background.paper',
+              borderBottom: `1px solid ${theme.palette.divider}`,
             }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <MenuBookIcon size={24} style={{ marginRight: 8, color: 'inherit' }} />
-                  <Typography variant={isSmDown ? 'subtitle1' : 'h6'} sx={{ fontWeight: 600 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, width: '100%' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                  <MenuBookIcon size={20} style={{ marginRight: 8, flexShrink: 0, color: 'inherit' }} />
+                  <Typography variant="subtitle1" noWrap sx={{ minWidth: 0, fontWeight: 700 }}>
                     {t('title')}
                   </Typography>
                 </Box>
-                <Stack direction="row" spacing={0.5}>
+                <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0 }}>
                   <Tooltip title={viewMode === 'tree' ? t('viewMode.grid') : t('viewMode.tree')} arrow>
                     <IconButton
                       size="small"
@@ -1472,23 +1602,18 @@ const VocabularyPage: React.FC = () => {
                   )}
                 </Stack>
               </Box>
-              <Divider sx={{ mb: 0 }} />
             </Box>
 
-            {/* Folder Tree List - Loại bỏ scroll riêng trên mobile để sticky hoạt động */}
             <Box sx={{ 
-              flex: '1 1 auto', // Cho phép mở rộng tự do
+              flex: '1 1 auto',
               minHeight: 0,
-              overflowY: { xs: 'visible', md: 'auto' }, // Mobile: visible để window scroll, Desktop: auto cho scroll riêng
-              px: 2, 
-              pt: 0,
-              pb: { xs: 4, md: 2 }, // Padding bottom trên mobile để scroll được hết nội dung
-              bgcolor: { 
-                xs: theme.palette.mode === 'dark' ? '#1e1e1e' : 'background.default', 
-                md: theme.palette.mode === 'dark' ? '#1e1e1e' : 'transparent' 
-              }, // Dark mode: #1e1e1e để nhìn dịu hơn, mobile dùng background.default để khớp với body khi scroll
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              px: 0.5,
+              py: 1,
+              scrollbarGutter: 'stable',
             }}>
-              <List>
+              <List disablePadding>
                 <FolderItem
                   node={tree}
                   onFileClick={handleFileClick}
@@ -1506,47 +1631,51 @@ const VocabularyPage: React.FC = () => {
         )}
       </Paper>
 
-      {/* Toggle button when sidebar is closed (desktop only) */}
-      {!sidebarOpen && !isMdDown && (
-        <Box
-          sx={{
-            position: 'fixed',
-            left: 'var(--nav-w, 240px)',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            zIndex: 1200,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          <Tooltip title={t('actions.showVocabulary')} arrow placement="right">
-            <IconButton
-              onClick={toggleSidebar}
-              sx={{
-                backgroundColor: theme.palette.background.paper,
-                color: theme.palette.primary.main,
-                border: `2px solid ${theme.palette.primary.main}`,
-                borderLeft: 'none',
-                borderRadius: '0 8px 8px 0',
-                boxShadow: theme.shadows[4],
-                width: 40,
-                height: 60,
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.main,
-                  color: theme.palette.primary.contrastText,
-                  boxShadow: theme.shadows[8],
-                  transform: 'translateX(2px)',
-                },
-                transition: theme.transitions.create(['background-color', 'transform', 'box-shadow'], {
-                  duration: theme.transitions.duration.shorter,
+      {sidebarOpen && !isMdDown && (
+        <Tooltip title={t('actions.resizeVocabulary')} arrow placement="right" disableInteractive>
+          <Box
+            role="separator"
+            aria-label={t('actions.resizeVocabulary')}
+            aria-orientation="vertical"
+            aria-valuemin={MIN_SIDEBAR_WIDTH}
+            aria-valuemax={MAX_SIDEBAR_WIDTH}
+            aria-valuenow={sidebarWidth}
+            tabIndex={0}
+            onPointerDown={startSidebarResize}
+            onDoubleClick={() => setSidebarWidth(clampSidebarWidth(getDefaultSidebarWidth()))}
+            onKeyDown={handleSidebarResizeKeyDown}
+            sx={{
+              position: 'relative',
+              zIndex: 3,
+              width: 8,
+              height: '100%',
+              ml: '-4px',
+              mr: '-4px',
+              flexShrink: 0,
+              cursor: 'col-resize',
+              touchAction: 'none',
+              outline: 'none',
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                width: 2,
+                height: sidebarResizeStart ? 48 : 32,
+                transform: 'translate(-50%, -50%)',
+                borderRadius: 1,
+                bgcolor: sidebarResizeStart ? 'primary.main' : 'divider',
+                transition: theme.transitions.create(['height', 'background-color'], {
+                  duration: theme.transitions.duration.shortest,
                 }),
-              }}
-              aria-label={t('actions.showVocabulary')}
-            >
-              <ChevronRightIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
+              },
+              '&:hover::after, &:focus-visible::after': {
+                height: 48,
+                bgcolor: 'primary.main',
+              },
+            }}
+          />
+        </Tooltip>
       )}
 
       {/* Content */}
@@ -1559,30 +1688,50 @@ const VocabularyPage: React.FC = () => {
           },
           flexDirection: 'column',
           minWidth: 0,
-          height: { 
-            xs: mobileViewMode === 'vocab' ? 'calc(100vh - 56px)' : '60vh',
-            sm: mobileViewMode === 'vocab' ? 'calc(100vh - 64px)' : '55vh',
-            md: '100%' 
-          },
+          height: '100%',
           position: 'relative',
         }}
       >
-        {/* Sticky Header - Tên file + buttons */}
         <Box 
           sx={{ 
-            px: { xs: 1.5, sm: 2, md: 3 }, 
-            pt: { xs: 1.5, sm: 2, md: 2.5 }, 
-            pb: { xs: 1.5, sm: 1.5, md: 2 }, 
+            px: { xs: 1.25, sm: 2 },
+            py: { xs: 1, md: 0 },
+            height: { xs: 'auto', md: 56 },
+            minHeight: 56,
+            boxSizing: 'border-box',
             flexShrink: 0,
-            position: 'sticky',
-            top: { xs: '56px', sm: '64px', md: 0 }, // Dưới AppBar trên mobile
-            zIndex: (t) => t.zIndex.appBar - 1, // Dưới AppBar
+            display: 'flex',
+            alignItems: 'center',
             bgcolor: 'background.paper',
+            borderBottom: `1px solid ${theme.palette.divider}`,
           }}
         >
-          {selectedFile ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+          {!sidebarOpen && !isMdDown && (
+            <Tooltip title={t('actions.showVocabulary')} arrow placement="right">
+              <IconButton
+                size="small"
+                onClick={toggleSidebar}
+                sx={{
+                  width: 32,
+                  height: 32,
+                  mr: 1,
+                  flexShrink: 0,
+                  color: 'text.secondary',
+                  '&:hover': {
+                    color: 'primary.main',
+                    backgroundColor: 'action.hover',
+                  },
+                }}
+                aria-label={t('actions.showVocabulary')}
+              >
+                <ChevronRightIcon size={18} />
+              </IconButton>
+            </Tooltip>
+          )}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            {selectedFile ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
                 {/* Back button - chỉ hiển thị trên mobile */}
                 {isMdDown && (
                   <IconButton
@@ -1594,58 +1743,60 @@ const VocabularyPage: React.FC = () => {
                     }}
                     aria-label={t('actions.backToFolders')}
                   >
-                    <ArrowBackIcon size={isSmDown ? 20 : 24} />
+                    <ArrowBackIcon size={20} />
                   </IconButton>
                 )}
-                <CategoryIcon size={isSmDown ? 20 : 24} style={{ marginRight: isSmDown ? 8 : 12, flexShrink: 0, color: 'inherit' }} />
+                <CategoryIcon size={20} style={{ marginRight: 8, flexShrink: 0, color: 'inherit' }} />
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography 
-                    variant={isSmDown ? 'subtitle1' : 'h6'} 
-                    color="primary"
-                    sx={{ 
-                      fontWeight: 700,
-                      fontSize: { xs: '0.875rem', sm: '1rem', md: undefined }, // Desktop giữ fontSize mặc định của variant
-                      wordBreak: 'break-word',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                  {selectedTitle}
-                </Typography>
+                  <Tooltip title={selectedTitle} placement="bottom-start" enterDelay={500}>
+                    <Typography
+                      variant="body2"
+                      color="primary"
+                      noWrap
+                      sx={{ minWidth: 0, fontWeight: 700, lineHeight: 1.25 }}
+                    >
+                      {selectedTitle}
+                    </Typography>
+                  </Tooltip>
                   {vocabCountMap[selectedFile.name] !== undefined && (
                     <Typography 
                       variant="caption" 
                       color="text.secondary" 
                       sx={{ 
-                        display: 'block', 
-                        mt: 0.25,
-                        fontSize: { xs: '0.6875rem', sm: '0.75rem' },
+                        display: 'block',
+                        mt: 0.125,
+                        fontSize: '0.6875rem',
+                        lineHeight: 1.2,
                       }}
                     >
                       {t('table.wordCount', { count: vocabCountMap[selectedFile.name] })}
                     </Typography>
                   )}
               </Box>
-              </Box>
-              <Stack 
-                direction="row" 
-                spacing={{ xs: 0.5, sm: 1 }}
-                sx={{ 
-                  flexWrap: { xs: 'wrap', sm: 'nowrap' },
-                  gap: { xs: 0.5, sm: 0 },
-                  width: { xs: '100%', sm: 'auto' },
-                }}
-              >
+                </Box>
+                <Stack
+                  direction="row"
+                  spacing={{ xs: 0.5, sm: 0.75 }}
+                  sx={{
+                    flexWrap: { xs: 'wrap', sm: 'nowrap' },
+                    gap: { xs: 0.5, sm: 0 },
+                    width: { xs: '100%', sm: 'auto' },
+                  }}
+                >
                 {selectedVocabs.size > 0 && (
                   <Button
                     variant="outlined"
                     color="error"
-                    size={isSmDown ? 'small' : 'medium'}
-                    startIcon={<DeleteIcon />}
+                    size="small"
+                    startIcon={<DeleteIcon size={17} />}
                     onClick={handleDeleteSelectedVocabs}
-                  sx={{ 
-                    fontSize: { xs: '0.6875rem', sm: undefined }, // Desktop giữ fontSize mặc định
-                    px: { xs: 1, sm: 2 },
+                  sx={{
+                    flex: { xs: '1 1 auto', sm: '0 0 auto' },
+                    minWidth: 0,
+                    minHeight: 34,
+                    fontSize: '0.8125rem',
+                    lineHeight: 1.25,
+                    px: 1.25,
                   }}
                 >
                   {t('actions.deleteSelectedCount', { count: selectedVocabs.size })}
@@ -1654,8 +1805,8 @@ const VocabularyPage: React.FC = () => {
                 <Button
                   variant="contained"
                   color="primary"
-                  size={isSmDown ? 'small' : 'medium'}
-                  startIcon={<RocketLaunchIcon />}
+                  size="small"
+                  startIcon={<RocketLaunchIcon size={17} />}
                   onClick={() => {
                     if (selectedFile) {
                       const fileName = selectedFile.name;
@@ -1711,47 +1862,54 @@ const VocabularyPage: React.FC = () => {
                       navigate(`/train/flashcards-reading?file=${encodeURIComponent(fileName)}`);
                     }
                   }}
-                sx={{ 
+                sx={{
+                  flex: { xs: '1 1 auto', sm: '0 0 auto' },
+                  minWidth: 0,
+                  minHeight: 34,
                   fontWeight: 600,
-                  fontSize: { xs: '0.6875rem', sm: undefined }, // Desktop giữ fontSize mặc định
-                  px: { xs: 1, sm: 2 },
+                  fontSize: '0.8125rem',
+                  lineHeight: 1.25,
+                  px: 1.25,
                 }}
               >
                   {t('actions.train')}
                 </Button>
                 <Button
                   variant="contained"
-                  size={isSmDown ? 'small' : 'medium'}
-                  startIcon={<AddIcon />}
+                  size="small"
+                  startIcon={<AddIcon size={17} />}
                   onClick={openAddVocabForm}
-                sx={{ 
-                  fontSize: { xs: '0.6875rem', sm: undefined }, // Desktop giữ fontSize mặc định
-                  px: { xs: 1, sm: 2 },
+                sx={{
+                  flex: { xs: '1 1 auto', sm: '0 0 auto' },
+                  minWidth: 0,
+                  minHeight: 34,
+                  fontSize: '0.8125rem',
+                  lineHeight: 1.25,
+                  px: 1.25,
                 }}
               >
                   {isSmDown ? t('actions.addWordShort') : t('actions.addWord')}
                 </Button>
-              </Stack>
-            </Box>
-          ) : (
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <CategoryIcon size={24} style={{ marginRight: 8, color: 'inherit' }} />
-              <Typography variant={isSmDown ? 'h6' : 'h5'} sx={{ fontWeight: 600 }}>
-                {t('title')}
-              </Typography>
-            </Box>
-          )}
+                </Stack>
+              </Box>
+            ) : (
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <CategoryIcon size={24} style={{ marginRight: 8, color: 'inherit' }} />
+                <Typography variant={isSmDown ? 'h6' : 'h5'} sx={{ fontWeight: 600 }}>
+                  {t('title')}
+                </Typography>
+              </Box>
+            )}
+          </Box>
         </Box>
 
-        {/* Content Area - Danh sách từ vựng */}
         <Box sx={{ 
           flex: 1, 
-          overflow: 'hidden', // Không scroll ở đây, để TableContainer handle
-          px: { xs: 2, md: 3 }, 
-          pb: { xs: 2, md: 3 },
+          overflow: 'hidden',
+          p: { xs: 1, sm: 1.5, md: 2 },
           display: 'flex',
           flexDirection: 'column',
-          minHeight: 0, // Quan trọng để flex child có thể shrink
+          minHeight: 0,
         }}>
           {selectedFile ? (
             <Paper 
@@ -1762,17 +1920,24 @@ const VocabularyPage: React.FC = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 minHeight: 0,
+                borderRadius: 1,
+                overflow: 'hidden',
               }}
             >
               <TableContainer sx={{ 
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
-                maxHeight: '100%', // Sử dụng 100% của parent flex container
-                overflow: 'auto', // Cho phép scroll khi cần
-                overflowX: 'hidden', // Không scroll ngang
+                maxHeight: '100%',
+                overflow: 'auto',
+                scrollbarGutter: 'stable',
               }}>
-                <Table aria-label={t('table.ariaLabel')} stickyHeader={isMdDown} size="medium" sx={{ minWidth: 650 }}>
+                <Table
+                  aria-label={t('table.ariaLabel')}
+                  stickyHeader
+                  size={isSmDown ? 'small' : 'medium'}
+                  sx={{ width: '100%', tableLayout: 'fixed' }}
+                >
                   <TableHead>
                     <TableRow>
                       <StyledTableCell padding="checkbox">
@@ -1783,11 +1948,19 @@ const VocabularyPage: React.FC = () => {
                           size={isSmDown ? 'small' : 'medium'}
                         />
                       </StyledTableCell>
-                      <StyledTableCell>{t('table.word')}</StyledTableCell>
+                      <StyledTableCell sx={{ width: { xs: '38%', sm: '32%', lg: '24%' } }}>
+                        {t('table.word')}
+                      </StyledTableCell>
                       <StyledTableCell>{t('table.meaning')}</StyledTableCell>
-                      <StyledTableCell>{t('table.type')}</StyledTableCell>
-                      <StyledTableCell>{t('table.pronunciation')}</StyledTableCell>
-                      <StyledTableCell align="center">{t('table.actions')}</StyledTableCell>
+                      <StyledTableCell sx={{ display: { xs: 'none', lg: 'table-cell' }, width: 112 }}>
+                        {t('table.type')}
+                      </StyledTableCell>
+                      <StyledTableCell sx={{ display: { xs: 'none', lg: 'table-cell' }, width: 160 }}>
+                        {t('table.pronunciation')}
+                      </StyledTableCell>
+                      <StyledTableCell align="center" sx={{ width: 56 }}>
+                        {t('table.actions')}
+                      </StyledTableCell>
                     </TableRow>
                   </TableHead>
                   <VocabTableBody
@@ -1982,8 +2155,7 @@ const VocabularyPage: React.FC = () => {
       <RenameDialog
         open={renameOpen}
         value={renameValue}
-        onChange={setRenameValue}
-        onClose={() => setRenameOpen(false)}
+        onClose={closeRenameDialog}
         onConfirm={confirmRename}
       />
 

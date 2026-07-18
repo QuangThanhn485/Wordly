@@ -141,6 +141,7 @@
     "collapseAll": "Thu gọn tất cả",
     "hideVocabulary": "Ẩn kho từ vựng",
     "showVocabulary": "Hiển thị kho từ vựng",
+    "resizeVocabulary": "Kéo để thay đổi độ rộng kho từ vựng",
     "backToFolders": "Quay lại danh sách thư mục",
     "addWordShort": "Thêm",
     "rowMenuFor": "Menu cho {{word}}",

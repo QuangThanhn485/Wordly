@@ -141,6 +141,7 @@
     "collapseAll": "Collapse all",
     "hideVocabulary": "Hide vocabulary",
     "showVocabulary": "Show vocabulary",
+    "resizeVocabulary": "Drag to resize the vocabulary panel",
     "backToFolders": "Back to folder list",
     "addWordShort": "Add",
     "rowMenuFor": "Menu for {{word}}",

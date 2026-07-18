@@ -5,12 +5,11 @@ import { useTranslation } from 'react-i18next';
 interface RenameDialogProps {
   open: boolean;
   value: string;
-  onChange: (value: string) => void;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (value: string) => void;
 }
 
-export const RenameDialog: React.FC<RenameDialogProps> = React.memo(({ open, value, onChange, onClose, onConfirm }) => {
+export const RenameDialog: React.FC<RenameDialogProps> = React.memo(({ open, value, onClose, onConfirm }) => {
   const { t } = useTranslation('vocabulary');
   // Use local state for instant input response
   const [localValue, setLocalValue] = React.useState(value);
@@ -26,12 +25,12 @@ export const RenameDialog: React.FC<RenameDialogProps> = React.memo(({ open, val
   }, []);
 
   const handleConfirm = useCallback(() => {
-    onChange(localValue); // Sync to parent only on confirm
-    onConfirm();
-  }, [localValue, onChange, onConfirm]);
+    onConfirm(localValue);
+  }, [localValue, onConfirm]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       handleConfirm();
     }
   }, [handleConfirm]);
