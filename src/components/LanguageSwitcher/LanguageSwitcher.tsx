@@ -5,9 +5,13 @@ import { Languages } from 'lucide-react';
 
 interface LanguageSwitcherProps {
   size?: 'small' | 'medium';
+  compact?: boolean;
 }
 
-const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ size = 'small' }) => {
+const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
+  size = 'small',
+  compact = false,
+}) => {
   const { i18n, t } = useTranslation('navbar');
   const theme = useTheme();
 
@@ -19,12 +23,19 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ size = 'small' }) =
   const currentLang = i18n.language === 'vi' ? 'VI' : 'EN';
 
   return (
-    <Tooltip title={t('tooltips.switchLanguage')}>
+    <Tooltip
+      title={`${t('tooltips.switchLanguage')} (${currentLang})`}
+      placement={compact ? 'right' : 'top'}
+    >
       <IconButton
         onClick={toggleLanguage}
         size={size}
         sx={{
-          p: 0.75,
+          width: compact ? 36 : 'auto',
+          height: 36,
+          minWidth: 36,
+          p: compact ? 0 : 0.75,
+          borderRadius: 1,
           color: theme.palette.text.secondary,
           '&:hover': {
             backgroundColor: theme.palette.action.hover,
@@ -36,13 +47,19 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ size = 'small' }) =
         aria-label={t('tooltips.switchLanguage')}
       >
         <Languages size={18} />
-        <span style={{ 
-          fontSize: '0.75rem', 
-          fontWeight: 600,
-          minWidth: '20px',
-        }}>
-          {currentLang}
-        </span>
+        {!compact && (
+          <span
+            style={{
+              fontSize: '0.75rem',
+              lineHeight: 1,
+              fontWeight: 600,
+              letterSpacing: 0,
+              minWidth: '20px',
+            }}
+          >
+            {currentLang}
+          </span>
+        )}
       </IconButton>
     </Tooltip>
   );

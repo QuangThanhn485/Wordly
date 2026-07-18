@@ -1,104 +1,187 @@
 import React from 'react';
 import {
+  AppBar,
+  Avatar,
+  Box,
+  Chip,
+  ClickAwayListener,
+  Collapse,
+  Divider,
   Drawer,
+  IconButton,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  IconButton,
-  Tooltip,
-  Divider,
-  Box,
-  Collapse,
-  useTheme,
-  AppBar,
+  Paper,
+  Popper,
   Toolbar,
+  Tooltip,
   Typography,
   useMediaQuery,
-  Avatar,
+  useTheme,
 } from '@mui/material';
-import { 
-  Menu, 
-  Home, 
-  BookOpen, 
-  BarChart3, 
-  Library, 
-  Rocket, 
-  ChevronLeft, 
-  ChevronRight, 
-  Moon, 
-  Sun, 
-  ChevronUp, 
-  ChevronDown, 
-  Headphones, 
-  Edit, 
-  Mic 
+import type { SxProps, Theme } from '@mui/material/styles';
+import {
+  BarChart3,
+  BookOpen,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Database,
+  Edit,
+  Headphones,
+  Home,
+  Library,
+  Menu,
+  Mic,
+  Moon,
+  Rocket,
+  Sun,
 } from 'lucide-react';
-import { Link as RouterLink, useLocation, useSearchParams } from 'react-router-dom';
+import {
+  Link as RouterLink,
+  useLocation,
+  useSearchParams,
+} from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useThemeMode } from 'contexts/ThemeContext';
-import { loadTrainingSession } from 'features/train/train-start/sessionStorage';
-import { loadTrainingSession as loadRWTrainingSession } from 'features/train/train-read-write/sessionStorage';
-import { Chip } from '@mui/material';
+import { loadTrainingSession as loadReadingSession } from 'features/train/train-start/sessionStorage';
+import { loadTrainingSession as loadListeningSession } from 'features/train/train-listen/sessionStorage';
+import { loadTrainingSession as loadReadWriteSession } from 'features/train/train-read-write/sessionStorage';
+import { loadTrainingSession as loadListenWriteSession } from 'features/train/train-listen-write/sessionStorage';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { getTopicLabel } from '@/features/vocabulary/utils/storageUtils';
 
-const drawerWidth = 240;
+const drawerWidth = 264;
+const collapsedWidth = 64;
+
+type StoredTrainingSession = {
+  topicId: string;
+  sourceTopicId?: string;
+  topicLabel?: string;
+  sourceTopicLabel?: string;
+  timestamp?: number;
+};
+
+type TrainingContext = {
+  topicId: string | null;
+  label: string | null;
+};
+
 const getSessionTopicLabel = (
-  session: {
-    topicId: string;
-    topicLabel?: string;
-    sourceTopicLabel?: string;
-  } | null,
-): string | null =>
-  session
-    ? session.sourceTopicLabel ||
-      session.topicLabel ||
-      getTopicLabel(session.topicId) ||
-      null
-    : null;
-const collapsedWidth = 72;
+  session: StoredTrainingSession | null,
+): string | null => {
+  if (!session) return null;
+  return (
+    session.sourceTopicLabel ||
+    session.topicLabel ||
+    getTopicLabel(session.sourceTopicId || session.topicId) ||
+    null
+  );
+};
 
-const iconStyle = (open: boolean) => ({
+const getStoredTrainingContext = (pathname: string): TrainingContext => {
+  const sessions = {
+    reading: loadReadingSession() as StoredTrainingSession | null,
+    listening: loadListeningSession() as StoredTrainingSession | null,
+    readWrite: loadReadWriteSession() as StoredTrainingSession | null,
+    listenWrite: loadListenWriteSession() as StoredTrainingSession | null,
+  };
+
+  let current: StoredTrainingSession | null = null;
+  if (pathname.startsWith('/train/flashcards-reading')) {
+    current = sessions.reading;
+  } else if (pathname.startsWith('/train/flashcards-listening')) {
+    current = sessions.listening;
+  } else if (pathname.startsWith('/train/read-write')) {
+    current = sessions.readWrite;
+  } else if (pathname.startsWith('/train/listen-write')) {
+    current = sessions.listenWrite;
+  }
+
+  if (!current) {
+    current =
+      Object.values(sessions)
+        .filter((session): session is StoredTrainingSession => Boolean(session))
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0] || null;
+  }
+
+  return {
+    topicId: current?.topicId || null,
+    label: getSessionTopicLabel(current),
+  };
+};
+
+const iconStyle = (expanded: boolean): SxProps<Theme> => ({
   minWidth: 0,
-  mr: open ? 1.5 : 'auto',
+  width: 24,
+  mr: expanded ? 1.25 : 0,
   justifyContent: 'center',
   display: 'flex',
+  flexShrink: 0,
   color: 'inherit',
-  '& svg': {
-    fontSize: '1.25rem', // Consistent icon size: 20px
-  },
 });
 
-const subIconStyle = (open: boolean) => ({
-  minWidth: 0,
-  mr: open ? 1.5 : 'auto',
-  justifyContent: 'center',
-  display: 'flex',
-  color: 'inherit',
-  '& svg': {
-    fontSize: '1.125rem', // Smaller for submenu: 18px
-  },
-});
+const navTextProps = {
+  noWrap: true,
+  fontSize: '0.875rem',
+  lineHeight: 1.3,
+  fontWeight: 500,
+  letterSpacing: 0,
+} as const;
 
-const listItemStyle = (open: boolean, active: boolean, theme: any) => ({
-  pl: open ? 1.5 : 1,
-  pr: open ? 1.5 : 1,
-  py: 0.75, // Reduced vertical padding for more compact look
-  borderRadius: 1.5,
-  mx: 0.75,
-  mb: 0.25, // Reduced margin between items
-  minHeight: 40, // Consistent height
-  backgroundColor: active
-    ? theme.palette.mode === 'dark'
-      ? 'rgba(255, 255, 255, 0.1)'
-      : 'rgba(0, 0, 0, 0.05)'
-    : 'transparent',
-  '&:hover': {
-    backgroundColor:
+const subNavTextProps = {
+  noWrap: true,
+  fontSize: '0.8125rem',
+  lineHeight: 1.3,
+  fontWeight: 500,
+  letterSpacing: 0,
+} as const;
+
+const navItemStyle = (
+  expanded: boolean,
+  active: boolean,
+  theme: Theme,
+  isSubItem = false,
+): SxProps<Theme> => ({
+  position: 'relative',
+  justifyContent: expanded ? 'flex-start' : 'center',
+  minHeight: isSubItem ? 38 : 42,
+  mx: 1,
+  mb: 0.25,
+  px: expanded ? (isSubItem ? 1.25 : 1.25) : 0,
+  pl: expanded && isSubItem ? 3.25 : undefined,
+  borderRadius: 1,
+  color: active ? theme.palette.primary.main : theme.palette.text.primary,
+  overflow: 'hidden',
+  '&::before': active
+    ? {
+        content: '""',
+        position: 'absolute',
+        left: 0,
+        top: 8,
+        bottom: 8,
+        width: 3,
+        borderRadius: '0 3px 3px 0',
+        bgcolor: 'primary.main',
+      }
+    : undefined,
+  '&.Mui-selected': {
+    bgcolor:
       theme.palette.mode === 'dark'
-        ? 'rgba(255, 255, 255, 0.08)'
-        : 'rgba(0, 0, 0, 0.04)',
+        ? 'rgba(144, 202, 249, 0.12)'
+        : 'rgba(25, 118, 210, 0.09)',
+  },
+  '&.Mui-selected:hover': {
+    bgcolor:
+      theme.palette.mode === 'dark'
+        ? 'rgba(144, 202, 249, 0.16)'
+        : 'rgba(25, 118, 210, 0.13)',
+  },
+  '&:hover': {
+    bgcolor: theme.palette.action.hover,
   },
 });
 
@@ -126,200 +209,299 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
-  
-  const [trainTopicLabel, setTrainTopicLabel] = React.useState<string | null>(() => {
-    return getSessionTopicLabel(loadTrainingSession());
-  });
-  
+
+  const [trainingContext, setTrainingContext] = React.useState<TrainingContext>(
+    () => getStoredTrainingContext(location.pathname),
+  );
   const [rwTopicId, setRwTopicId] = React.useState<string | null>(() => {
-    const session = loadRWTrainingSession();
-    return session?.topicId || null;
+    return loadReadWriteSession()?.topicId || null;
   });
-  
-  // Update train file name when URL params change OR when localStorage session changes
+
+  const refreshTrainingContext = React.useCallback(() => {
+    const nextContext = getStoredTrainingContext(location.pathname);
+    setTrainingContext((current) =>
+      current.topicId === nextContext.topicId &&
+      current.label === nextContext.label
+        ? current
+        : nextContext,
+    );
+    const nextRwTopicId = loadReadWriteSession()?.topicId || null;
+    setRwTopicId((current) =>
+      current === nextRwTopicId ? current : nextRwTopicId,
+    );
+  }, [location.pathname]);
+
   React.useEffect(() => {
-    const session = loadTrainingSession();
-    setTrainTopicLabel(getSessionTopicLabel(session));
-  }, [searchParams, location.pathname]); // Re-check when URL params change (user navigates)
-  
-  // Update read-write file name when URL params change OR when localStorage session changes
+    refreshTrainingContext();
+  }, [refreshTrainingContext, searchParams]);
+
   React.useEffect(() => {
-    const session = loadRWTrainingSession();
-    const topicId = session?.topicId || null;
-    setRwTopicId(topicId);
-  }, [searchParams, location.pathname]); // Re-check when URL params change (user navigates)
-  
-  // Listen for storage events (when session is saved from other tabs/components)
-  React.useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'wordly_train_session') {
-        const session = loadTrainingSession();
-        setTrainTopicLabel(getSessionTopicLabel(session));
-      } else if (e.key === 'wordly_train_rw_session') {
-        const session = loadRWTrainingSession();
-        const topicId = session?.topicId || null;
-        setRwTopicId(topicId);
+    const trainingStorageKeys = new Set([
+      'wordly_train_session',
+      'wordly_train_listen_session',
+      'wordly_train_rw_session',
+      'wordly_train_lw_session',
+    ]);
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key && trainingStorageKeys.has(event.key)) {
+        refreshTrainingContext();
       }
     };
-    
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-  
-  // Poll localStorage periodically to catch changes in the same tab
-  // (since storage events only fire across tabs)
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      const session = loadTrainingSession();
-      const topicLabel = getSessionTopicLabel(session);
-      setTrainTopicLabel((prev) => {
-        // Only update if changed to avoid unnecessary re-renders
-        if (prev !== topicLabel) {
-          return topicLabel;
-        }
-        return prev;
-      });
-      
-      const rwSession = loadRWTrainingSession();
-      const nextRwTopicId = rwSession?.topicId || null;
-      setRwTopicId((prev) => {
-        if (prev !== nextRwTopicId) {
-          return nextRwTopicId;
-        }
-        return prev;
-      });
-    }, 1000); // Check every second
-    
-    return () => clearInterval(interval);
-  }, []);
+  }, [refreshTrainingContext]);
 
-  // Trên mobile: drawer mặc định đóng. Trên desktop: drawer mặc định mở
-  const [open, setOpen] = React.useState<boolean>(false);
-  const [trainOpen, setTrainOpen] = React.useState<boolean>(() =>
-    location.pathname.startsWith('/train'),
+  React.useEffect(() => {
+    const interval = window.setInterval(refreshTrainingContext, 1200);
+    return () => window.clearInterval(interval);
+  }, [refreshTrainingContext]);
+
+  const [open, setOpen] = React.useState(false);
+  const [trainOpen, setTrainOpen] = React.useState(() =>
+    location.pathname.startsWith('/train') &&
+    location.pathname !== '/train/result',
   );
+  const [trainFlyoutAnchor, setTrainFlyoutAnchor] =
+    React.useState<HTMLElement | null>(null);
+  const closeFlyoutTimer = React.useRef<number | null>(null);
 
-  // Đồng bộ trạng thái drawer khi breakpoint thay đổi (desktop <-> mobile)
-  // Trên desktop: mở drawer. Trên mobile: đóng drawer
   React.useEffect(() => {
-    if (!isMobile) {
-      setOpen(true); // Desktop: mở drawer
-    } else {
-      setOpen(false); // Mobile: đóng drawer
-    }
+    setOpen(!isMobile);
   }, [isMobile]);
 
-  const handleToggleDrawer = React.useCallback((e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
+  React.useEffect(() => {
+    if (open || isMobile) setTrainFlyoutAnchor(null);
+  }, [open, isMobile]);
+
+  React.useEffect(
+    () => () => {
+      if (closeFlyoutTimer.current !== null) {
+        window.clearTimeout(closeFlyoutTimer.current);
+      }
+    },
+    [],
+  );
+
+  const cancelFlyoutClose = React.useCallback(() => {
+    if (closeFlyoutTimer.current !== null) {
+      window.clearTimeout(closeFlyoutTimer.current);
+      closeFlyoutTimer.current = null;
     }
-    setOpen((prev) => !prev);
   }, []);
-  const handleTrainClick = () => setTrainOpen((prev) => !prev);
+
+  const closeTrainFlyout = React.useCallback(() => {
+    cancelFlyoutClose();
+    setTrainFlyoutAnchor(null);
+  }, [cancelFlyoutClose]);
+
+  const scheduleFlyoutClose = React.useCallback(() => {
+    cancelFlyoutClose();
+    closeFlyoutTimer.current = window.setTimeout(() => {
+      setTrainFlyoutAnchor(null);
+      closeFlyoutTimer.current = null;
+    }, 140);
+  }, [cancelFlyoutClose]);
+
+  const showTrainFlyout = React.useCallback(
+    (anchor: HTMLElement) => {
+      if (open || isMobile) return;
+      cancelFlyoutClose();
+      setTrainFlyoutAnchor(anchor);
+    },
+    [cancelFlyoutClose, isMobile, open],
+  );
+
+  const handleToggleDrawer = React.useCallback((event?: React.MouseEvent) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    setOpen((current) => !current);
+  }, []);
+
+  const handleTrainClick = React.useCallback(
+    (event: React.MouseEvent<HTMLElement>) => {
+      if (!open && !isMobile) {
+        showTrainFlyout(event.currentTarget);
+        return;
+      }
+      setTrainOpen((current) => !current);
+    },
+    [isMobile, open, showTrainFlyout],
+  );
 
   const isActive = React.useCallback(
     (path: string) => {
-      // Home chỉ active khi pathname chính xác là '/'
-      if (path === '/') {
-        return location.pathname === '/';
-      }
-      // Các path khác: active khi pathname bắt đầu bằng path và ký tự tiếp theo là '/' hoặc kết thúc
-      return location.pathname === path || 
-             (location.pathname.startsWith(path) && 
-              (location.pathname[path.length] === '/' || location.pathname.length === path.length));
+      if (path === '/') return location.pathname === '/';
+      return (
+        location.pathname === path ||
+        (location.pathname.startsWith(path) &&
+          (location.pathname[path.length] === '/' ||
+            location.pathname.length === path.length))
+      );
     },
     [location.pathname],
   );
 
-  // Cập nhật CSS var --nav-w để các trang khác (như Home) co giãn panel theo navbar
+  const trainingModePaths = [
+    '/train/flashcards-reading',
+    '/train/flashcards-listening',
+    '/train/read-write',
+    '/train/listen-write',
+  ];
+  const trainActive =
+    location.pathname === '/train' ||
+    trainingModePaths.some((path) => isActive(path));
+
   React.useEffect(() => {
-    const widthPx = isMobile ? 0 : open ? drawerWidth : collapsedWidth;
-    document.documentElement.style.setProperty('--nav-w', `${widthPx}px`);
+    const width = isMobile ? 0 : open ? drawerWidth : collapsedWidth;
+    document.documentElement.style.setProperty('--nav-w', `${width}px`);
     return () => {
       document.documentElement.style.removeProperty('--nav-w');
     };
-  }, [open, isMobile]);
+  }, [isMobile, open]);
+
+  const closeMobileDrawer = React.useCallback(() => {
+    if (isMobile) setOpen(false);
+  }, [isMobile]);
+
+  const renderMainNavItem = (
+    to: string,
+    label: string,
+    icon: React.ReactNode,
+  ) => {
+    const active = isActive(to);
+    return (
+      <Tooltip
+        key={to}
+        title={label}
+        placement="right"
+        disableHoverListener={open}
+      >
+        <ListItemLink
+          to={to}
+          selected={active}
+          onClick={closeMobileDrawer}
+          sx={navItemStyle(open, active, theme)}
+        >
+          <ListItemIcon sx={iconStyle(open)}>{icon}</ListItemIcon>
+          {open && (
+            <ListItemText
+              primary={label}
+              sx={{ my: 0, minWidth: 0 }}
+              primaryTypographyProps={navTextProps}
+            />
+          )}
+        </ListItemLink>
+      </Tooltip>
+    );
+  };
+
+  const trainingItems = [
+    {
+      to: '/train/flashcards-reading',
+      label: t('flashcardsReading'),
+      icon: <Rocket size={18} />,
+    },
+    {
+      to: '/train/flashcards-listening',
+      label: t('flashcardsListening'),
+      icon: <Headphones size={18} />,
+    },
+    {
+      to: rwTopicId
+        ? `/train/read-write?topic=${encodeURIComponent(rwTopicId)}`
+        : '/train/read-write',
+      activePath: '/train/read-write',
+      label: t('readWrite'),
+      icon: <Edit size={18} />,
+    },
+    {
+      to: '/train/listen-write',
+      label: t('listenWrite'),
+      icon: <Mic size={18} />,
+    },
+  ];
+
+  const renderExpandedTrainingItems = () => (
+    <Collapse in={open && trainOpen} timeout="auto" unmountOnExit>
+      <List component="div" disablePadding sx={{ pb: 0.25 }}>
+        {trainingItems.map((item) => {
+          const active = isActive(item.activePath || item.to.split('?')[0]);
+          return (
+            <ListItemLink
+              key={item.to}
+              to={item.to}
+              selected={active}
+              onClick={closeMobileDrawer}
+              sx={navItemStyle(true, active, theme, true)}
+            >
+              <ListItemIcon sx={iconStyle(true)}>{item.icon}</ListItemIcon>
+              <ListItemText
+                primary={item.label}
+                sx={{ my: 0, minWidth: 0 }}
+                primaryTypographyProps={subNavTextProps}
+              />
+            </ListItemLink>
+          );
+        })}
+      </List>
+    </Collapse>
+  );
 
   return (
     <>
       {isMobile && (
         <>
-          <AppBar 
-            position="fixed" 
-            elevation={1}
-            sx={{
-              zIndex: (theme) => theme.zIndex.appBar, // Use standard appBar z-index
-            }}
-          >
-            <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
-                <IconButton
-                  edge="start"
-                  color="inherit"
-                  aria-label={open ? t('tooltips.collapseSidebar') : t('tooltips.expandSidebar')}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleToggleDrawer(e);
-                  }}
-                onTouchStart={(e) => {
-                  e.stopPropagation();
-                }}
-                sx={{ 
-                  mr: 2,
-                  // Ensure touch-friendly size on mobile
-                  minWidth: 48,
-                  minHeight: 48,
+          <AppBar position="fixed" elevation={1}>
+            <Toolbar sx={{ minHeight: { xs: 56, sm: 64 }, px: 1.25 }}>
+              <IconButton
+                edge="start"
+                color="inherit"
+                aria-label={
+                  open
+                    ? t('tooltips.collapseSidebar')
+                    : t('tooltips.expandSidebar')
+                }
+                onClick={handleToggleDrawer}
+                sx={{
+                  mr: 1,
+                  width: 44,
+                  height: 44,
                   touchAction: 'manipulation',
-                  WebkitTapHighlightColor: 'transparent',
-                  '-webkit-tap-highlight-color': 'transparent',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  position: 'relative',
-                  zIndex: 1,
-                  '&:active': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                  },
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                  },
                 }}
               >
-                <Menu size={isMobile ? 24 : 28} style={{ pointerEvents: 'none' }} />
+                <Menu size={23} />
               </IconButton>
-              <Box 
+              <Box
                 component={RouterLink}
                 to="/"
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 1.25, 
-                  flex: 1,
-                  textDecoration: 'none',
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  minWidth: 0,
+                  gap: 1,
                   color: 'inherit',
-                  '&:hover': {
-                    opacity: 0.9,
-                  },
+                  textDecoration: 'none',
                 }}
               >
                 <Avatar
-                  src="/logo.png"
-                  alt="Wordly Logo"
                   sx={{
-                    width: { xs: 32, sm: 36 },
-                    height: { xs: 32, sm: 36 },
-                    bgcolor: theme.palette.primary.main,
+                    width: 32,
+                    height: 32,
+                    bgcolor: 'primary.contrastText',
+                    color: 'primary.main',
                     flexShrink: 0,
                   }}
                 >
-                  <BookOpen size={isMobile ? 18 : 20} />
+                  <BookOpen size={18} />
                 </Avatar>
-                <Typography 
-                  variant="h6" 
-                  noWrap 
-                  component="div" 
-                  fontWeight={600} 
-                  sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}
+                <Typography
+                  noWrap
+                  sx={{
+                    fontSize: '1.0625rem',
+                    lineHeight: 1.2,
+                    fontWeight: 700,
+                    letterSpacing: 0,
+                  }}
                 >
                   Wordly
                 </Typography>
@@ -334,15 +516,16 @@ const Navbar: React.FC = () => {
         variant={isMobile ? 'temporary' : 'permanent'}
         open={open}
         onClose={() => setOpen(false)}
-        ModalProps={{
-          keepMounted: true, // Better mobile performance
-        }}
+        ModalProps={{ keepMounted: true }}
         sx={{
           width: open ? drawerWidth : collapsedWidth,
           flexShrink: 0,
           '& .MuiDrawer-paper': {
             width: open ? drawerWidth : collapsedWidth,
             overflowX: 'hidden',
+            boxSizing: 'border-box',
+            bgcolor: 'background.paper',
+            borderRight: `1px solid ${theme.palette.divider}`,
             transition: isMobile
               ? theme.transitions.create('transform', {
                   easing: theme.transitions.easing.sharp,
@@ -352,111 +535,127 @@ const Navbar: React.FC = () => {
                   easing: theme.transitions.easing.sharp,
                   duration: theme.transitions.duration.standard,
                 }),
-            boxSizing: 'border-box',
-            bgcolor: theme.palette.background.paper,
-            borderRight: `1px solid ${theme.palette.divider}`,
-            // Better mobile touch handling
             touchAction: 'pan-y',
             WebkitOverflowScrolling: 'touch',
           },
-          // Higher z-index for mobile overlay - must be higher than AppBar
           zIndex: isMobile ? theme.zIndex.drawer : 'auto',
         }}
       >
-        {/* Logo header - Desktop */}
         {!isMobile && (
           <Box
             sx={{
-              display: 'flex',
-              justifyContent: open ? 'space-between' : 'center',
-              alignItems: 'center',
               height: 56,
               minHeight: 56,
-              px: 1.5,
-              py: 0,
-              boxSizing: 'border-box',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: open ? 'space-between' : 'center',
+              px: open ? 1.5 : 0,
+              overflow: 'hidden',
             }}
           >
-            {open ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+            {open && (
+              <Box
+                component={RouterLink}
+                to="/"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  minWidth: 0,
+                  color: 'text.primary',
+                  textDecoration: 'none',
+                }}
+              >
                 <Avatar
-                  src="/logo.png"
-                  alt="Wordly Logo"
                   sx={{
-                    width: 28,
-                    height: 28,
-                    bgcolor: theme.palette.primary.main,
+                    width: 30,
+                    height: 30,
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    flexShrink: 0,
                   }}
                 >
-                  <BookOpen size={16} />
+                  <BookOpen size={17} />
                 </Avatar>
-                <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.125rem' }}>
+                <Typography
+                  noWrap
+                  sx={{
+                    fontSize: '1.0625rem',
+                    lineHeight: 1.2,
+                    fontWeight: 700,
+                    letterSpacing: 0,
+                  }}
+                >
                   Wordly
                 </Typography>
               </Box>
-            ) : (
-              <Avatar
-                src="/logo.png"
-                alt="Wordly Logo"
+            )}
+            <Tooltip
+              title={
+                open
+                  ? t('tooltips.collapseSidebar')
+                  : t('tooltips.expandSidebar')
+              }
+              placement="right"
+            >
+              <IconButton
+                onClick={handleToggleDrawer}
+                size="small"
+                aria-label={
+                  open
+                    ? t('tooltips.collapseSidebar')
+                    : t('tooltips.expandSidebar')
+                }
                 sx={{
-                  width: 28,
-                  height: 28,
-                  bgcolor: theme.palette.primary.main,
+                  width: 34,
+                  height: 34,
+                  flexShrink: 0,
+                  color: 'text.secondary',
                 }}
               >
-                <BookOpen size={16} />
-              </Avatar>
-            )}
-            <IconButton
-              onClick={handleToggleDrawer}
-              size="small"
-              sx={{
-                p: 0.75,
-                color: theme.palette.text.secondary,
-                '&:hover': {
-                  backgroundColor: theme.palette.action.hover,
-                },
-              }}
-              aria-label={open ? t('tooltips.collapseSidebar') : t('tooltips.expandSidebar')}
-            >
-              {open ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-            </IconButton>
+                {open ? (
+                  <ChevronLeft size={19} />
+                ) : (
+                  <ChevronRight size={19} />
+                )}
+              </IconButton>
+            </Tooltip>
           </Box>
         )}
 
-        {/* Logo header - Mobile */}
         {isMobile && (
           <Box
             component={RouterLink}
             to="/"
-            onClick={() => setOpen(false)} // Đóng drawer khi click logo
+            onClick={closeMobileDrawer}
             sx={{
+              minHeight: 56,
               display: 'flex',
               alignItems: 'center',
-              gap: 1.25,
-              p: 1.5,
-              pb: 1,
+              gap: 1,
+              px: 1.5,
+              color: 'text.primary',
               textDecoration: 'none',
-              color: 'inherit',
-              '&:hover': {
-                opacity: 0.9,
-                backgroundColor: theme.palette.action.hover,
-              },
             }}
           >
             <Avatar
-              src="/logo.png"
-              alt="Wordly Logo"
               sx={{
-                width: 28,
-                height: 28,
-                bgcolor: theme.palette.primary.main,
-                flexShrink: 0,
+                width: 30,
+                height: 30,
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
               }}
             >
-              <BookOpen size={16} />
+              <BookOpen size={17} />
             </Avatar>
-            <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.125rem' }}>
+            <Typography
+              noWrap
+              sx={{
+                fontSize: '1.0625rem',
+                fontWeight: 700,
+                letterSpacing: 0,
+              }}
+            >
               Wordly
             </Typography>
           </Box>
@@ -464,264 +663,285 @@ const Navbar: React.FC = () => {
 
         <Divider />
 
-        <List sx={{ px: 0.75, py: 0.5 }}>
-          <ListItemLink
-            to="/"
-            selected={isActive('/')}
-            sx={listItemStyle(open, isActive('/'), theme)}
-          >
-            <Tooltip title={t('home')} placement="right" disableHoverListener={open}>
-              <ListItemIcon sx={iconStyle(open)}>
-                <Home size={20} />
-              </ListItemIcon>
-            </Tooltip>
-            {open && (
-              <ListItemText 
-                primary={t('home')} 
-                primaryTypographyProps={{ 
-                  fontWeight: 500,
-                  fontSize: { xs: '0.9375rem', sm: '0.875rem' }, // 15px on mobile, 14px on desktop
-                }} 
-              />
-            )}
-          </ListItemLink>
-
-          <ListItemLink
-            to="/vocabulary"
-            selected={isActive('/vocabulary')}
-            sx={listItemStyle(open, isActive('/vocabulary'), theme)}
-          >
-            <Tooltip title={t('vocabulary')} placement="right" disableHoverListener={open}>
-              <ListItemIcon sx={iconStyle(open)}>
-                <Library size={20} />
-              </ListItemIcon>
-            </Tooltip>
-            {open && (
-              <ListItemText
-                primary={t('vocabulary')}
-                primaryTypographyProps={{ 
-                  fontWeight: 500,
-                  fontSize: { xs: '0.9375rem', sm: '0.875rem' },
-                }}
-              />
-            )}
-          </ListItemLink>
+        <List sx={{ px: 0, py: 0.75, overflowX: 'hidden' }}>
+          {renderMainNavItem('/', t('home'), <Home size={20} />)}
+          {renderMainNavItem(
+            '/vocabulary',
+            t('vocabulary'),
+            <Library size={20} />,
+          )}
 
           <ListItemButton
+            selected={trainActive}
             onClick={handleTrainClick}
-            selected={isActive('/train')}
-            sx={listItemStyle(open, isActive('/train'), theme)}
+            onMouseEnter={(event) => showTrainFlyout(event.currentTarget)}
+            onMouseLeave={scheduleFlyoutClose}
+            onFocus={(event) => showTrainFlyout(event.currentTarget)}
+            aria-haspopup={!open && !isMobile ? 'menu' : undefined}
+            aria-expanded={
+              !open && !isMobile
+                ? Boolean(trainFlyoutAnchor)
+                : open
+                  ? trainOpen
+                  : undefined
+            }
+            sx={navItemStyle(open, trainActive, theme)}
           >
-            <Tooltip title={t('train')} placement="right" disableHoverListener={open}>
-              <ListItemIcon sx={iconStyle(open)}>
+            <Tooltip
+              title={
+                trainingContext.label
+                  ? `${t('train')}: ${trainingContext.label}`
+                  : t('train')
+              }
+              placement="right"
+              disableHoverListener={open || (!open && !isMobile)}
+            >
+              <ListItemIcon
+                sx={{
+                  ...iconStyle(open),
+                  position: 'relative',
+                  overflow: 'visible',
+                }}
+              >
                 <BookOpen size={20} />
+                {!open && trainingContext.label && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: -3,
+                      right: -3,
+                      width: 7,
+                      height: 7,
+                      borderRadius: '50%',
+                      bgcolor: 'primary.main',
+                      border: '2px solid',
+                      borderColor: 'background.paper',
+                    }}
+                  />
+                )}
               </ListItemIcon>
             </Tooltip>
             {open && (
               <>
-                <ListItemText 
-                    primary={
-                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0, flexWrap: 'nowrap' }}>
-                      <Typography
-                        component="span"
-                        sx={{
-                          fontWeight: 500,
-                          fontSize: { xs: '0.9375rem', sm: '0.875rem' },
-                        }}
-                      >
-                        {t('train')}
-                      </Typography>
-                      {trainTopicLabel && (
-                        <Chip
-                          label={trainTopicLabel}
-                          size="small"
-                          sx={{
-                            height: 20,
-                            fontSize: '0.6875rem', // 11px
-                            fontWeight: 500,
-                            maxWidth: 160,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            '& .MuiChip-label': {
-                              px: 0.75,
-                              py: 0,
-                              maxWidth: 140,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            },
-                          }}
-                          color="primary"
-                          variant="outlined"
-                          title={trainTopicLabel}
-                        />
-                      )}
-                    </Box>
-                  } 
+                <ListItemText
+                  primary={t('train')}
+                  sx={{ my: 0, minWidth: 0 }}
+                  primaryTypographyProps={navTextProps}
                 />
                 {trainOpen ? (
-                  <ChevronUp size={18} style={{ marginLeft: 4 }} />
+                  <ChevronUp size={17} />
                 ) : (
-                  <ChevronDown size={18} style={{ marginLeft: 4 }} />
+                  <ChevronDown size={17} />
                 )}
               </>
             )}
           </ListItemButton>
 
-          <Collapse in={trainOpen} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding sx={{ py: 0.25 }}>
-              <ListItemLink
-                to="/train/flashcards-reading"
-                selected={isActive('/train/flashcards-reading')}
-                sx={{
-                  ...listItemStyle(open, isActive('/train/flashcards-reading'), theme),
-                  pl: open ? 3.5 : 2,
-                  py: 0.625,
-                  minHeight: 36,
-                }}
-              >
-                <ListItemIcon sx={subIconStyle(open)}>
-                  <Rocket size={18} />
-                </ListItemIcon>
-                {open && (
-                  <ListItemText 
-                    primary={t('flashcardsReading')} 
-                    primaryTypographyProps={{ fontSize: { xs: '0.875rem', sm: '0.8125rem' } }}
-                  />
-                )}
-              </ListItemLink>
-
-              <ListItemLink
-                to="/train/flashcards-listening"
-                selected={isActive('/train/flashcards-listening')}
-                sx={{
-                  ...listItemStyle(open, isActive('/train/flashcards-listening'), theme),
-                  pl: open ? 3.5 : 2,
-                  py: 0.625,
-                  minHeight: 36,
-                }}
-              >
-                <ListItemIcon sx={subIconStyle(open)}>
-                  <Headphones size={18} />
-                </ListItemIcon>
-                {open && (
-                  <ListItemText 
-                    primary={t('flashcardsListening')} 
-                    primaryTypographyProps={{ fontSize: { xs: '0.875rem', sm: '0.8125rem' } }}
-                  />
-                )}
-              </ListItemLink>
-
-              <ListItemLink
-                to={rwTopicId ? `/train/read-write?topic=${encodeURIComponent(rwTopicId)}` : '/train/read-write'}
-                selected={isActive('/train/read-write')}
-                sx={{
-                  ...listItemStyle(open, isActive('/train/read-write'), theme),
-                  pl: open ? 3.5 : 2,
-                  py: 0.625,
-                  minHeight: 36,
-                }}
-              >
-                <ListItemIcon sx={subIconStyle(open)}>
-                  <Edit size={18} />
-                </ListItemIcon>
-                {open && (
-                  <ListItemText 
-                    primary={t('readWrite')} 
-                    primaryTypographyProps={{ fontSize: { xs: '0.875rem', sm: '0.8125rem' } }}
-                  />
-                )}
-              </ListItemLink>
-
-              <ListItemLink
-                to="/train/listen-write"
-                selected={isActive('/train/listen-write')}
-                sx={{
-                  ...listItemStyle(open, isActive('/train/listen-write'), theme),
-                  pl: open ? 3.5 : 2,
-                  py: 0.625,
-                  minHeight: 36,
-                }}
-              >
-                <ListItemIcon sx={subIconStyle(open)}>
-                  <Mic size={18} />
-                </ListItemIcon>
-                {open && (
-                  <ListItemText 
-                    primary={t('listenWrite')} 
-                    primaryTypographyProps={{ fontSize: { xs: '0.875rem', sm: '0.8125rem' } }}
-                  />
-                )}
-              </ListItemLink>
-            </List>
-          </Collapse>
-
-          {/* Result - moved outside Train menu */}
-          <ListItemLink
-            to="/train/result"
-            selected={isActive('/train/result')}
-            sx={listItemStyle(open, isActive('/train/result'), theme)}
-          >
-            <Tooltip title={t('result')} placement="right" disableHoverListener={open}>
-              <ListItemIcon sx={iconStyle(open)}>
-                <BarChart3 size={20} />
-              </ListItemIcon>
+          {open && trainingContext.label && (
+            <Tooltip title={trainingContext.label} placement="right">
+              <Box sx={{ mx: 1.25, mb: 0.5, minWidth: 0 }}>
+                <Chip
+                  icon={<BookOpen size={14} />}
+                  label={trainingContext.label}
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                  aria-label={`${t('trainingTopic')}: ${trainingContext.label}`}
+                  sx={{
+                    width: '100%',
+                    height: 28,
+                    borderRadius: 1,
+                    justifyContent: 'flex-start',
+                    '& .MuiChip-icon': {
+                      ml: 0.75,
+                      mr: -0.25,
+                      flexShrink: 0,
+                    },
+                    '& .MuiChip-label': {
+                      display: 'block',
+                      minWidth: 0,
+                      px: 0.75,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      fontSize: '0.75rem',
+                      lineHeight: 1.2,
+                      fontWeight: 500,
+                      letterSpacing: 0,
+                    },
+                  }}
+                />
+              </Box>
             </Tooltip>
-            {open && (
-              <ListItemText 
-                primary={t('result')} 
-                primaryTypographyProps={{ 
-                  fontWeight: 500,
-                  fontSize: { xs: '0.9375rem', sm: '0.875rem' },
-                }} 
-              />
-            )}
-          </ListItemLink>
+          )}
 
-          {/* Data - moved outside Train menu */}
-          <ListItemLink
-            to="/data"
-            selected={isActive('/data')}
-            sx={listItemStyle(open, isActive('/data'), theme)}
-          >
-            <Tooltip title={t('data')} placement="right" disableHoverListener={open}>
-              <ListItemIcon sx={iconStyle(open)}>
-                <Library size={20} />
-              </ListItemIcon>
-            </Tooltip>
-            {open && (
-              <ListItemText 
-                primary={t('data')} 
-                primaryTypographyProps={{ 
-                  fontWeight: 500,
-                  fontSize: '0.875rem',
-                }} 
-              />
-            )}
-          </ListItemLink>
+          {renderExpandedTrainingItems()}
+
+          {renderMainNavItem(
+            '/train/result',
+            t('result'),
+            <BarChart3 size={20} />,
+          )}
+          {renderMainNavItem('/data', t('data'), <Database size={20} />)}
         </List>
 
-        <Box sx={{ mt: 'auto' }}>
-          <Box sx={{ p: 1, display: 'flex', justifyContent: 'center', gap: 0.5 }}>
-            <LanguageSwitcher />
-            <Tooltip title={mode === 'dark' ? t('tooltips.switchToLight') : t('tooltips.switchToDark')}>
-              <IconButton
-                onClick={toggleTheme}
-                size="small"
-                sx={{
-                  p: 0.75,
-                  color: theme.palette.text.secondary,
-                  '&:hover': {
-                    backgroundColor: theme.palette.action.hover,
-                  },
-                }}
-                aria-label={mode === 'dark' ? t('tooltips.switchToLight') : t('tooltips.switchToDark')}
-              >
-                {mode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-              </IconButton>
-            </Tooltip>
-          </Box>
+        <Box
+          sx={{
+            mt: 'auto',
+            borderTop: `1px solid ${theme.palette.divider}`,
+            py: 0.75,
+            display: 'flex',
+            flexDirection: open ? 'row' : 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: open ? 1 : 0.5,
+            overflow: 'hidden',
+          }}
+        >
+          <LanguageSwitcher compact={!open} />
+          <Tooltip
+            title={
+              mode === 'dark'
+                ? t('tooltips.switchToLight')
+                : t('tooltips.switchToDark')
+            }
+            placement={open ? 'top' : 'right'}
+          >
+            <IconButton
+              onClick={toggleTheme}
+              size="small"
+              aria-label={
+                mode === 'dark'
+                  ? t('tooltips.switchToLight')
+                  : t('tooltips.switchToDark')
+              }
+              sx={{
+                width: 36,
+                height: 36,
+                p: 0,
+                borderRadius: 1,
+                color: 'text.secondary',
+                flexShrink: 0,
+              }}
+            >
+              {mode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </IconButton>
+          </Tooltip>
         </Box>
       </Drawer>
+
+      <Popper
+        open={!open && !isMobile && Boolean(trainFlyoutAnchor)}
+        anchorEl={trainFlyoutAnchor}
+        placement="right-start"
+        modifiers={[
+          {
+            name: 'offset',
+            options: { offset: [0, 8] },
+          },
+        ]}
+        sx={{ zIndex: theme.zIndex.drawer + 2 }}
+      >
+        <ClickAwayListener onClickAway={closeTrainFlyout}>
+          <Paper
+            role="menu"
+            aria-label={t('train')}
+            onMouseEnter={cancelFlyoutClose}
+            onMouseLeave={scheduleFlyoutClose}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') closeTrainFlyout();
+            }}
+            elevation={8}
+            sx={{
+              width: 248,
+              py: 0.75,
+              border: `1px solid ${theme.palette.divider}`,
+              borderRadius: 1,
+              overflow: 'hidden',
+            }}
+          >
+            <Box sx={{ px: 1.5, py: 0.75, minWidth: 0 }}>
+              <Typography
+                sx={{
+                  fontSize: '0.875rem',
+                  lineHeight: 1.25,
+                  fontWeight: 700,
+                  letterSpacing: 0,
+                }}
+              >
+                {t('train')}
+              </Typography>
+              {trainingContext.label && (
+                <>
+                  <Typography
+                    sx={{
+                      mt: 0.75,
+                      color: 'text.secondary',
+                      fontSize: '0.6875rem',
+                      lineHeight: 1.2,
+                      fontWeight: 500,
+                      letterSpacing: 0,
+                    }}
+                  >
+                    {t('trainingTopic')}
+                  </Typography>
+                  <Typography
+                    title={trainingContext.label}
+                    noWrap
+                    sx={{
+                      mt: 0.25,
+                      color: 'primary.main',
+                      fontSize: '0.8125rem',
+                      lineHeight: 1.3,
+                      fontWeight: 600,
+                      letterSpacing: 0,
+                    }}
+                  >
+                    {trainingContext.label}
+                  </Typography>
+                </>
+              )}
+            </Box>
+            <Divider />
+            <List disablePadding sx={{ py: 0.5 }}>
+              {trainingItems.map((item) => {
+                const active = isActive(item.activePath || item.to.split('?')[0]);
+                return (
+                  <ListItemLink
+                    key={`flyout-${item.to}`}
+                    to={item.to}
+                    role="menuitem"
+                    selected={active}
+                    onClick={closeTrainFlyout}
+                    sx={{
+                      minHeight: 40,
+                      mx: 0.75,
+                      px: 1,
+                      borderRadius: 1,
+                      color: active ? 'primary.main' : 'text.primary',
+                      '&.Mui-selected': {
+                        bgcolor:
+                          theme.palette.mode === 'dark'
+                            ? 'rgba(144, 202, 249, 0.12)'
+                            : 'rgba(25, 118, 210, 0.09)',
+                      },
+                    }}
+                  >
+                    <ListItemIcon sx={iconStyle(true)}>
+                      {item.icon}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={item.label}
+                      sx={{ my: 0, minWidth: 0 }}
+                      primaryTypographyProps={subNavTextProps}
+                    />
+                  </ListItemLink>
+                );
+              })}
+            </List>
+          </Paper>
+        </ClickAwayListener>
+      </Popper>
     </>
   );
 };
