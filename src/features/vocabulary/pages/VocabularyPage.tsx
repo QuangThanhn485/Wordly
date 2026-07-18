@@ -19,7 +19,9 @@ import {
   tableCellClasses,
   Menu,
   MenuItem,
+  MenuList,
   ListItemIcon,
+  Popper,
   useMediaQuery,
   useTheme,
   TableContainer,
@@ -52,6 +54,7 @@ import {
   Grid3x3 as ViewModuleIcon,
   Rocket as RocketLaunchIcon,
   ArrowLeft as ArrowBackIcon,
+  FileDown as SampleDownloadIcon,
 } from 'lucide-react';
 
 // Import types
@@ -106,6 +109,74 @@ const getJsonDownloadName = (label: string): string => {
     .trim();
   return `${safeLabel || 'vocabulary-topic'}.json`;
 };
+
+const downloadJsonFile = (data: unknown, fileName: string): void => {
+  const jsonContent = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonContent], {
+    type: 'application/json;charset=utf-8',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const createVocabularyImportSample = () => ({
+  folderStructure: {
+    kind: 'folder',
+    id: 'sample-folder-root',
+    label: 'Dữ liệu mẫu',
+    children: [
+      {
+        kind: 'topic',
+        id: 'sample-topic-animals',
+        label: 'Động vật cơ bản',
+      },
+      {
+        kind: 'folder',
+        id: 'sample-folder-actions',
+        label: 'Nhóm chủ đề mẫu',
+        children: [
+          {
+            kind: 'topic',
+            id: 'sample-topic-actions',
+            label: 'Hành động cơ bản',
+          },
+        ],
+      },
+    ],
+  },
+  vocabularyData: {
+    'sample-topic-animals': [
+      {
+        word: 'cat',
+        type: 'noun',
+        vnMeaning: 'con mèo',
+        pronunciation: '/kæt/',
+      },
+      {
+        word: 'dog',
+        type: 'noun',
+        vnMeaning: 'con chó',
+        pronunciation: '/dɔːɡ/',
+      },
+    ],
+    'sample-topic-actions': [
+      {
+        word: 'create',
+        type: 'verb',
+        vnMeaning: 'tạo ra',
+        pronunciation: '/kriˈeɪt/',
+      },
+    ],
+  },
+  exportDate: new Date().toISOString(),
+  version: '2.0',
+});
 
 // ===== Styled Components =====
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
@@ -545,9 +616,44 @@ const VocabularyPage: React.FC = () => {
     | null
   >(null);
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
+  const [importSubmenuAnchorEl, setImportSubmenuAnchorEl] =
+    useState<HTMLElement | null>(null);
+  const importSubmenuCloseTimer = useRef<number | null>(null);
+
+  const cancelImportSubmenuClose = useCallback(() => {
+    if (importSubmenuCloseTimer.current !== null) {
+      window.clearTimeout(importSubmenuCloseTimer.current);
+      importSubmenuCloseTimer.current = null;
+    }
+  }, []);
+
+  const closeImportSubmenu = useCallback(() => {
+    cancelImportSubmenuClose();
+    setImportSubmenuAnchorEl(null);
+  }, [cancelImportSubmenuClose]);
+
+  const scheduleImportSubmenuClose = useCallback(() => {
+    cancelImportSubmenuClose();
+    importSubmenuCloseTimer.current = window.setTimeout(() => {
+      setImportSubmenuAnchorEl(null);
+      importSubmenuCloseTimer.current = null;
+    }, 280);
+  }, [cancelImportSubmenuClose]);
+
+  React.useEffect(
+    () => () => {
+      if (importSubmenuCloseTimer.current !== null) {
+        window.clearTimeout(importSubmenuCloseTimer.current);
+      }
+    },
+    [],
+  );
+
   const openContext = useCallback((type: 'folder' | 'topic', path: string[], event: React.MouseEvent | React.MouseEvent<HTMLElement>) => {
     event.preventDefault();
     event.stopPropagation();
+    cancelImportSubmenuClose();
+    setImportSubmenuAnchorEl(null);
     // Lưu anchorEl nếu là click từ button (mobile), mouseX/Y nếu là context menu (desktop)
     const anchorEl = 'currentTarget' in event && event.currentTarget ? event.currentTarget as HTMLElement : null;
     setMenu({ 
@@ -560,9 +666,11 @@ const VocabularyPage: React.FC = () => {
     setMenuAnchorEl(anchorEl);
   }, []);
   const closeMenu = useCallback(() => {
+    cancelImportSubmenuClose();
+    setImportSubmenuAnchorEl(null);
     setMenu(null);
     setMenuAnchorEl(null);
-  }, []);
+  }, [cancelImportSubmenuClose]);
 
   // ===== Clipboard for cut/copy/paste =====
   const [clip, setClip] = useState<null | { mode: 'cut' | 'copy'; node: FolderNode | TopicItem }>(null);
@@ -625,7 +733,7 @@ const VocabularyPage: React.FC = () => {
 
   const toggleSidebar = useCallback(() => {
     setSidebarOpen((prev) => !prev);
-  }, []);
+  }, [cancelImportSubmenuClose]);
 
   const clampSidebarWidth = useCallback((width: number): number => {
     const availableWidth = pageRootRef.current?.getBoundingClientRect().width ?? window.innerWidth;
@@ -1295,6 +1403,19 @@ const VocabularyPage: React.FC = () => {
     if (!menu) return;
     folderInputRef.current?.click();
   }, [menu]);
+
+  const handleDownloadImportSample = useCallback(() => {
+    const isRootFolder =
+      menu?.type === 'folder' && menu.path.length === 1;
+    if (!isRootFolder) return;
+
+    downloadJsonFile(
+      createVocabularyImportSample(),
+      'wordly_vocabulary_import_sample.json',
+    );
+    showSnack(t('messages.downloadSampleSuccess'));
+    closeMenu();
+  }, [menu, closeMenu, t]);
 
   const handleImportFolder = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2133,13 +2254,27 @@ const VocabularyPage: React.FC = () => {
             <ListItemIcon><ExportIcon fontSize="small" /></ListItemIcon>
             <ListItemText primary={t('contextMenu.exportFolder')} />
           </MenuItem>,
-          <MenuItem key="import-folder" onClick={startImportFolder}>
-              <ListItemIcon><ImportIcon fontSize="small" /></ListItemIcon>
-            <ListItemText primary={t('contextMenu.importFolder')} />
-          </MenuItem>,
-          <MenuItem key="import-topic" onClick={startImport}>
+          <MenuItem
+            key="import-data"
+            id="vocabulary-import-submenu-trigger"
+            aria-haspopup="menu"
+            aria-expanded={Boolean(importSubmenuAnchorEl)}
+            onMouseEnter={(event) => {
+              cancelImportSubmenuClose();
+              setImportSubmenuAnchorEl(event.currentTarget);
+            }}
+            onMouseLeave={scheduleImportSubmenuClose}
+            onClick={(event) => {
+              const anchor = event.currentTarget;
+              cancelImportSubmenuClose();
+              setImportSubmenuAnchorEl((current) =>
+                current ? null : anchor,
+              );
+            }}
+          >
             <ListItemIcon><ImportIcon fontSize="small" /></ListItemIcon>
-            <ListItemText primary={t('contextMenu.importTopic')} />
+            <ListItemText primary={t('contextMenu.importData')} />
+            <ChevronRightIcon size={17} />
           </MenuItem>,
           <Divider key="divider-2" />,
           <MenuItem key="rename" onClick={startRename}>
@@ -2188,6 +2323,74 @@ const VocabularyPage: React.FC = () => {
           </MenuItem>,
         ]}
       </Menu>
+
+      <Popper
+        anchorEl={importSubmenuAnchorEl}
+        open={Boolean(menu?.type === 'folder' && importSubmenuAnchorEl)}
+        placement="right-start"
+        modifiers={[
+          {
+            name: 'offset',
+            options: { offset: [0, -4] },
+          },
+        ]}
+        sx={{ zIndex: theme.zIndex.modal + 1 }}
+      >
+        <Paper
+          elevation={8}
+          onMouseEnter={cancelImportSubmenuClose}
+          onMouseLeave={scheduleImportSubmenuClose}
+          sx={{
+            position: 'relative',
+            minWidth: 240,
+            border: `1px solid ${theme.palette.divider}`,
+            borderRadius: 1,
+            overflow: 'visible',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: -8,
+              width: 8,
+            },
+          }}
+        >
+          <MenuList
+            aria-labelledby="vocabulary-import-submenu-trigger"
+            autoFocusItem={false}
+            sx={{ py: 0.5 }}
+          >
+            <MenuItem
+              onClick={() => {
+                closeImportSubmenu();
+                startImportFolder();
+              }}
+            >
+              <ListItemIcon><ImportIcon fontSize="small" /></ListItemIcon>
+              <ListItemText primary={t('contextMenu.importFolder')} />
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                closeImportSubmenu();
+                startImport();
+              }}
+            >
+              <ListItemIcon><TopicIcon size={18} /></ListItemIcon>
+              <ListItemText primary={t('contextMenu.importTopic')} />
+            </MenuItem>
+            {menu?.path.length === 1 && (
+              <>
+                <Divider />
+                <MenuItem onClick={handleDownloadImportSample}>
+                  <ListItemIcon><SampleDownloadIcon size={18} /></ListItemIcon>
+                  <ListItemText primary={t('contextMenu.downloadSample')} />
+                </MenuItem>
+              </>
+            )}
+          </MenuList>
+        </Paper>
+      </Popper>
 
       {/* Dialogs */}
       <RenameDialog

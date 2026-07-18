@@ -97,8 +97,10 @@
     "deleteTopic": "Delete topic",
     "exportTopic": "Export topic (.json)",
     "exportFolder": "Export folder (.json)",
+    "importData": "Import data",
     "importFolder": "Import folder (.json)",
     "importTopic": "Import topic (.json)",
+    "downloadSample": "Download sample data (.json)",
     "futureItem": "Item {{index}} (Coming soon)"
   },
   "messages": {
@@ -124,6 +126,7 @@
     "exportFolderSuccess": "Exported folder \"{{name}}\" ({{count}} topics).",
     "importTopicSuccess": "Imported topic \"{{name}}\" with {{count}} words.",
     "importFolderSuccess": "Imported folder \"{{name}}\" ({{topicCount}} topics, {{wordCount}} words).",
+    "downloadSampleSuccess": "Downloaded the sample import data file.",
     "cutInstruction": "Cut. Choose destination folder and Paste.",
     "cannotDeleteRoot": "Cannot delete root folder!"
   },

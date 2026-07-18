@@ -96,9 +96,11 @@
     "deleteFolder": "Xóa thư mục",
     "deleteTopic": "Xóa chủ đề",
     "exportTopic": "Xuất chủ đề (.json)",
-    "exportFolder": "Export thư mục (.json)",
-    "importFolder": "Import thư mục (.json)",
+    "exportFolder": "Xuất thư mục (.json)",
+    "importData": "Nhập dữ liệu",
+    "importFolder": "Nhập thư mục (.json)",
     "importTopic": "Nhập chủ đề (.json)",
+    "downloadSample": "Tải dữ liệu mẫu (.json)",
     "futureItem": "Mục {{index}} (Tính năng tương lai)"
   },
   "messages": {
@@ -124,6 +126,7 @@
     "exportFolderSuccess": "Đã xuất thư mục \"{{name}}\" ({{count}} chủ đề).",
     "importTopicSuccess": "Đã nhập chủ đề \"{{name}}\" với {{count}} từ vựng.",
     "importFolderSuccess": "Đã nhập thư mục \"{{name}}\" ({{topicCount}} chủ đề, {{wordCount}} từ vựng).",
+    "downloadSampleSuccess": "Đã tải file dữ liệu mẫu để import.",
     "cutInstruction": "Đã cắt. Hãy chọn thư mục đích và Dán.",
     "cannotDeleteRoot": "Không thể xóa thư mục gốc!"
   },
