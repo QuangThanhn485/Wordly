@@ -5,6 +5,24 @@
   "trainingTopic": "Chủ đề đang luyện",
   "result": "Kết quả",
   "data": "Dữ liệu",
+  "settings": {
+    "title": "Cài đặt",
+    "close": "Đóng cài đặt",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "saveError": "Không thể lưu cài đặt. Dữ liệu hiện tại chưa bị thay đổi.",
+    "pronunciation": {
+      "title": "Giọng đọc tiếng Anh",
+      "device": "Giọng mặc định",
+      "deviceMeta": "Không gọi API phát âm",
+      "dictionary": "Bản ghi từ điển chuẩn",
+      "dictionaryMeta": "Dùng API phát âm miễn phí",
+      "accent": "Giọng phát âm",
+      "us": "Anh-Mỹ (US)",
+      "uk": "Anh-Anh (UK)",
+      "preview": "Nghe thử"
+    }
+  },
   "flashcardsReading": "Flashcards Đọc",
   "flashcardsListening": "Flashcards Nghe",
   "readWrite": "Đọc & Viết",

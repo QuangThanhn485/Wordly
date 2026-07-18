@@ -5,6 +5,8 @@ export type TrainWordItem = {
   id: string;
   en: string; // English word
   vi: string; // Vietnamese meaning
+  type?: string;
+  pronunciation?: string;
 };
 
 export const getWords = async (topicId?: string): Promise<TrainWordItem[]> => {
@@ -19,6 +21,8 @@ export const getWords = async (topicId?: string): Promise<TrainWordItem[]> => {
             id: item.id || `${topicId}:${index}`,
             en: item.word,
             vi: item.vnMeaning || item.word, // Fallback to word if vnMeaning is empty
+            type: item.type,
+            pronunciation: item.pronunciation,
           }));
           resolve(words);
           return;

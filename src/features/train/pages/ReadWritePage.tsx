@@ -40,7 +40,13 @@ import {
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
-type WordItem = { id: string; en: string; vi: string };
+type WordItem = {
+  id: string;
+  en: string;
+  vi: string;
+  type?: string;
+  pronunciation?: string;
+};
 
 function adaptWords(input: any[]): WordItem[] {
   if (!Array.isArray(input)) return [];
@@ -335,7 +341,11 @@ const ReadWritePage = () => {
         clearAdvanceTimeout();
         setCurrentWordCompleted(true);
         setScore((s) => s + 1);
-        speakEnglish(currentWord.en, { lang: 'en-US' });
+        speakEnglish(currentWord.en, {
+          lang: 'en-US',
+          phonetic: currentWord.pronunciation,
+          partOfSpeech: currentWord.type,
+        });
       } else {
         // Wrong answer
         setHasError(true);
@@ -543,6 +553,8 @@ const ReadWritePage = () => {
               answer={answer}
               englishWord={currentWord.en}
               vietnameseMeaning={currentWord.vi}
+              englishPronunciation={currentWord.pronunciation}
+              englishPartOfSpeech={currentWord.type}
               mode={mode}
               onAnswer={handleAnswer}
               onHint={handleHint}

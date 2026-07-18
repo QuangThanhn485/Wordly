@@ -14,6 +14,10 @@ const preferences: AppPreferences = {
   themeMode: 'dark',
   vocabularyViewMode: 'grid',
   language: 'vi',
+  pronunciation: {
+    source: 'dictionary',
+    accent: 'uk',
+  },
   flashcards: {
     removeCorrectCards: true,
   },
@@ -76,6 +80,20 @@ describe('key-value database', () => {
     expect(loadPreferences().writeTraining).toEqual({
       answerReviewDurationMs: 4500,
       disableAutoAdvance: false,
+    });
+  });
+
+  it('defaults pronunciation safely for preferences saved before the option existed', () => {
+    const legacyPreferences = {
+      ...preferences,
+      pronunciation: undefined,
+    };
+    delete legacyPreferences.pronunciation;
+    writeDatabaseValue(DATABASE_KEYS.preferences, legacyPreferences);
+
+    expect(loadPreferences().pronunciation).toEqual({
+      source: 'dictionary',
+      accent: 'us',
     });
   });
 

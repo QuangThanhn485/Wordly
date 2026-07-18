@@ -20,6 +20,8 @@ const reveal = keyframes`
 type AnswerReviewPanelProps = {
   englishWord: string;
   vietnameseMeaning: string;
+  englishPronunciation?: string;
+  englishPartOfSpeech?: string;
   autoAdvanceDisabled: boolean;
   reviewDurationMs: number;
   onNext: () => void;
@@ -28,6 +30,8 @@ type AnswerReviewPanelProps = {
 export const AnswerReviewPanel = ({
   englishWord,
   vietnameseMeaning,
+  englishPronunciation,
+  englishPartOfSpeech,
   autoAdvanceDisabled,
   reviewDurationMs,
   onNext,
@@ -162,7 +166,13 @@ export const AnswerReviewPanel = ({
             <Tooltip title={t('review.replay')}>
               <IconButton
                 size="small"
-                onClick={() => speakEnglish(englishWord, { lang: 'en-US' })}
+                onClick={() =>
+                  speakEnglish(englishWord, {
+                    lang: 'en-US',
+                    phonetic: englishPronunciation,
+                    partOfSpeech: englishPartOfSpeech,
+                  })
+                }
                 aria-label={t('review.replay')}
                 sx={{
                   flexShrink: 0,

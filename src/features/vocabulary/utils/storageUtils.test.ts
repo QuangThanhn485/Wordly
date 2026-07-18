@@ -331,6 +331,10 @@ describe('normalized vocabulary storage', () => {
       themeMode: 'dark',
       vocabularyViewMode: 'grid',
       language: 'vi',
+      pronunciation: {
+        source: 'dictionary',
+        accent: 'us',
+      },
       flashcards: { removeCorrectCards: true },
       writeTraining: {
         answerReviewDurationMs: 4500,

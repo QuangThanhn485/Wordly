@@ -54,7 +54,13 @@ import {
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
-type WordItem = { id: string; en: string; vi: string };
+type WordItem = {
+  id: string;
+  en: string;
+  vi: string;
+  type?: string;
+  pronunciation?: string;
+};
 
 function adaptWords(input: any[]): WordItem[] {
   if (!Array.isArray(input)) return [];
@@ -298,20 +304,29 @@ const FlashcardsListeningPage = () => {
   const wait = useCallback((ms: number) => new Promise<void>((res) => window.setTimeout(res, ms)), []);
 
   const speakResult = useCallback(
-    async (current: string) => {
-      if (!current) return;
+    async (current: WordItem) => {
+      if (!current.en) return;
       try {
         if (typeof window !== 'undefined') {
           window.speechSynthesis?.cancel();
         }
       } catch {}
-      await speakEnglishAwaitable(current, { lang: 'en-US' });
+      await speakEnglishAwaitable(current.en, {
+        lang: 'en-US',
+        phonetic: current.pronunciation,
+        partOfSpeech: current.type,
+      });
     },
     [speakEnglishAwaitable]
   );
 
   const playCorrectFeedback = useCallback(
-    async (idx: number, current: string, next: string | undefined, shouldRemoveAfterFeedback: boolean) => {
+    async (
+      idx: number,
+      current: WordItem,
+      next: WordItem | undefined,
+      shouldRemoveAfterFeedback: boolean,
+    ) => {
       const runId = ++feedbackRunIdRef.current;
       setPendingCorrectFeedbackCount((count) => count + 1);
 
@@ -354,7 +369,11 @@ const FlashcardsListeningPage = () => {
                 feedbackRunIdRef.current === runId &&
                 !interactionLockedRef.current
               ) {
-                speakEnglish(next, { lang: 'en-US' });
+                speakEnglish(next.en, {
+                  lang: 'en-US',
+                  phonetic: next.pronunciation,
+                  partOfSpeech: next.type,
+                });
               }
             });
           }
@@ -390,7 +409,11 @@ const FlashcardsListeningPage = () => {
     
     setHasStarted(true);
     setShowHintModal(false);
-    speakEnglish(target.en, { lang: 'en-US' });
+    speakEnglish(target.en, {
+      lang: 'en-US',
+      phonetic: target.pronunciation,
+      partOfSpeech: target.type,
+    });
   }, [items, targetIdx, isLoading]);
 
   const handleReplayAudio = useCallback(() => {
@@ -402,7 +425,11 @@ const FlashcardsListeningPage = () => {
     const target = items[targetIdx];
     if (!target) return;
     
-    speakEnglish(target.en, { lang: 'en-US' });
+    speakEnglish(target.en, {
+      lang: 'en-US',
+      phonetic: target.pronunciation,
+      partOfSpeech: target.type,
+    });
   }, [hasStarted, items, targetIdx, isLoading]);
 
   const handleShowAnswer = useCallback(() => {
@@ -463,7 +490,7 @@ const FlashcardsListeningPage = () => {
         setFeedbackTargetIdx(targetIdx);
         setFlipped((f) => ({ ...f, [idx]: true }));
         setScore((v) => v + 1);
-        const currentEnglish = items[targetIdx].en;
+        const currentWord = items[targetIdx];
         setShowHintModal(false);
         const exclude = new Set<number>();
         Object.keys(flipped).forEach((k) => {
@@ -473,11 +500,16 @@ const FlashcardsListeningPage = () => {
         const newTargetIdx = pickRandomIndex(items.length, exclude);
         setTargetIdx(newTargetIdx);
 
-        const nextEnglish =
+        const nextWord =
           newTargetIdx >= 0 && newTargetIdx < items.length && items[newTargetIdx]
-            ? items[newTargetIdx].en
+            ? items[newTargetIdx]
             : undefined;
-        void playCorrectFeedback(idx, currentEnglish, nextEnglish, removeCorrectCardsRef.current);
+        void playCorrectFeedback(
+          idx,
+          currentWord,
+          nextWord,
+          removeCorrectCardsRef.current,
+        );
       } else {
         setWrongIdx(idx);
         setWrongTick((t) => t + 1);

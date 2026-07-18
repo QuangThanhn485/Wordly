@@ -5,6 +5,24 @@
   "trainingTopic": "Training topic",
   "result": "Result",
   "data": "Data",
+  "settings": {
+    "title": "Settings",
+    "close": "Close settings",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saveError": "Settings could not be saved. Existing data was not changed.",
+    "pronunciation": {
+      "title": "English voice",
+      "device": "Default voice",
+      "deviceMeta": "No pronunciation API",
+      "dictionary": "Dictionary recording",
+      "dictionaryMeta": "Uses the free pronunciation API",
+      "accent": "Pronunciation accent",
+      "us": "American English (US)",
+      "uk": "British English (UK)",
+      "preview": "Preview"
+    }
+  },
   "flashcardsReading": "Flashcards Reading",
   "flashcardsListening": "Flashcards Listening",
   "readWrite": "Read & Write",

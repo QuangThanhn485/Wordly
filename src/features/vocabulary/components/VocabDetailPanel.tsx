@@ -52,7 +52,11 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({
 
   const handleSpeak = (text?: string) => {
     if (!text) return;
-    speak(text);
+    const item = vocab && 'word' in vocab ? vocab : null;
+    speak(text, {
+      phonetic: item?.pronunciation,
+      partOfSpeech: item?.type,
+    });
   };
 
   return (

@@ -222,6 +222,20 @@ const isValidRecordData = (key: string, data: unknown): boolean => {
         data.language === 'vi' ||
         data.language === 'en'
       ) &&
+      (
+        data.pronunciation === undefined ||
+        (
+          isRecord(data.pronunciation) &&
+          (
+            data.pronunciation.source === 'device' ||
+            data.pronunciation.source === 'dictionary'
+          ) &&
+          (
+            data.pronunciation.accent === 'us' ||
+            data.pronunciation.accent === 'uk'
+          )
+        )
+      ) &&
       isRecord(data.flashcards) &&
       typeof data.flashcards.removeCorrectCards === 'boolean' &&
       (

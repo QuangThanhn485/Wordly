@@ -5,10 +5,17 @@ import {
   writeDatabaseValue,
 } from './database';
 
+export type PronunciationSource = 'device' | 'dictionary';
+export type PronunciationAccent = 'us' | 'uk';
+
 export type AppPreferences = {
   themeMode: 'light' | 'dark';
   vocabularyViewMode: 'tree' | 'grid';
   language: 'vi' | 'en' | null;
+  pronunciation: {
+    source: PronunciationSource;
+    accent: PronunciationAccent;
+  };
   flashcards: {
     removeCorrectCards: boolean;
   };
@@ -34,6 +41,10 @@ const DEFAULT_PREFERENCES: AppPreferences = {
   themeMode: 'light',
   vocabularyViewMode: 'tree',
   language: null,
+  pronunciation: {
+    source: 'dictionary',
+    accent: 'us',
+  },
   flashcards: {
     removeCorrectCards: false,
   },
@@ -59,6 +70,10 @@ export const loadPreferences = (): AppPreferences => {
     ...DEFAULT_PREFERENCES,
     ...stored,
     language,
+    pronunciation: {
+      ...DEFAULT_PREFERENCES.pronunciation,
+      ...stored.pronunciation,
+    },
     flashcards: {
       ...DEFAULT_PREFERENCES.flashcards,
       ...stored.flashcards,

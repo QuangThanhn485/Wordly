@@ -37,6 +37,8 @@ interface WordInputCardProps {
   answer: string;
   englishWord: string;
   vietnameseMeaning: string;
+  englishPronunciation?: string;
+  englishPartOfSpeech?: string;
   mode: 'vi-en' | 'en-vi';
   onAnswer: (userAnswer: string) => void;
   onHint: () => void;
@@ -57,6 +59,8 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
   answer,
   englishWord,
   vietnameseMeaning,
+  englishPronunciation,
+  englishPartOfSpeech,
   mode,
   onAnswer,
   onHint,
@@ -115,7 +119,11 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
     if (!hasStarted) {
       onStart();
     } else {
-      speakEnglish(question, { lang: 'en-US' });
+      speakEnglish(question, {
+        lang: 'en-US',
+        phonetic: englishPronunciation,
+        partOfSpeech: englishPartOfSpeech,
+      });
     }
     setHasPlayed(true);
   };
@@ -240,6 +248,8 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
         <AnswerReviewPanel
           englishWord={englishWord}
           vietnameseMeaning={vietnameseMeaning}
+          englishPronunciation={englishPronunciation}
+          englishPartOfSpeech={englishPartOfSpeech}
           autoAdvanceDisabled={autoAdvanceDisabled}
           reviewDurationMs={answerReviewDurationMs}
           onNext={onNext}

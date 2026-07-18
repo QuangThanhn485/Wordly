@@ -38,6 +38,7 @@ import {
   Mic,
   Moon,
   Rocket,
+  Settings,
   Sun,
 } from 'lucide-react';
 import {
@@ -57,6 +58,11 @@ import { DATABASE_KEYS } from '@/data';
 
 const drawerWidth = 264;
 const collapsedWidth = 64;
+const AppSettingsDialog = React.lazy(() =>
+  import('@/features/settings/AppSettingsDialog').then((module) => ({
+    default: module.AppSettingsDialog,
+  })),
+);
 
 type StoredTrainingSession = {
   topicId: string;
@@ -252,6 +258,7 @@ const Navbar: React.FC = () => {
   }, [refreshTrainingContext]);
 
   const [open, setOpen] = React.useState(false);
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [trainOpen, setTrainOpen] = React.useState(() =>
     location.pathname.startsWith('/train') &&
     location.pathname !== '/train/result',
@@ -357,6 +364,12 @@ const Navbar: React.FC = () => {
   const closeMobileDrawer = React.useCallback(() => {
     if (isMobile) setOpen(false);
   }, [isMobile]);
+
+  const handleOpenSettings = React.useCallback(() => {
+    closeTrainFlyout();
+    setSettingsOpen(true);
+    if (isMobile) setOpen(false);
+  }, [closeTrainFlyout, isMobile]);
 
   const renderMainNavItem = (
     to: string,
@@ -778,6 +791,30 @@ const Navbar: React.FC = () => {
             <BarChart3 size={20} />,
           )}
           {renderMainNavItem('/data', t('data'), <Database size={20} />)}
+          <Tooltip
+            title={t('settings.title')}
+            placement="right"
+            disableHoverListener={open}
+          >
+            <ListItemButton
+              selected={settingsOpen}
+              onClick={handleOpenSettings}
+              aria-haspopup="dialog"
+              aria-expanded={settingsOpen}
+              sx={navItemStyle(open, settingsOpen, theme)}
+            >
+              <ListItemIcon sx={iconStyle(open)}>
+                <Settings size={20} />
+              </ListItemIcon>
+              {open && (
+                <ListItemText
+                  primary={t('settings.title')}
+                  sx={{ my: 0, minWidth: 0 }}
+                  primaryTypographyProps={navTextProps}
+                />
+              )}
+            </ListItemButton>
+          </Tooltip>
         </List>
 
         <Box
@@ -937,6 +974,15 @@ const Navbar: React.FC = () => {
           </Paper>
         </ClickAwayListener>
       </Popper>
+
+      {settingsOpen && (
+        <React.Suspense fallback={null}>
+          <AppSettingsDialog
+            open
+            onClose={() => setSettingsOpen(false)}
+          />
+        </React.Suspense>
+      )}
     </>
   );
 };

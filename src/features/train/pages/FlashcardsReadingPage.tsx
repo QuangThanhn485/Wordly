@@ -40,7 +40,13 @@ import {
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
-type WordItem = { id: string; en: string; vi: string };
+type WordItem = {
+  id: string;
+  en: string;
+  vi: string;
+  type?: string;
+  pronunciation?: string;
+};
 
 function adaptWords(input: any[]): WordItem[] {
   if (!Array.isArray(input)) return [];
@@ -277,14 +283,22 @@ const FlashcardsReadingPage = () => {
   const wait = useCallback((ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms)), []);
 
   const playCorrectFeedback = useCallback(
-    async (idx: number, word: string, shouldRemoveAfterFeedback: boolean) => {
+    async (
+      idx: number,
+      word: WordItem,
+      shouldRemoveAfterFeedback: boolean,
+    ) => {
       const runId = ++feedbackRunIdRef.current;
       setPendingCorrectFeedbackCount((count) => count + 1);
 
       try {
         await Promise.all([
           wait(CARD_FLIP_FEEDBACK_MS),
-          speakEnglishAsync(word, { lang: 'en-US' }),
+          speakEnglishAsync(word.en, {
+            lang: 'en-US',
+            phonetic: word.pronunciation,
+            partOfSpeech: word.type,
+          }),
         ]);
 
         if (feedbackRunIdRef.current !== runId) return;
@@ -414,7 +428,7 @@ const FlashcardsReadingPage = () => {
         : normalize(items[idx].vi) === normalize(items[targetIdx].vi); // EN-VI: match Vietnamese
       
       if (isCorrect) {
-        const currentEnglish = items[targetIdx].en;
+        const currentWord = items[targetIdx];
         interactionLockedRef.current = true;
         setFeedbackTargetIdx(targetIdx);
         setFlipped((f) => ({ ...f, [idx]: true }));
@@ -425,7 +439,11 @@ const FlashcardsReadingPage = () => {
         });
         exclude.add(idx);
         setTargetIdx(pickRandomIndex(items.length, exclude));
-        void playCorrectFeedback(idx, currentEnglish, removeCorrectCardsRef.current);
+        void playCorrectFeedback(
+          idx,
+          currentWord,
+          removeCorrectCardsRef.current,
+        );
       } else {
         setWrongIdx(idx);
         setWrongTick((t) => t + 1);

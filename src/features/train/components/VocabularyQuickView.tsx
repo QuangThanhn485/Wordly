@@ -27,6 +27,8 @@ import { VocabDetailPanel } from '@/features/vocabulary/components/VocabDetailPa
 interface VocabularyItem {
   en: string;
   vi: string;
+  type?: string;
+  pronunciation?: string;
 }
 
 interface VocabularyQuickViewProps {
@@ -56,8 +58,12 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
     setOpen(false);
   };
 
-  const handleSpeak = (word: string) => {
-    speakEnglish(word, { lang: 'en-US' });
+  const handleSpeak = (item: VocabularyItem) => {
+    speakEnglish(item.en, {
+      lang: 'en-US',
+      phonetic: item.pronunciation,
+      partOfSpeech: item.type,
+    });
   };
 
   const openMenu = (event: React.MouseEvent<HTMLElement>, item: VocabularyItem) => {
@@ -197,7 +203,7 @@ export const VocabularyQuickView: React.FC<VocabularyQuickViewProps> = ({
                   <React.Fragment key={`${item.en}-${index}`}>
                     <ListItem disablePadding>
                       <ListItemButton
-                        onClick={() => handleSpeak(item.en)}
+                        onClick={() => handleSpeak(item)}
                         sx={{
                           py: 1.75,
                           px: 2,

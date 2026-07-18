@@ -262,9 +262,12 @@ const VocabTableRow = React.memo(function VocabTableRow({
     }
     pendingSpeakRef.current = window.setTimeout(() => {
       pendingSpeakRef.current = null;
-      speak(item.word);
+      speak(item.word, {
+        phonetic: item.pronunciation,
+        partOfSpeech: item.type,
+      });
     }, 220);
-  }, [item.word]);
+  }, [item.pronunciation, item.type, item.word]);
 
   const handleRowDoubleClick = useCallback(() => {
     if (pendingSpeakRef.current !== null) {
@@ -300,7 +303,10 @@ const VocabTableRow = React.memo(function VocabTableRow({
             size="small"
             onClick={(event) => {
               event.stopPropagation();
-              speak(item.word);
+              speak(item.word, {
+                phonetic: item.pronunciation,
+                partOfSpeech: item.type,
+              });
             }}
             onDoubleClick={stopRowInteraction}
             sx={{

@@ -1,145 +1,74 @@
-# Tùy chọn phát âm tiếng Anh cho giáo dục
+# Kiến trúc phát âm tiếng Anh
 
-## So sánh các giải pháp
+## Mục tiêu
 
-### 1. Web Speech API (Hiện tại - Miễn phí) ⭐ Đề xuất cho giáo dục
+Wordly dùng một chuỗi phát âm miễn phí, không cần API key:
 
-**Ưu điểm:**
-- ✅ Miễn phí hoàn toàn
-- ✅ Không cần API key
-- ✅ Hoạt động offline (sau lần đầu load)
-- ✅ Không cần server
-- ✅ Đã được tích hợp trong code hiện tại
+1. Ưu tiên bản ghi người thật từ Free Dictionary API.
+2. Chọn giọng US hoặc UK theo `lang`.
+3. Khi có IPA và loại từ, chỉ chọn bản ghi phù hợp với dữ liệu đó.
+4. Nếu không có bản ghi, mạng lỗi hoặc trình duyệt chặn audio, tự động dùng Web Speech API.
 
-**Nhược điểm:**
-- ⚠️ Chất lượng phụ thuộc vào browser
-- ⚠️ Một số browser có giọng đọc không tự nhiên
-- ⚠️ Không nhất quán giữa các browser
+Mọi màn hình gọi qua `src/utils/speechUtils.ts`; không tự gọi dịch vụ phát âm
+riêng lẻ.
 
-**Cải thiện đã thực hiện:**
-- Chọn giọng tốt nhất có sẵn (Google voices > Microsoft voices > US English > GB English)
-- Tự động load voices khi chưa sẵn sàng
-- Hỗ trợ tùy chỉnh rate, pitch, volume
+Người dùng có thể mở `Cài đặt` trên navbar để chọn:
 
-### 2. Google Cloud Text-to-Speech (Premium)
+- `Giọng mặc định`: dùng lại cơ chế Web Speech ban đầu của ứng dụng, không
+  gọi API phát âm.
+- `Bản ghi từ điển chuẩn`: dùng API và chọn giọng Anh-Mỹ hoặc Anh-Anh.
 
-**Ưu điểm:**
-- ✅ Chất lượng rất cao, giọng tự nhiên
-- ✅ Nhiều giọng đọc (hơn 40 giọng tiếng Anh)
-- ✅ Hỗ trợ SSML (điều khiển phát âm chi tiết)
-- ✅ Có Neural TTS (giọng AI rất tự nhiên)
-- ✅ Tier miễn phí: 0-4 triệu characters/tháng
+Cấu hình được lưu trong `AppPreferences.pronunciation` qua lớp dữ liệu tập
+trung. Giá trị mặc định là bản ghi từ điển giọng Anh-Mỹ.
 
-**Nhược điểm:**
-- ❌ Cần Google Cloud account và API key
-- ❌ Có chi phí sau tier miễn phí
-- ❌ Cần internet connection
-- ❌ Cần server backend hoặc proxy (không thể gọi trực tiếp từ browser)
+## Luồng production
 
-**Chi phí:** ~$4-16 per 1M characters (tùy voice type)
+- Frontend gọi `/api/pronunciation` cho một từ đơn.
+- Vercel Function tra dữ liệu từ
+  `https://api.dictionaryapi.dev/api/v2/entries/en/<word>`.
+- `src/utils/pronunciationSource.ts` kiểm tra host audio, IPA, loại từ và
+  giọng US/UK.
+- Endpoint trả redirect `307` đến file audio. Redirect được cache ở trình
+  duyệt và Vercel CDN để giảm số lần gọi nguồn ngoài.
+- Nếu endpoint trả `404`, `502`, quá thời gian hoặc audio không phát được,
+  frontend chuyển sang giọng Web Speech tốt nhất có trên thiết bị.
 
-### 3. Amazon Polly (Premium)
+Trong development, frontend gọi trực tiếp Free Dictionary API vì CRA dev
+server không chạy Vercel Function. API và file audio đều cho phép CORS.
 
-**Ưu điểm:**
-- ✅ Chất lượng cao với Neural TTS
-- ✅ Hỗ trợ SSML
-- ✅ Có tier miễn phí: 5M characters/tháng (12 tháng đầu)
+## Chọn bản ghi an toàn
 
-**Nhược điểm:**
-- ❌ Cần AWS account
-- ❌ Có chi phí sau tier miễn phí
-- ❌ Cần server backend
+- Chỉ tra từ đơn, kể cả từ có dấu nháy hoặc gạch nối.
+- Cụm từ và câu luôn dùng Web Speech API.
+- Chỉ chấp nhận URL HTTPS từ các host audio đã cho phép.
+- IPA được chuẩn hóa trước khi so khớp. Nếu IPA đã biết nhưng không có bản
+  ghi đủ gần, hệ thống không dùng một bản ghi có khả năng sai.
+- Loại từ giúp tránh dùng cách đọc của danh từ cho động từ khi từ điển tách
+  chúng thành các mục khác nhau.
 
-**Chi phí:** ~$4 per 1M characters (Neural voices)
+## Web Speech dự phòng
 
-### 4. Microsoft Azure Speech (Premium)
+Giọng dự phòng được chấm điểm theo thứ tự:
 
-**Ưu điểm:**
-- ✅ Chất lượng tốt
-- ✅ Nhiều giọng đọc
-- ✅ Có tier miễn phí: 0.5M characters/tháng
+- đúng locale yêu cầu (`en-US` hoặc `en-GB`);
+- giọng có nhãn Natural, Neural, Premium hoặc Enhanced;
+- các giọng chất lượng cao phổ biến của hệ điều hành/trình duyệt;
+- loại trừ hoặc hạ điểm các giọng Compact, eSpeak, Festival và Novelty.
 
-**Nhược điểm:**
-- ❌ Cần Azure account
-- ❌ Có chi phí sau tier miễn phí
-- ❌ Cần server backend
+Tốc độ mặc định của giọng tổng hợp là `0.95` để rõ âm hơn. Bản ghi người thật
+giữ tốc độ `1.0`.
 
-### 5. ResponsiveVoice.js (Freemium)
+## Chi phí và giới hạn
 
-**Ưu điểm:**
-- ✅ Dễ tích hợp
-- ✅ Có bản miễn phí (với watermark)
-- ✅ Không cần server backend
+- Không có dependency phát âm mới.
+- Không có API key, tài khoản cloud hay dịch vụ có thể phát sinh phí.
+- Chất lượng cao nhất áp dụng cho từ có bản ghi. Từ hiếm, cụm từ và câu phụ
+  thuộc vào giọng cài trên thiết bị.
+- Cache giảm tải nhưng Free Dictionary API vẫn là dịch vụ cộng đồng; Web
+  Speech là lớp dự phòng bắt buộc.
 
-**Nhược điểm:**
-- ⚠️ Chất lượng không bằng Cloud services
-- ⚠️ Bản miễn phí có watermark audio
-- ⚠️ Bản trả phí: $9-99/tháng
+Nguồn kỹ thuật:
 
-## Đề xuất cho ứng dụng giáo dục
-
-### Phương án 1: Cải thiện Web Speech API (Đã triển khai) ⭐
-
-**Phù hợp khi:**
-- Muốn miễn phí hoàn toàn
-- Không muốn setup server
-- Chấp nhận chất lượng tốt (không phải xuất sắc)
-
-**Đã cải thiện:**
-- Tự động chọn giọng tốt nhất
-- Xử lý voices loading tốt hơn
-- Code trong `src/utils/speechUtils.ts`
-
-### Phương án 2: Hybrid (Web Speech + Cloud TTS)
-
-**Phù hợp khi:**
-- Muốn chất lượng cao nhất
-- Có thể setup server backend
-- Có budget nhỏ
-
-**Cách hoạt động:**
-1. Dùng Web Speech API làm fallback (miễn phí)
-2. Dùng Google Cloud TTS khi có API key
-3. User có thể chọn trong settings
-
-### Phương án 3: Chỉ dùng Cloud TTS
-
-**Phù hợp khi:**
-- Cần chất lượng xuất sắc
-- Có budget và server backend
-- Ứng dụng thương mại
-
-## Cách tích hợp (Nếu cần upgrade)
-
-### Google Cloud TTS Integration Example:
-
-```typescript
-// 1. Cần install: npm install @google-cloud/text-to-speech
-// 2. Cần server endpoint để proxy API calls (bảo mật API key)
-// 3. Frontend gọi đến server endpoint
-
-const speakWithGoogleTTS = async (text: string) => {
-  const response = await fetch('/api/tts', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, voice: 'en-US-Neural2-D' })
-  });
-  const audioBlob = await response.blob();
-  const audio = new Audio(URL.createObjectURL(audioBlob));
-  audio.play();
-};
-```
-
-## Kết luận
-
-**Cho ứng dụng giáo dục hiện tại:**
-- ✅ **Nên dùng Web Speech API với cải thiện đã triển khai**
-- ✅ Đủ chất lượng cho giáo dục
-- ✅ Miễn phí, không cần setup phức tạp
-- ✅ Hoạt động tốt trên Chrome, Edge, Safari
-
-**Nếu cần nâng cấp sau này:**
-- Có thể thêm Google Cloud TTS như optional premium feature
-- User có thể chọn trong settings
-- Fallback về Web Speech API nếu không có API key
-
+- Free Dictionary API: https://dictionaryapi.dev/
+- Web Speech API: https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API
+- Vercel CDN cache: https://vercel.com/docs/cdn-cache
