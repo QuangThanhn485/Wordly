@@ -1,6 +1,23 @@
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 
 module.exports = {
+  jest: {
+    configure: {
+      moduleDirectories: ['node_modules', '<rootDir>/src'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@components/(.*)$': '<rootDir>/src/components/$1',
+        '^@features/(.*)$': '<rootDir>/src/features/$1',
+        '^@layouts/(.*)$': '<rootDir>/src/layouts/$1',
+        '^@hooks/(.*)$': '<rootDir>/src/hooks/$1',
+        '^@utils/(.*)$': '<rootDir>/src/utils/$1',
+        '^@services/(.*)$': '<rootDir>/src/services/$1',
+        '^@constants/(.*)$': '<rootDir>/src/constants/$1',
+        '^@contexts/(.*)$': '<rootDir>/src/contexts/$1',
+        '^@assets/(.*)$': '<rootDir>/src/assets/$1',
+      },
+    },
+  },
   webpack: {
     configure: (webpackConfig) => {
       // Add TsconfigPathsPlugin to resolve path aliases

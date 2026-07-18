@@ -3,6 +3,7 @@ import i18n from '@/i18n';
 import { type MistakeRecord, type MistakesStats } from '@/features/train/train-read-write/mistakesStorage';
 
 export type ProcessedMistake = {
+  wordId: string;
   word: string;
   viMeaning: string;
   topicId: string;
@@ -45,7 +46,7 @@ export const processMistakesData = (stats: MistakesStats): ProcessedMistake[] =>
   const wordMap = new Map<string, ProcessedMistake>();
 
   Object.values(stats).forEach((record: MistakeRecord) => {
-    const key = `${record.topicId}:${record.word}`;
+    const key = `${record.topicId}:${record.wordId}`;
     
     if (wordMap.has(key)) {
       const existing = wordMap.get(key)!;
@@ -64,6 +65,7 @@ export const processMistakesData = (stats: MistakesStats): ProcessedMistake[] =>
       }
     } else {
       wordMap.set(key, {
+        wordId: record.wordId,
         word: record.word,
         viMeaning: record.viMeaning,
         topicId: record.topicId,
@@ -207,7 +209,7 @@ export const groupMistakesByMode = (
     // Remove duplicates (same word can appear in multiple modes)
     const uniqueMistakes = new Map<string, ProcessedMistake>();
     mistakes.forEach((mistake) => {
-      const key = `${mistake.topicId}:${mistake.word}`;
+      const key = `${mistake.topicId}:${mistake.wordId}`;
       if (!uniqueMistakes.has(key)) {
         uniqueMistakes.set(key, mistake);
       }

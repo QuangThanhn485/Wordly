@@ -19,6 +19,7 @@ import { AlertCircle, ArrowRight, CheckCircle, RotateCcw, X } from 'lucide-react
 import { useTranslation } from 'react-i18next';
 
 export type SessionMistake = {
+  wordId: string;
   word: string; // English word
   viMeaning: string; // Vietnamese meaning
   count: number; // Number of mistakes in this session

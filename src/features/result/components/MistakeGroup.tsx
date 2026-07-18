@@ -116,7 +116,7 @@ export const MistakeGroup: React.FC<MistakeGroupProps> = ({ group }) => {
 
           return (
             <Box
-              key={`${mistake.topicId}:${mistake.word}:${group.mode}:${index}`}
+              key={`${mistake.topicId}:${mistake.wordId}:${group.mode}:${index}`}
             >
               <MistakeCard mistake={modeSpecificMistake} />
             </Box>

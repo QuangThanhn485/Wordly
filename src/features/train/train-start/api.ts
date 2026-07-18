@@ -2,6 +2,7 @@
 import { loadVocabularyTopic } from '@/features/vocabulary/utils/storageUtils';
 
 export type TrainWordItem = {
+  id: string;
   en: string; // English word
   vi: string; // Vietnamese meaning
 };
@@ -14,7 +15,8 @@ export const getWords = async (topicId?: string): Promise<TrainWordItem[]> => {
         const vocab = loadVocabularyTopic(topicId);
         if (vocab && vocab.length > 0) {
           // Map vocab items to train word items
-          const words = vocab.map(item => ({
+          const words = vocab.map((item, index) => ({
+            id: item.id || `${topicId}:${index}`,
             en: item.word,
             vi: item.vnMeaning || item.word, // Fallback to word if vnMeaning is empty
           }));

@@ -118,7 +118,13 @@ export const TopicTreeItem = memo(function TopicTreeItem({
         >
           <Box aria-hidden sx={{ width: 18, height: 18 }} />
           <TopicIcon size={17} aria-hidden />
-          <Tooltip title={node.label} placement="right" enterDelay={500}>
+          <Tooltip
+            title={node.label}
+            placement="top-start"
+            enterDelay={650}
+            enterNextDelay={650}
+            disableInteractive
+          >
             <Typography variant="body2" noWrap sx={{ minWidth: 0, fontWeight: selected ? 600 : 400 }}>
               {node.label}
             </Typography>
@@ -255,7 +261,13 @@ const FolderItemComponent = function FolderItem({
           >
             {open ? <ExpandLessIcon size={17} aria-hidden /> : <ExpandMoreIcon size={17} aria-hidden />}
             {open ? <FolderOpenIcon size={18} aria-hidden /> : <FolderIcon size={18} aria-hidden />}
-            <Tooltip title={node.label} placement="right" enterDelay={500}>
+            <Tooltip
+              title={node.label}
+              placement="top-start"
+              enterDelay={650}
+              enterNextDelay={650}
+              disableInteractive
+            >
               <Typography variant="body2" noWrap sx={{ minWidth: 0, fontWeight: 600 }}>
                 {node.label}
               </Typography>

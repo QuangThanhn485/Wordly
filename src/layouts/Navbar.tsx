@@ -53,6 +53,7 @@ import { loadTrainingSession as loadReadWriteSession } from 'features/train/trai
 import { loadTrainingSession as loadListenWriteSession } from 'features/train/train-listen-write/sessionStorage';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { getTopicLabel } from '@/features/vocabulary/utils/storageUtils';
+import { DATABASE_KEYS } from '@/data';
 
 const drawerWidth = 264;
 const collapsedWidth = 64;
@@ -236,14 +237,8 @@ const Navbar: React.FC = () => {
   }, [refreshTrainingContext, searchParams]);
 
   React.useEffect(() => {
-    const trainingStorageKeys = new Set([
-      'wordly_train_session',
-      'wordly_train_listen_session',
-      'wordly_train_rw_session',
-      'wordly_train_lw_session',
-    ]);
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key && trainingStorageKeys.has(event.key)) {
+      if (event.key === DATABASE_KEYS.trainingSessions) {
         refreshTrainingContext();
       }
     };

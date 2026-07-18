@@ -17,8 +17,7 @@ import {
 import { alpha } from '@mui/material/styles';
 import { Settings, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-const STORAGE_KEY_FLASHCARDS_SETTINGS = 'wordly_flashcards_settings';
+import { loadPreferences, updatePreferences } from '@/data';
 
 export type FlashcardsSettings = {
   removeCorrectCards: boolean;
@@ -32,9 +31,7 @@ const loadFlashcardsSettings = (): FlashcardsSettings => {
   if (typeof window === 'undefined') return defaultSettings;
 
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY_FLASHCARDS_SETTINGS);
-    if (!stored) return defaultSettings;
-    return { ...defaultSettings, ...JSON.parse(stored) };
+    return { ...defaultSettings, ...loadPreferences().flashcards };
   } catch {
     return defaultSettings;
   }
@@ -44,7 +41,10 @@ const saveFlashcardsSettings = (settings: FlashcardsSettings) => {
   if (typeof window === 'undefined') return;
 
   try {
-    window.localStorage.setItem(STORAGE_KEY_FLASHCARDS_SETTINGS, JSON.stringify(settings));
+    updatePreferences((current) => ({
+      ...current,
+      flashcards: settings,
+    }));
   } catch {}
 };
 

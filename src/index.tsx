@@ -6,16 +6,12 @@ import App from 'App';
 import { store } from './app/store';
 import { CustomThemeProvider } from './contexts/ThemeContext';
 import '@fontsource/roboto';
+import { initializeDatabase } from './data';
 
 // Initialize i18n
 import './i18n';
 
-// Cleanup legacy storage key (removed change-tracking mechanism)
-try {
-  localStorage.removeItem('wordly_last_change_timestamp');
-} catch {
-  // Ignore storage access errors
-}
+initializeDatabase();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

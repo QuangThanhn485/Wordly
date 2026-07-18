@@ -4,8 +4,11 @@ import {
   normalizeSessionTopicReference,
   type TopicSessionReference,
 } from '../utils/topicSession';
-
-const STORAGE_KEY_TRAIN_LW_SESSION = 'wordly_train_lw_session';
+import {
+  clearTrainingSessionValue,
+  loadTrainingSessionValue,
+  saveTrainingSessionValue,
+} from '@/data';
 
 export type TrainingSession = TopicSessionReference & {
   currentWordIndex: number; // Index of current word being shown
@@ -18,27 +21,26 @@ export type TrainingSession = TopicSessionReference & {
 };
 
 /**
- * Save training session to localStorage
+ * Save the listen-write session.
  */
 export const saveTrainingSession = (session: TrainingSession): void => {
   try {
-    localStorage.setItem(STORAGE_KEY_TRAIN_LW_SESSION, JSON.stringify(session));
+    saveTrainingSessionValue('listenWrite', session);
   } catch (err) {
     console.error('Failed to save training session:', err);
   }
 };
 
 /**
- * Load training session from localStorage
+ * Load the listen-write session.
  */
 export const loadTrainingSession = (): TrainingSession | null => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY_TRAIN_LW_SESSION);
-    if (!stored) return null;
-    const parsed = JSON.parse(stored);
+    const parsed = loadTrainingSessionValue<TrainingSession>('listenWrite');
+    if (!parsed) return null;
     const normalized = normalizeSessionTopicReference(parsed) as TrainingSession | null;
-    if (normalized && JSON.stringify(normalized) !== stored) {
-      localStorage.setItem(STORAGE_KEY_TRAIN_LW_SESSION, JSON.stringify(normalized));
+    if (normalized && JSON.stringify(normalized) !== JSON.stringify(parsed)) {
+      saveTrainingSessionValue('listenWrite', normalized);
     }
     return normalized;
   } catch (err) {
@@ -48,11 +50,11 @@ export const loadTrainingSession = (): TrainingSession | null => {
 };
 
 /**
- * Clear training session from localStorage
+ * Clear the listen-write session.
  */
 export const clearTrainingSession = (): void => {
   try {
-    localStorage.removeItem(STORAGE_KEY_TRAIN_LW_SESSION);
+    clearTrainingSessionValue('listenWrite');
   } catch (err) {
     console.error('Failed to clear training session:', err);
   }

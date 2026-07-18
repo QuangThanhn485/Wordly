@@ -9,16 +9,13 @@ import {
   loadVocabularyTopicCounts,
   saveTreeToStorage,
   loadTreeFromStorage,
-  syncAllVocabularyTopicCounts,
+  normalizeVocabularyItems,
 } from '../utils/storageUtils';
-
-// ===== Helper: localStorage for viewMode =====
-const STORAGE_KEY_VIEW_MODE = 'vocabulary_view_mode';
+import { loadPreferences, updatePreferences } from '@/data';
 
 const loadViewMode = (): 'tree' | 'grid' => {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY_VIEW_MODE);
-    return saved === 'grid' ? 'grid' : 'tree';
+    return loadPreferences().vocabularyViewMode;
   } catch {
     return 'tree';
   }
@@ -26,7 +23,10 @@ const loadViewMode = (): 'tree' | 'grid' => {
 
 export const saveViewModeToStorage = (mode: 'tree' | 'grid') => {
   try {
-    localStorage.setItem(STORAGE_KEY_VIEW_MODE, mode);
+    updatePreferences((current) => ({
+      ...current,
+      vocabularyViewMode: mode,
+    }));
   } catch (err) {
     console.error('Failed to save view mode:', err);
   }
@@ -101,11 +101,6 @@ export function useVocabularyState(): UseVocabularyStateReturn {
   const treeRef = useRef(tree);
   treeRef.current = tree;
   
-  // Sync vocab counts on mount
-  useEffect(() => {
-    syncAllVocabularyTopicCounts();
-  }, []);
-
   // Path index cache for O(1) node lookups
   const treeIndex = useMemo(() => {
     return new TreeIndex(tree);
@@ -178,7 +173,7 @@ export function useVocabularyState(): UseVocabularyStateReturn {
     return () => clearTimeout(timeoutId);
   }, [vocabMap]);
 
-  // Helper to update vocabMap and save to localStorage
+  // Update in-memory topics and persist only the changed topic records.
   const updateVocabMap = useCallback((updater: (prev: Record<string, VocabItem[]>) => Record<string, VocabItem[]>) => {
     const prev = vocabMapRef.current;
     const next = updater(prev);
@@ -204,13 +199,21 @@ export function useVocabularyState(): UseVocabularyStateReturn {
       }
     }
 
+    let preparedNext = next;
     deletedTopicIds.forEach(deleteVocabularyTopic);
     changedTopicIds.forEach((topicId) => {
-      saveVocabularyTopic(topicId, next[topicId]);
+      const preparedItems = normalizeVocabularyItems(
+        next[topicId],
+        Date.now(),
+        prev[topicId] || [],
+      );
+      if (preparedNext === next) preparedNext = { ...next };
+      preparedNext[topicId] = preparedItems;
+      saveVocabularyTopic(topicId, preparedItems);
     });
 
-    vocabMapRef.current = next;
-    setVocabMap(next);
+    vocabMapRef.current = preparedNext;
+    setVocabMap(preparedNext);
     setVocabCountMap((prevCounts) => {
       const updated = { ...prevCounts };
       let hasChanges = false;
@@ -223,7 +226,7 @@ export function useVocabularyState(): UseVocabularyStateReturn {
       });
 
       changedTopicIds.forEach((topicId) => {
-        const newCount = next[topicId]?.length || 0;
+        const newCount = preparedNext[topicId]?.length || 0;
         if (updated[topicId] !== newCount) {
           updated[topicId] = newCount;
           hasChanges = true;
@@ -234,7 +237,7 @@ export function useVocabularyState(): UseVocabularyStateReturn {
     });
   }, []);
   
-  // Helper to update tree and save to localStorage
+  // Update the UI tree and persist its normalized catalog.
   const updateTree = useCallback((updater: (prev: FolderNode) => FolderNode) => {
     const prev = treeRef.current;
     const next = updater(prev);

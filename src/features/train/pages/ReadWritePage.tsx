@@ -26,6 +26,7 @@ import {
   type TrainingSession,
 } from '@/features/train/train-read-write/sessionStorage';
 import { recordMistakes } from '@/features/train/train-read-write/mistakesStorage';
+import { loadTrainingSession as loadReadingSession } from '@/features/train/train-start/sessionStorage';
 import {
   CompletionModal,
   type SessionMistake,
@@ -34,13 +35,12 @@ import { speakEnglish } from '@/utils/speechUtils';
 import {
   createTrainingSearchParams,
   getTrainingTopicParams,
-  normalizeSessionTopicReference,
 } from '@/features/train/utils/topicSession';
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
-type WordItem = { en: string; vi: string };
+type WordItem = { id: string; en: string; vi: string };
 
 function adaptWords(input: any[]): WordItem[] {
   if (!Array.isArray(input)) return [];
@@ -94,19 +94,11 @@ const ReadWritePage = () => {
       return;
     }
     
-    // If needed, inherit the topic from the flashcards reading session.
-    try {
-      const readingSessionStr = localStorage.getItem('wordly_train_session');
-      if (readingSessionStr) {
-        const readingSession = normalizeSessionTopicReference(JSON.parse(readingSessionStr));
-        if (readingSession?.topicId) {
-          setSearchParams(createTrainingSearchParams(readingSession), { replace: true });
-          setSessionRestored(true);
-          return;
-        }
-      }
-    } catch (err) {
-      // Ignore errors when reading reading session
+    const readingSession = loadReadingSession();
+    if (readingSession?.topicId) {
+      setSearchParams(createTrainingSearchParams(readingSession), { replace: true });
+      setSessionRestored(true);
+      return;
     }
     
     setSessionRestored(true);
@@ -190,7 +182,7 @@ const ReadWritePage = () => {
     setMode('vi-en');
   }, [currentTopicId, isLoading, items.length, sessionRestored, trainingSource]);
 
-  // Save session to localStorage
+  // Persist the current session.
   useEffect(() => {
     if (!currentTopicId || isLoading || items.length === 0) return;
 
@@ -222,19 +214,21 @@ const ReadWritePage = () => {
   // Prepare mistakes data for modal
   const sessionMistakes: SessionMistake[] = useMemo(() => {
     const mistakesList: SessionMistake[] = [];
-    wordMistakes.forEach((count, word) => {
-      const item = items.find((it) => it.en === word);
+    wordMistakes.forEach((count, wordId) => {
+      const item = items.find((candidate) => candidate.id === wordId);
       if (item) {
         mistakesList.push({
+          wordId: item.id,
           word: item.en,
           viMeaning: item.vi,
           count,
         });
       } else {
         // Fallback: if item not found (shouldn't happen), still show the word
-        console.warn(`Word "${word}" not found in items, showing anyway`);
+        console.warn(`Word ID "${wordId}" not found in items, showing anyway`);
         mistakesList.push({
-          word: word,
+          wordId,
+          word: wordId,
           viMeaning: 'N/A',
           count,
         });
@@ -249,10 +243,10 @@ const ReadWritePage = () => {
     return completedWords.length === items.length;
   }, [completedWords.length, items.length]);
 
-  // Show completion modal when done and save mistakes to localStorage
+  // Show the completion modal and persist mistakes once.
   useEffect(() => {
     if (isCompleted && !isLoading && items.length > 0 && !showCompletionModal && !completionModalShown) {
-      // Save mistakes to localStorage when completing (only once)
+      // Save mistakes only once when completing.
       if (!skipMistakeLogging && sessionMistakes.length > 0 && recordTopicId && !mistakesSaved) {
         recordMistakes(sessionMistakes, recordTopicId, 'read-write');
         setMistakesSaved(true);
@@ -309,10 +303,10 @@ const ReadWritePage = () => {
         setMistakes((m) => m + 1);
 
         // Track mistake
-        const wrongWord = currentWord.en;
+        const wrongWordId = currentWord.id;
         setWordMistakes((prev) => {
           const newMap = new Map(prev);
-          newMap.set(wrongWord, (newMap.get(wrongWord) || 0) + 1);
+          newMap.set(wrongWordId, (newMap.get(wrongWordId) || 0) + 1);
           return newMap;
         });
 

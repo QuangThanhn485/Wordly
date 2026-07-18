@@ -79,9 +79,9 @@ import {
   deleteVocabularyTopic,
   loadVocabularyTopicCounts,
   normalizeLegacyTopicLabel,
+  normalizeVocabularyItems,
   saveTreeToStorage,
   loadTreeFromStorage,
-  syncAllVocabularyTopicCounts,
 } from '../utils/storageUtils';
 import { speak } from '@/utils/speechUtils';
 import { saveTrainingSession as saveReadingSession } from '@/features/train/train-start/sessionStorage';
@@ -101,6 +101,7 @@ import {
   VocabFormDialog,
 } from '../components/dialogs';
 import { VocabDetailPanel } from '../components/VocabDetailPanel';
+import { loadPreferences, updatePreferences } from '@/data';
 
 const getJsonDownloadName = (label: string): string => {
   const safeLabel = label
@@ -125,7 +126,11 @@ const downloadJsonFile = (data: unknown, fileName: string): void => {
   URL.revokeObjectURL(url);
 };
 
+const getVocabItemIdentity = (item: VocabItem): string =>
+  item.id || item.word;
+
 const createVocabularyImportSample = () => ({
+  format: 'wordly-vocabulary-folder',
   folderStructure: {
     kind: 'folder',
     id: 'sample-folder-root',
@@ -175,7 +180,7 @@ const createVocabularyImportSample = () => ({
     ],
   },
   exportDate: new Date().toISOString(),
-  version: '2.0',
+  version: '3.0',
 });
 
 // ===== Styled Components =====
@@ -279,7 +284,7 @@ const VocabTableRow = React.memo(function VocabTableRow({
       <StyledTableCell padding="checkbox" onClick={stopRowInteraction} onDoubleClick={stopRowInteraction}>
         <Checkbox
           checked={selected}
-          onChange={() => onToggleSelection(item.word)}
+          onChange={() => onToggleSelection(getVocabItemIdentity(item))}
           size={compact ? 'small' : 'medium'}
         />
       </StyledTableCell>
@@ -394,10 +399,10 @@ const VocabTableBody = React.memo(function VocabTableBody({
     <TableBody>
       {entries.map(({ item, originalIndex }) => (
         <VocabTableRow
-          key={`${item.word}:${originalIndex}`}
+          key={item.id || `${item.word}:${originalIndex}`}
           item={item}
           originalIndex={originalIndex}
-          selected={selectedVocabs.has(item.word)}
+          selected={selectedVocabs.has(getVocabItemIdentity(item))}
           compact={compact}
           getSpeakAriaLabel={getSpeakAriaLabel}
           getMenuAriaLabel={getMenuAriaLabel}
@@ -410,8 +415,6 @@ const VocabTableBody = React.memo(function VocabTableBody({
   );
 });
 
-// ===== Helper: localStorage for viewMode =====
-const STORAGE_KEY_VIEW_MODE = 'vocabulary_view_mode';
 const MIN_SIDEBAR_WIDTH = 240;
 const MAX_SIDEBAR_WIDTH = 480;
 const MIN_CONTENT_WIDTH = 360;
@@ -423,8 +426,7 @@ const getDefaultSidebarWidth = (): number => {
 
 const loadViewMode = (): 'tree' | 'grid' => {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY_VIEW_MODE);
-    return saved === 'grid' ? 'grid' : 'tree';
+    return loadPreferences().vocabularyViewMode;
   } catch {
     return 'tree';
   }
@@ -432,7 +434,10 @@ const loadViewMode = (): 'tree' | 'grid' => {
 
 const saveViewModeToStorage = (mode: 'tree' | 'grid') => {
   try {
-    localStorage.setItem(STORAGE_KEY_VIEW_MODE, mode);
+    updatePreferences((current) => ({
+      ...current,
+      vocabularyViewMode: mode,
+    }));
   } catch (err) {
     console.error('Failed to save view mode:', err);
   }
@@ -470,17 +475,12 @@ const VocabularyPage: React.FC = () => {
   const treeRef = React.useRef(tree);
   treeRef.current = tree;
   
-  // Rebuild counts from canonical topic data on mount.
-  React.useEffect(() => {
-    syncAllVocabularyTopicCounts();
-  }, []); // Only run once on mount
-
   // Path index cache for O(1) node lookups - rebuilds when tree changes
   const treeIndex = useMemo(() => {
     return new TreeIndex(tree);
   }, [tree]);
   
-  // Helper to update vocabMap and save to localStorage
+  // Update in-memory topics and persist only the changed topic records.
   // Persist only changed topics so large vocabulary libraries remain responsive.
   const updateVocabMap = useCallback((updater: (prev: Record<string, VocabItem[]>) => Record<string, VocabItem[]>) => {
     const prev = vocabMapRef.current;
@@ -507,13 +507,21 @@ const VocabularyPage: React.FC = () => {
       }
     }
 
+    let preparedNext = next;
     deletedTopicIds.forEach(deleteVocabularyTopic);
     changedTopicIds.forEach((topicId) => {
-      saveVocabularyTopic(topicId, next[topicId]);
+      const preparedItems = normalizeVocabularyItems(
+        next[topicId],
+        Date.now(),
+        prev[topicId] || [],
+      );
+      if (preparedNext === next) preparedNext = { ...next };
+      preparedNext[topicId] = preparedItems;
+      saveVocabularyTopic(topicId, preparedItems);
     });
 
-    vocabMapRef.current = next;
-    setVocabMap(next);
+    vocabMapRef.current = preparedNext;
+    setVocabMap(preparedNext);
     setVocabCountMap((prevCounts) => {
       const updated = { ...prevCounts };
       let hasChanges = false;
@@ -526,7 +534,7 @@ const VocabularyPage: React.FC = () => {
       });
 
       changedTopicIds.forEach((topicId) => {
-        const newCount = next[topicId]?.length || 0;
+        const newCount = preparedNext[topicId]?.length || 0;
         if (updated[topicId] !== newCount) {
           updated[topicId] = newCount;
           hasChanges = true;
@@ -537,7 +545,7 @@ const VocabularyPage: React.FC = () => {
     });
   }, []);
   
-  // Helper to update tree and save to localStorage
+  // Update the UI tree and persist its normalized catalog.
   const updateTree = useCallback((updater: (prev: FolderNode) => FolderNode) => {
     const prev = treeRef.current;
     const next = updater(prev);
@@ -911,16 +919,18 @@ const VocabularyPage: React.FC = () => {
     
     const topicId = selectedTopic.id;
     const vocabList = vocabMap[topicId] || [];
-    const wordsToDelete = Array.from(selectedVocabs);
+    const itemIdsToDelete = new Set(selectedVocabs);
     
     updateVocabMap((prev) => {
-      const newList = vocabList.filter((item) => !wordsToDelete.includes(item.word));
+      const newList = vocabList.filter(
+        (item) => !itemIdsToDelete.has(getVocabItemIdentity(item)),
+      );
       return { ...prev, [topicId]: newList };
     });
     
     setSelectedVocabs(new Set());
     setVocabDeleteOpen(false);
-        showSnack(t('messages.vocabDeletedCount', { count: wordsToDelete.length }));
+        showSnack(t('messages.vocabDeletedCount', { count: itemIdsToDelete.size }));
   }, [selectedTopic, selectedVocabs, vocabMap, updateVocabMap]);
 
   const handleToggleVocabSelection = useCallback((word: string) => {
@@ -943,7 +953,9 @@ const VocabularyPage: React.FC = () => {
       setSelectedVocabs(new Set());
     } else {
       // Select all
-      setSelectedVocabs(new Set(vocabList.map((item) => item.word)));
+      setSelectedVocabs(
+        new Set(vocabList.map((item) => getVocabItemIdentity(item))),
+      );
     }
   }, [selectedTopic, vocabMap, selectedVocabs]);
 
@@ -1334,12 +1346,13 @@ const VocabularyPage: React.FC = () => {
     }
     
     const exportData = {
+      format: 'wordly-vocabulary-topic',
       topic: {
         label: topic.label,
       },
       vocabulary: items,
       exportDate: new Date().toISOString(),
-      version: '2.0',
+      version: '3.0',
     };
     
     const jsonContent = JSON.stringify(exportData, null, 2);
@@ -1375,10 +1388,11 @@ const VocabularyPage: React.FC = () => {
     
     // Create export data structure
     const exportData = {
+      format: 'wordly-vocabulary-folder',
       folderStructure: folderNode,
       vocabularyData: folderVocabData,
       exportDate: new Date().toISOString(),
-      version: '2.0',
+      version: '3.0',
     };
     
     // Convert to JSON

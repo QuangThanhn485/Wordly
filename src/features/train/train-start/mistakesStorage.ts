@@ -3,10 +3,15 @@ import {
   normalizeLegacyTopicLabel,
   resolveTopicId,
 } from '@/features/vocabulary/utils/storageUtils';
-
-const STORAGE_KEY_MISTAKES_STATS = 'wordly_mistakes_stats';
+import {
+  DATABASE_KEYS,
+  readDatabaseValue,
+  removeDatabaseValue,
+  writeDatabaseValue,
+} from '@/data';
 
 export type MistakeRecord = {
+  wordId: string;
   word: string;
   viMeaning: string;
   topicId: string;
@@ -24,15 +29,17 @@ type LegacyMistakeRecord = Partial<MistakeRecord> & {
 
 export const loadMistakesStats = (): MistakesStats => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY_MISTAKES_STATS);
-    if (!stored) return {};
-    const rawStats = JSON.parse(stored) as Record<string, LegacyMistakeRecord>;
+    const rawStats = readDatabaseValue<Record<string, LegacyMistakeRecord>>(
+      DATABASE_KEYS.mistakes,
+      {},
+    );
     const normalized: MistakesStats = {};
     let changed = false;
 
     Object.values(rawStats).forEach((record) => {
       if (
         !record ||
+        typeof record.wordId !== 'string' ||
         typeof record.word !== 'string' ||
         typeof record.trainingMode !== 'string'
       ) {
@@ -53,6 +60,7 @@ export const loadMistakesStats = (): MistakesStats => {
         record.topicLabel ||
         normalizeLegacyTopicLabel(legacyReference);
       const normalizedRecord: MistakeRecord = {
+        wordId: record.wordId,
         word: record.word,
         viMeaning: record.viMeaning || '',
         topicId,
@@ -65,7 +73,7 @@ export const loadMistakesStats = (): MistakesStats => {
             ? record.lastMistakeTime
             : Date.now(),
       };
-      const key = `${topicId}:${record.word}:${record.trainingMode}`;
+      const key = `${topicId}:${record.wordId}:${record.trainingMode}`;
       const existing = normalized[key];
       if (existing) {
         existing.mistakeCount += normalizedRecord.mistakeCount;
@@ -95,22 +103,31 @@ export const loadMistakesStats = (): MistakesStats => {
 
 export const saveMistakesStats = (stats: MistakesStats): void => {
   try {
-    localStorage.setItem(STORAGE_KEY_MISTAKES_STATS, JSON.stringify(stats));
+    if (Object.keys(stats).length === 0) {
+      removeDatabaseValue(DATABASE_KEYS.mistakes);
+    } else {
+      writeDatabaseValue(DATABASE_KEYS.mistakes, stats);
+    }
   } catch (error) {
     console.error('Failed to save mistake statistics:', error);
   }
 };
 
 export const recordMistakes = (
-  mistakes: Array<{ word: string; viMeaning: string; count: number }>,
+  mistakes: Array<{
+    wordId: string;
+    word: string;
+    viMeaning: string;
+    count: number;
+  }>,
   topicId: string,
   trainingMode: string,
 ): void => {
   const stats = loadMistakesStats();
   const topicLabel = getTopicLabel(topicId) || topicId;
 
-  mistakes.forEach(({ word, viMeaning, count }) => {
-    const key = `${topicId}:${word}:${trainingMode}`;
+  mistakes.forEach(({ wordId, word, viMeaning, count }) => {
+    const key = `${topicId}:${wordId}:${trainingMode}`;
     const existing = stats[key];
 
     if (existing) {
@@ -119,6 +136,7 @@ export const recordMistakes = (
       existing.topicLabel = topicLabel;
     } else {
       stats[key] = {
+        wordId,
         word,
         viMeaning,
         topicId,
@@ -135,9 +153,9 @@ export const recordMistakes = (
 
 export const getWordMistakeStats = (
   topicId: string,
-  word: string,
+  wordId: string,
   trainingMode: string,
 ): MistakeRecord | null => {
   const stats = loadMistakesStats();
-  return stats[`${topicId}:${word}:${trainingMode}`] || null;
+  return stats[`${topicId}:${wordId}:${trainingMode}`] || null;
 };

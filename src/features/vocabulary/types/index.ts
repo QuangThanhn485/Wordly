@@ -1,9 +1,12 @@
 // ===== Types =====
 export type VocabItem = {
+  id?: string;
   word: string;
   type: string;
   vnMeaning: string;
   pronunciation: string;
+  createdAt?: number;
+  updatedAt?: number;
 };
 
 export type TopicItem = {

@@ -157,7 +157,7 @@ const Home: React.FC = () => {
   });
 
   useEffect(() => {
-    // Load statistics from localStorage
+    // Load statistics from the application database.
     const tree = loadTreeFromStorage();
     const mistakesStats = loadMistakesStats();
     const vocabCounts = loadVocabularyTopicCounts();
@@ -178,13 +178,13 @@ const Home: React.FC = () => {
     });
 
     // Count total mistakes and unique words from mistakes
-    // mistakesStats format: { "topicId:word:mode": MistakeRecord }
+    // mistakesStats format: { "topicId:wordId:mode": MistakeRecord }
     let totalMistakes = 0;
     const uniqueWordsSet = new Set<string>();
     
     Object.values(mistakesStats).forEach((record) => {
       totalMistakes += record.mistakeCount; // Sum all mistake counts
-      uniqueWordsSet.add(record.word);
+      uniqueWordsSet.add(record.wordId);
     });
     
     const uniqueWords = uniqueWordsSet.size;

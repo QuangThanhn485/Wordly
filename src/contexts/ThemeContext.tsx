@@ -1,8 +1,9 @@
 // src/contexts/ThemeContext.tsx
-import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
+import React, { createContext, useContext, useMemo, useState } from 'react';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { getTheme } from 'theme';
+import { loadPreferences, updatePreferences } from '@/data';
 
 interface ThemeContextProps {
   toggleTheme: () => void;
@@ -18,17 +19,14 @@ export const useThemeMode = () => {
 };
 
 export const CustomThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [mode, setMode] = useState<'light' | 'dark'>('light');
-
-  useEffect(() => {
-    const savedMode = localStorage.getItem('themeMode') as 'light' | 'dark';
-    if (savedMode) setMode(savedMode);
-  }, []);
+  const [mode, setMode] = useState<'light' | 'dark'>(
+    () => loadPreferences().themeMode,
+  );
 
   const toggleTheme = () => {
     const newMode = mode === 'light' ? 'dark' : 'light';
     setMode(newMode);
-    localStorage.setItem('themeMode', newMode);
+    updatePreferences((current) => ({ ...current, themeMode: newMode }));
   };
 
   const theme = useMemo(() => getTheme(mode), [mode]);

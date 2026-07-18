@@ -4,8 +4,11 @@ import {
   normalizeSessionTopicReference,
   type TopicSessionReference,
 } from '../utils/topicSession';
-
-const STORAGE_KEY_TRAIN_SESSION = 'wordly_train_listen_session';
+import {
+  clearTrainingSessionValue,
+  loadTrainingSessionValue,
+  saveTrainingSessionValue,
+} from '@/data';
 
 export type TrainingSession = TopicSessionReference & {
   score: number;
@@ -18,27 +21,26 @@ export type TrainingSession = TopicSessionReference & {
 };
 
 /**
- * Save training session to localStorage
+ * Save the listening flashcard session.
  */
 export const saveTrainingSession = (session: TrainingSession): void => {
   try {
-    localStorage.setItem(STORAGE_KEY_TRAIN_SESSION, JSON.stringify(session));
+    saveTrainingSessionValue('flashcardsListening', session);
   } catch (err) {
     console.error('Failed to save training session:', err);
   }
 };
 
 /**
- * Load training session from localStorage
+ * Load the listening flashcard session.
  */
 export const loadTrainingSession = (): TrainingSession | null => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY_TRAIN_SESSION);
-    if (!stored) return null;
-    const parsed = JSON.parse(stored);
+    const parsed = loadTrainingSessionValue<TrainingSession>('flashcardsListening');
+    if (!parsed) return null;
     const normalized = normalizeSessionTopicReference(parsed) as TrainingSession | null;
-    if (normalized && JSON.stringify(normalized) !== stored) {
-      localStorage.setItem(STORAGE_KEY_TRAIN_SESSION, JSON.stringify(normalized));
+    if (normalized && JSON.stringify(normalized) !== JSON.stringify(parsed)) {
+      saveTrainingSessionValue('flashcardsListening', normalized);
     }
     return normalized;
   } catch (err) {
@@ -48,11 +50,11 @@ export const loadTrainingSession = (): TrainingSession | null => {
 };
 
 /**
- * Clear training session from localStorage
+ * Clear the listening flashcard session.
  */
 export const clearTrainingSession = (): void => {
   try {
-    localStorage.removeItem(STORAGE_KEY_TRAIN_SESSION);
+    clearTrainingSessionValue('flashcardsListening');
   } catch (err) {
     console.error('Failed to clear training session:', err);
   }

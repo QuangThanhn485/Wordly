@@ -218,7 +218,7 @@ const ResultPage = () => {
                 >
                   {mistakes.map((mistake, index) => (
                     <Box
-                      key={`${mistake.topicId}:${mistake.word}:${index}`}
+                      key={`${mistake.topicId}:${mistake.wordId}:${index}`}
                     >
                       <MistakeCard mistake={mistake} />
                     </Box>

@@ -61,6 +61,7 @@ export const MistakeGroupByTopic: React.FC<MistakeGroupByTopicProps> = ({ group 
       .slice(0, topCount);
 
     const vocabItems = topMistakes.map((mistake) => ({
+      id: mistake.wordId,
       word: mistake.word,
       vnMeaning: mistake.viMeaning,
       type: 'mistake',
@@ -227,7 +228,7 @@ export const MistakeGroupByTopic: React.FC<MistakeGroupByTopicProps> = ({ group 
       >
         {group.mistakes.map((mistake, index) => (
           <Box
-            key={`${mistake.topicId}:${mistake.word}:${index}`}
+            key={`${mistake.topicId}:${mistake.wordId}:${index}`}
           >
             <MistakeCard mistake={mistake} />
           </Box>

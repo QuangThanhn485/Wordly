@@ -27,35 +27,23 @@ import { AlertTriangle, ArrowRight, BookOpen, CalendarDays, CalendarRange, Check
 import {
   clearVocabularyTopics,
   loadVocabularyTopicCounts,
-  loadVocabularyTopics,
   loadTreeFromStorage,
-  VOCAB_TOPIC_COUNTS_KEY,
-  VOCAB_TOPIC_INDEX_KEY,
-  VOCAB_TOPIC_STORAGE_PREFIX,
+  syncAllVocabularyTopicCounts,
 } from '@/features/vocabulary/utils/storageUtils';
 import { getAllTopicIds } from '@/features/vocabulary/utils/treeUtils';
-import type { VocabItem } from '@/features/vocabulary/types';
-import { loadMistakesStats } from '@/features/train/train-read-write/mistakesStorage';
+import {
+  loadMistakesStats,
+  saveMistakesStats,
+} from '@/features/train/train-read-write/mistakesStorage';
 import { useTranslation } from 'react-i18next';
-
-const BACKUP_TIMESTAMP_KEY = 'wordly_backup_timestamp';
-
-interface BackupData {
-  vocabularySchema?: 2;
-  timestamp: number;
-  vocabularyTopics?: Record<string, unknown>;
-  vocabFiles?: Record<string, unknown>;
-  vocabIndex: string[];
-  vocabCounts: Record<string, number>;
-  vocabTree: any;
-  mistakesStats: any;
-  trainingSessions: {
-    reading?: any;
-    listening?: any;
-    readWrite?: any;
-    listenWrite?: any;
-  };
-}
+import {
+  clearDatabase,
+  createDatabaseBackup,
+  getDatabaseUsageBytes,
+  loadBackupMetadata,
+  restoreDatabaseBackup,
+  saveBackupMetadata,
+} from '@/data';
 
 const DataManagementPage: React.FC = () => {
   const theme = useTheme();
@@ -85,53 +73,19 @@ const DataManagementPage: React.FC = () => {
   // File input ref
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Check if backup exists (has backup timestamp)
-  const hasBackup = () => {
-    const timestamp = localStorage.getItem(BACKUP_TIMESTAMP_KEY);
-    return !!timestamp;
-  };
-
-  // Get backup timestamp
   const getBackupTimestamp = () => {
-    const timestamp = localStorage.getItem(BACKUP_TIMESTAMP_KEY);
-    return timestamp ? new Date(parseInt(timestamp)) : null;
+    const timestamp = loadBackupMetadata().lastBackupAt;
+    return timestamp ? new Date(timestamp) : null;
   };
 
   // Backup all data
   const handleBackup = useCallback(() => {
     try {
       setLoading(true);
-      
-      const allVocab = loadVocabularyTopics();
-      const vocabularyTopics: Record<string, VocabItem[]> = allVocab || {};
-      const vocabIndex = allVocab ? Object.keys(allVocab) : [];
-
-      // Collect other data
-      const vocabCounts = loadVocabularyTopicCounts();
-      const vocabTree = localStorage.getItem('wordly_tree');
-      const mistakesStats = loadMistakesStats();
-      
-      // Collect training sessions
-      const trainingSessions = {
-        reading: localStorage.getItem('wordly_train_session'),
-        listening: localStorage.getItem('wordly_train_listen_session'),
-        readWrite: localStorage.getItem('wordly_train_rw_session'),
-        listenWrite: localStorage.getItem('wordly_train_lw_session'),
-      };
-
-      const backupData: BackupData = {
-        vocabularySchema: 2,
-        timestamp: Date.now(),
-        vocabularyTopics,
-        vocabIndex,
-        vocabCounts,
-        vocabTree: vocabTree ? JSON.parse(vocabTree) : null,
-        mistakesStats,
-        trainingSessions,
-      };
-
-      // Save only backup timestamp (not the full data to save space)
-      localStorage.setItem(BACKUP_TIMESTAMP_KEY, backupData.timestamp.toString());
+      syncAllVocabularyTopicCounts();
+      const timestamp = Date.now();
+      saveBackupMetadata(timestamp);
+      const backupData = createDatabaseBackup(timestamp);
 
       // Download as file
       const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
@@ -174,7 +128,7 @@ const DataManagementPage: React.FC = () => {
 
       if (isAll) {
         // Delete all mistakes stats
-        localStorage.removeItem('wordly_mistakes_stats');
+        saveMistakesStats({});
         showSuccessDialog(t('messages.deleteReportsSuccess'));
       } else {
         // Delete by date range
@@ -192,7 +146,7 @@ const DataManagementPage: React.FC = () => {
           }
         });
 
-        localStorage.setItem('wordly_mistakes_stats', JSON.stringify(updatedStats));
+        saveMistakesStats(updatedStats);
         showSuccessDialog(t('messages.deleteReportsRangeSuccess', { count: deletedCount }));
       }
       
@@ -239,31 +193,7 @@ const DataManagementPage: React.FC = () => {
     try {
       setLoading(true);
       
-      // Save backup timestamp temporarily
-      const backupTimestamp = localStorage.getItem(BACKUP_TIMESTAMP_KEY);
-      
-      // Get all localStorage keys
-      const allKeys: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key) {
-          allKeys.push(key);
-        }
-      }
-      
-      // Delete all wordly_* keys except backup timestamp
-      let deletedCount = 0;
-      allKeys.forEach((key) => {
-        if (key.startsWith('wordly_') && key !== BACKUP_TIMESTAMP_KEY) {
-          localStorage.removeItem(key);
-          deletedCount++;
-        }
-      });
-      
-      // Restore backup timestamp
-      if (backupTimestamp) {
-        localStorage.setItem(BACKUP_TIMESTAMP_KEY, backupTimestamp);
-      }
+      const deletedCount = clearDatabase({ preserveBackupMetadata: true });
       
       showSuccessDialog(t('messages.deleteAllSuccess', { count: deletedCount }));
       setDeleteAllDialogOpen(false);
@@ -291,74 +221,9 @@ const DataManagementPage: React.FC = () => {
       try {
         setLoading(true);
         const content = e.target?.result as string;
-        const backupData: BackupData = JSON.parse(content);
-
-        const vocabularyData = backupData.vocabularyTopics || backupData.vocabFiles;
-        if (!backupData || typeof backupData !== 'object' || !vocabularyData) {
-          throw new Error('Invalid vocabulary backup');
-        }
-
-        clearVocabularyTopics();
-        const vocabularyEntries = Object.entries(vocabularyData);
-        const isTopicBackup =
-          backupData.vocabularySchema === 2 || Boolean(backupData.vocabularyTopics);
-
-        vocabularyEntries.forEach(([reference, data]) => {
-          const prefix = isTopicBackup
-            ? VOCAB_TOPIC_STORAGE_PREFIX
-            : 'wordly_vocab_file:';
-          localStorage.setItem(`${prefix}${reference}`, JSON.stringify(data));
-        });
-
-        if (isTopicBackup) {
-          localStorage.setItem(
-            VOCAB_TOPIC_INDEX_KEY,
-            JSON.stringify(backupData.vocabIndex || vocabularyEntries.map(([topicId]) => topicId)),
-          );
-          localStorage.setItem(
-            VOCAB_TOPIC_COUNTS_KEY,
-            JSON.stringify(backupData.vocabCounts || {}),
-          );
-        } else {
-          localStorage.setItem(
-            'wordly_vocab_index',
-            JSON.stringify(backupData.vocabIndex || vocabularyEntries.map(([fileName]) => fileName)),
-          );
-          localStorage.setItem(
-            'wordly_vocab_counts',
-            JSON.stringify(backupData.vocabCounts || {}),
-          );
-        }
-
-        if (backupData.vocabTree) {
-          localStorage.setItem('wordly_tree', JSON.stringify(backupData.vocabTree));
-        }
-
-        // Restore mistakes stats
-        if (backupData.mistakesStats) {
-          localStorage.setItem('wordly_mistakes_stats', JSON.stringify(backupData.mistakesStats));
-        }
-
-        // Restore training sessions
-        if (backupData.trainingSessions) {
-          if (backupData.trainingSessions.reading) {
-            localStorage.setItem('wordly_train_session', backupData.trainingSessions.reading);
-          }
-          if (backupData.trainingSessions.listening) {
-            localStorage.setItem('wordly_train_listen_session', backupData.trainingSessions.listening);
-          }
-          if (backupData.trainingSessions.readWrite) {
-            localStorage.setItem('wordly_train_rw_session', backupData.trainingSessions.readWrite);
-          }
-          if (backupData.trainingSessions.listenWrite) {
-            localStorage.setItem('wordly_train_lw_session', backupData.trainingSessions.listenWrite);
-          }
-        }
-
-        // Update backup timestamp to match imported data
-        if (backupData.timestamp) {
-          localStorage.setItem(BACKUP_TIMESTAMP_KEY, backupData.timestamp.toString());
-        }
+        const backupData = JSON.parse(content);
+        const restored = restoreDatabaseBackup(backupData);
+        saveBackupMetadata(restored.exportedAt);
 
         showSuccessDialog(t('messages.restoreSuccess'));
         setImportDialogOpen(false);
@@ -398,7 +263,7 @@ const DataManagementPage: React.FC = () => {
   const dateLocale = i18n.language || undefined;
   const formatDateTime = (value: Date) => value.toLocaleString(dateLocale);
   const formatDate = (value: Date) => value.toLocaleDateString(dateLocale);
-  const storageUsageKb = JSON.stringify(localStorage).length / 1024;
+  const storageUsageKb = getDatabaseUsageBytes() / 1024;
 
   const startOfDay = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate(), 0, 0, 0, 0);
   const endOfDay = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate(), 23, 59, 59, 999);

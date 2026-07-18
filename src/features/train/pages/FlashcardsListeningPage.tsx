@@ -32,18 +32,18 @@ import {
   type TrainingSession 
 } from '@/features/train/train-listen/sessionStorage';
 import { recordMistakes } from '@/features/train/train-listen/mistakesStorage';
+import { loadTrainingSession as loadReadingSession } from '@/features/train/train-start/sessionStorage';
 import { CompletionModal, type SessionMistake } from '@/features/train/train-listen-write/components/CompletionModal';
 import { speakEnglish, speakEnglishAsync, type SpeechOptions } from '@/utils/speechUtils';
 import {
   createTrainingSearchParams,
   getTrainingTopicParams,
-  normalizeSessionTopicReference,
 } from '@/features/train/utils/topicSession';
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
-type WordItem = { en: string; vi: string };
+type WordItem = { id: string; en: string; vi: string };
 
 function adaptWords(input: any[]): WordItem[] {
   if (!Array.isArray(input)) return [];
@@ -129,17 +129,12 @@ const FlashcardsListeningPage = () => {
       return;
     }
     
-    try {
-      const readingSessionStr = localStorage.getItem('wordly_train_session');
-      if (readingSessionStr) {
-        const readingSession = normalizeSessionTopicReference(JSON.parse(readingSessionStr));
-        if (readingSession?.topicId) {
-          setSearchParams(createTrainingSearchParams(readingSession), { replace: true });
-          setSessionRestored(true);
-          return;
-        }
-      }
-    } catch (err) {}
+    const readingSession = loadReadingSession();
+    if (readingSession?.topicId) {
+      setSearchParams(createTrainingSearchParams(readingSession), { replace: true });
+      setSessionRestored(true);
+      return;
+    }
     
     setSessionRestored(true);
   }, [currentTopicId, sessionRestored, setSearchParams, trainingSource]);
@@ -437,10 +432,10 @@ const FlashcardsListeningPage = () => {
         setWrongTick((t) => t + 1);
         setMistakes((m) => m + 1);
         
-        const wrongWord = items[targetIdx].en;
+        const wrongWordId = items[targetIdx].id;
         setWordMistakes((prev) => {
           const newMap = new Map(prev);
-          newMap.set(wrongWord, (newMap.get(wrongWord) || 0) + 1);
+          newMap.set(wrongWordId, (newMap.get(wrongWordId) || 0) + 1);
           return newMap;
         });
         
@@ -463,17 +458,19 @@ const FlashcardsListeningPage = () => {
   
   const sessionMistakes: SessionMistake[] = useMemo(() => {
     const mistakesList: SessionMistake[] = [];
-    wordMistakes.forEach((count, word) => {
-      const item = items.find(it => it.en === word);
+    wordMistakes.forEach((count, wordId) => {
+      const item = items.find((candidate) => candidate.id === wordId);
       if (item) {
         mistakesList.push({
+          wordId: item.id,
           word: item.en,
           viMeaning: item.vi,
           count,
         });
       } else {
         mistakesList.push({
-          word: word,
+          wordId,
+          word: wordId,
           viMeaning: 'N/A',
           count,
         });

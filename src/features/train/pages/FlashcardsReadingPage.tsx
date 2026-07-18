@@ -34,7 +34,7 @@ import {
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
-type WordItem = { en: string; vi: string };
+type WordItem = { id: string; en: string; vi: string };
 
 function adaptWords(input: any[]): WordItem[] {
   if (!Array.isArray(input)) return [];
@@ -154,7 +154,7 @@ const FlashcardsReadingPage = () => {
   const [mistakes, setMistakes] = useState(0);
   const [language, setLanguage] = useState<'vi' | 'en'>('vi');
   
-  // Track mistakes per word for current session: word -> count
+  // Track mistakes by stable word ID for the current session.
   const [wordMistakes, setWordMistakes] = useState<Map<string, number>>(new Map());
   
   // Completion modal state
@@ -329,7 +329,7 @@ const FlashcardsReadingPage = () => {
     }, 3000);
   }, [isLoading, items.length, targetIdx, flipped, scrollToCard]);
 
-  // Save session to localStorage whenever relevant state changes
+  // Persist the session whenever relevant state changes.
   useEffect(() => {
     if (!currentTopicId || isLoading || items.length === 0) return;
     
@@ -403,10 +403,10 @@ const FlashcardsReadingPage = () => {
         }, 2000);
         
         // Track mistake for this word
-        const wrongWord = items[targetIdx].en;
+        const wrongWordId = items[targetIdx].id;
         setWordMistakes((prev) => {
           const newMap = new Map(prev);
-          newMap.set(wrongWord, (newMap.get(wrongWord) || 0) + 1);
+          newMap.set(wrongWordId, (newMap.get(wrongWordId) || 0) + 1);
           return newMap;
         });
         
@@ -455,19 +455,21 @@ const FlashcardsReadingPage = () => {
   // Prepare mistakes data for modal
   const sessionMistakes: SessionMistake[] = useMemo(() => {
     const mistakesList: SessionMistake[] = [];
-    wordMistakes.forEach((count, word) => {
-      const item = items.find(it => it.en === word);
+    wordMistakes.forEach((count, wordId) => {
+      const item = items.find((candidate) => candidate.id === wordId);
       if (item) {
         mistakesList.push({
+          wordId: item.id,
           word: item.en,
           viMeaning: item.vi,
           count,
         });
       } else {
         // Fallback: if item not found (shouldn't happen), still show the word
-        console.warn(`Word "${word}" not found in items, showing anyway`);
+        console.warn(`Word ID "${wordId}" not found in items, showing anyway`);
         mistakesList.push({
-          word: word,
+          wordId,
+          word: wordId,
           viMeaning: 'N/A',
           count,
         });
@@ -497,10 +499,10 @@ const FlashcardsReadingPage = () => {
     }
   }, [items.length, currentTopicId]);
   
-  // Save mistakes to localStorage and handle actions
+  // Persist mistakes and handle completion actions.
   const saveMistakesAndAction = useCallback((action: 'exit' | 'restart' | 'next') => {
     if (!skipMistakeLogging && sessionMistakes.length > 0 && recordTopicId) {
-      // Save mistakes to localStorage
+      // Save mistakes once the session completes.
       recordMistakes(sessionMistakes, recordTopicId, 'flashcards-reading');
     }
     
