@@ -16,7 +16,8 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-i18next": "^15.7.4",
-    "react-router-dom": "^6.30.4"
+    "react-router-dom": "^6.30.4",
+    "wordly": "file:"
   },
   "scripts": {
     "start": "craco start",

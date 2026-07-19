@@ -55,6 +55,7 @@ import {
   Rocket as RocketLaunchIcon,
   ArrowLeft as ArrowBackIcon,
   FileDown as SampleDownloadIcon,
+  Search as SearchIcon,
 } from 'lucide-react';
 
 // Import types
@@ -105,6 +106,7 @@ import {
   NewTopicDialog,
   ConfirmDeleteDialog,
   VocabFormDialog,
+  SearchDialog,
 } from '../components/dialogs';
 import { VocabDetailPanel } from '../components/VocabDetailPanel';
 import { loadPreferences, updatePreferences } from '@/data';
@@ -743,6 +745,14 @@ const VocabularyPage: React.FC = () => {
   // Vocab delete confirmation
   const [vocabDeleteOpen, setVocabDeleteOpen] = useState(false);
   const [snack, setSnack] = useState<SnackState>({ open: false, msg: '', sev: 'success' });
+
+  // ===== Search dialog =====
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchScope, setSearchScope] = useState<{
+    path: string[];
+    node: FolderNode;
+    label: string;
+  } | null>(null);
 
   // ===== Vocab form dialog =====
   const [vocabFormOpen, setVocabFormOpen] = useState(false);
@@ -1718,6 +1728,86 @@ const VocabularyPage: React.FC = () => {
     showSnack(t('messages.deleted'));
   }, [pendingDelete, tree, selectedPath, updateTree, updateVocabMap]);
 
+  // ===== Search =====
+  // Open the scoped search dialog from a folder's context menu.
+  const startSearch = useCallback(() => {
+    if (!menu) return;
+    const targetPath = menu.type === 'folder' ? menu.path : menu.path.slice(0, -1);
+    const located = treeIndex.findByPath(targetPath);
+    if (!located || located.node.kind !== 'folder') return;
+    setSearchScope({
+      path: [...targetPath],
+      node: located.node,
+      label: located.node.label,
+    });
+    setSearchOpen(true);
+    closeMenu();
+  }, [menu, treeIndex, closeMenu]);
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+  }, []);
+
+  // Expand the ancestor folders so a matched node becomes visible in the tree.
+  const revealPath = useCallback((path: string[], includeLast: boolean) => {
+    const foldersToOpen = includeLast ? path : path.slice(0, -1);
+    if (foldersToOpen.length === 0) return;
+    setOpenFolders((prev) => {
+      const next = new Set(prev);
+      foldersToOpen.forEach((id) => next.add(id));
+      return next;
+    });
+  }, []);
+
+  // Ancestor labels for a full id path, joined for display (excludes self + root).
+  const breadcrumbOf = useCallback(
+    (path: string[]): string =>
+      path
+        .slice(1, -1)
+        .map((id) => treeIndex.getNode(id)?.label ?? '')
+        .filter(Boolean)
+        .join(' / '),
+    [treeIndex],
+  );
+
+  // Provide topic words to the search: in-memory cache first, storage otherwise.
+  const getTopicVocabForSearch = useCallback(
+    (topicId: string): VocabItem[] =>
+      vocabMapRef.current[topicId] ?? loadVocabularyTopic(topicId) ?? [],
+    [],
+  );
+
+  const handleSearchSelectTopic = useCallback(
+    (path: string[]) => {
+      revealPath(path, false);
+      setSelectedPath(path);
+      setSelectedVocabs(new Set());
+      if (isMdDown) setMobileViewMode('vocab');
+      closeSearch();
+    },
+    [revealPath, isMdDown, closeSearch],
+  );
+
+  const handleSearchRevealFolder = useCallback(
+    (path: string[]) => {
+      revealPath(path, true);
+      closeSearch();
+    },
+    [revealPath, closeSearch],
+  );
+
+  const handleSearchSelectVocab = useCallback(
+    (topicPath: string[], item: VocabItem) => {
+      revealPath(topicPath, false);
+      setSelectedPath(topicPath);
+      setSelectedVocabs(new Set());
+      if (isMdDown) setMobileViewMode('vocab');
+      setDetailVocab(item);
+      closeSearch();
+    },
+    [revealPath, isMdDown, closeSearch],
+  );
+
   // ===== Render =====
   return (
     <Box
@@ -2273,8 +2363,27 @@ const VocabularyPage: React.FC = () => {
         }}
       >
         {menu?.type === 'folder' ? [
-          <MenuItem 
-            key="new-folder" 
+          <MenuItem
+            key="search"
+            onClick={startSearch}
+            sx={{
+              fontSize: { xs: '0.875rem', sm: '1rem' },
+              py: { xs: 1.25, sm: 1 },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+              <SearchIcon size={isSmDown ? 18 : 20} />
+            </ListItemIcon>
+            <ListItemText
+              primary={t('contextMenu.search')}
+              primaryTypographyProps={{
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+              }}
+            />
+          </MenuItem>,
+          <Divider key="divider-search" />,
+          <MenuItem
+            key="new-folder"
             onClick={startNewSubfolder}
             sx={{
               fontSize: { xs: '0.875rem', sm: '1rem' },
@@ -2502,6 +2611,19 @@ const VocabularyPage: React.FC = () => {
         open={!!detailVocab}
         vocab={detailVocab}
         onClose={closeVocabDetail}
+      />
+
+      <SearchDialog
+        open={searchOpen}
+        onClose={closeSearch}
+        scopeNode={searchScope?.node ?? null}
+        scopePath={searchScope?.path ?? []}
+        scopeLabel={searchScope?.label ?? ''}
+        getTopicVocab={getTopicVocabForSearch}
+        breadcrumbOf={breadcrumbOf}
+        onSelectTopic={handleSearchSelectTopic}
+        onRevealFolder={handleSearchRevealFolder}
+        onSelectVocab={handleSearchSelectVocab}
       />
 
       {/* Grid View Modal */}
