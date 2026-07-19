@@ -1,155 +1,148 @@
 // src/features/result/components/MistakeCard.tsx
 import React from 'react';
-import {
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Chip,
-  useTheme,
-  Tooltip,
-} from '@mui/material';
-import { AlertCircle, Clock, Folder } from 'lucide-react';
+import { Card, CardContent, Typography, Box, Chip, useTheme } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import { AlertCircle, Folder } from 'lucide-react';
 import { type ProcessedMistake } from '../utils/dataTransform';
 import { getTrainingModeLabel, formatTimeAgo, getMistakeSeverity } from '../utils/dataTransform';
-import { useTranslation } from 'react-i18next';
 
 interface MistakeCardProps {
   mistake: ProcessedMistake;
+  /**
+   * Where the card is rendered, so redundant context can be dropped:
+   * - 'mode'  → inside a By-mode group: hide the per-mode chips.
+   * - 'topic' → inside a By-topic group: hide the topic line.
+   * - 'all'   → flat list: show everything.
+   */
+  context?: 'all' | 'mode' | 'topic';
 }
 
-export const MistakeCard: React.FC<MistakeCardProps> = ({ mistake }) => {
+const clamp = (lines: number) => ({
+  display: '-webkit-box',
+  WebkitLineClamp: lines,
+  WebkitBoxOrient: 'vertical' as const,
+  overflow: 'hidden',
+});
+
+export const MistakeCard: React.FC<MistakeCardProps> = ({ mistake, context = 'all' }) => {
   const theme = useTheme();
-  const { t } = useTranslation('result');
   const severity = getMistakeSeverity(mistake.totalMistakes);
+  const accent = {
+    high: theme.palette.error.main,
+    medium: theme.palette.warning.main,
+    low: theme.palette.info.main,
+  }[severity];
 
-  const severityColors = {
-    high: {
-      bg: theme.palette.error.light + '20',
-      border: theme.palette.error.main,
-      text: theme.palette.error.main,
-    },
-    medium: {
-      bg: theme.palette.warning.light + '20',
-      border: theme.palette.warning.main,
-      text: theme.palette.warning.main,
-    },
-    low: {
-      bg: theme.palette.info.light + '20',
-      border: theme.palette.info.main,
-      text: theme.palette.info.main,
-    },
-  };
-
-  const colors = severityColors[severity];
+  const showTopic = context !== 'topic';
+  const showModes = context !== 'mode';
 
   return (
     <Card
+      variant="outlined"
       sx={{
         height: '100%',
-        border: `2px solid ${colors.border}40`,
         borderRadius: 2,
-        transition: 'all 0.2s',
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: theme.shadows[8],
-          borderColor: colors.border,
-        },
+        borderLeft: `3px solid ${accent}`,
+        transition: 'box-shadow 0.2s, border-color 0.2s',
+        '&:hover': { boxShadow: theme.shadows[4] },
       }}
     >
-      <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
-        {/* Header with mistake count */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-          <Chip
-            icon={<AlertCircle size={16} />}
-            label={t('group.mistakesLabel', { count: mistake.totalMistakes })}
-            size="small"
+      <CardContent
+        sx={{
+          p: 1.5,
+          '&:last-child': { pb: 1.5 },
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0.5,
+          height: '100%',
+        }}
+      >
+        {/* Word + mistake count */}
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+          <Typography
             sx={{
-              bgcolor: colors.bg,
-              color: colors.text,
-              fontWeight: 600,
-              border: `1px solid ${colors.border}60`,
+              fontWeight: 700,
+              color: 'primary.main',
+              fontSize: '1.05rem',
+              lineHeight: 1.25,
+              wordBreak: 'break-word',
+              ...clamp(2),
             }}
-          />
-          <Tooltip title={formatTimeAgo(mistake.lastMistakeTime)}>
-            <Chip
-              icon={<Clock size={16} />}
-              label={formatTimeAgo(mistake.lastMistakeTime)}
-              size="small"
-              variant="outlined"
-              sx={{ fontSize: '0.75rem' }}
-            />
-          </Tooltip>
+          >
+            {mistake.word}
+          </Typography>
+          <Box
+            sx={{
+              flexShrink: 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.25,
+              px: 0.75,
+              py: 0.125,
+              borderRadius: 1,
+              color: accent,
+              bgcolor: alpha(accent, 0.12),
+              fontWeight: 700,
+              fontSize: '0.8125rem',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            <AlertCircle size={13} />
+            {mistake.totalMistakes}
+          </Box>
         </Box>
 
-        {/* Word */}
+        {/* Meaning */}
         <Typography
-          variant="h5"
-          fontWeight={700}
-          sx={{
-            mb: 1,
-            color: 'primary.main',
-            fontSize: { xs: '1.25rem', sm: '1.5rem' },
-            wordBreak: 'break-word',
-          }}
-        >
-          {mistake.word}
-        </Typography>
-
-        {/* Vietnamese meaning */}
-        <Typography
-          variant="body1"
+          variant="body2"
           color="text.secondary"
-          sx={{
-            mb: 2,
-            fontSize: { xs: '0.875rem', sm: '1rem' },
-            wordBreak: 'break-word',
-          }}
+          sx={{ wordBreak: 'break-word', ...clamp(2) }}
         >
           {mistake.viMeaning}
         </Typography>
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          {/* Topic */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Folder size={16} style={{ color: 'inherit' }} />
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            sx={{
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {mistake.topicLabel}
-          </Typography>
-        </Box>
-
-          {/* Training modes */}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-            {mistake.allModes.map((mode) => (
-              <Chip
-                key={mode}
-                label={`${getTrainingModeLabel(mode)} (${mistake.mistakesByMode[mode] || 0})`}
-                size="small"
-                variant="outlined"
-                sx={{
-                  fontSize: { xs: '0.6875rem', sm: '0.75rem' },
-                  height: { xs: 24, sm: 28 },
-                }}
-              />
-            ))}
+        {/* Topic (only when not already grouped by topic) */}
+        {showTopic && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.disabled', minWidth: 0 }}>
+            <Folder size={13} style={{ flexShrink: 0 }} />
+            <Typography variant="caption" color="text.secondary" noWrap sx={{ minWidth: 0 }}>
+              {mistake.topicLabel}
+            </Typography>
           </Box>
+        )}
+
+        {/* Footer: per-mode breakdown + time */}
+        <Box
+          sx={{
+            mt: 'auto',
+            pt: 0.5,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1,
+            flexWrap: 'wrap',
+          }}
+        >
+          {showModes ? (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, minWidth: 0 }}>
+              {mistake.allModes.map((mode) => (
+                <Chip
+                  key={mode}
+                  label={`${getTrainingModeLabel(mode)} · ${mistake.mistakesByMode[mode] || 0}`}
+                  size="small"
+                  variant="outlined"
+                  sx={{ height: 22, fontSize: '0.6875rem', '& .MuiChip-label': { px: 0.75 } }}
+                />
+              ))}
+            </Box>
+          ) : (
+            <span />
+          )}
+          <Typography variant="caption" color="text.disabled" sx={{ whiteSpace: 'nowrap', ml: 'auto' }}>
+            {formatTimeAgo(mistake.lastMistakeTime)}
+          </Typography>
         </Box>
       </CardContent>
     </Card>
   );
 };
-
-
-
-
-
-

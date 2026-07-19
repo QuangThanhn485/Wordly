@@ -6,11 +6,9 @@ import {
   Autocomplete,
   Chip,
   IconButton,
-  useTheme,
-  useMediaQuery,
-  Paper,
+  Tooltip,
 } from '@mui/material';
-import { Search, X } from 'lucide-react';
+import { Search, X, ArrowDownUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { type SortOption, type TopicFilterOption } from '../hooks/useMistakesStats';
 import { getTrainingModeLabel } from '../utils/dataTransform';
@@ -27,7 +25,35 @@ interface FilterBarProps {
   uniqueTopics: TopicFilterOption[];
   uniqueModes: string[];
   onClearFilters: () => void;
+  /** Hide the topic filter (redundant inside the By-topic view). */
+  hideTopicFilter?: boolean;
+  /** Hide the mode filter (redundant inside the By-mode view). */
+  hideModeFilter?: boolean;
 }
+
+/** Trim long selections to a single chip + "+N" so the field never grows tall. */
+const renderCompactTags = <T,>(
+  getLabel: (option: T) => string,
+  getKey: (option: T) => string,
+) =>
+  (value: T[], getTagProps: (params: { index: number }) => Record<string, unknown>) => {
+    if (value.length === 0) return null;
+    const first = value[0];
+    return (
+      <Box sx={{ display: 'flex', gap: 0.5, maxWidth: '100%', overflow: 'hidden' }}>
+        <Chip
+          {...getTagProps({ index: 0 })}
+          key={getKey(first)}
+          label={getLabel(first)}
+          size="small"
+          sx={{ maxWidth: 120 }}
+        />
+        {value.length > 1 && (
+          <Chip label={`+${value.length - 1}`} size="small" color="primary" />
+        )}
+      </Box>
+    );
+  };
 
 export const FilterBar: React.FC<FilterBarProps> = ({
   searchQuery,
@@ -41,10 +67,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   uniqueTopics,
   uniqueModes,
   onClearFilters,
+  hideTopicFilter = false,
+  hideModeFilter = false,
 }) => {
-  const theme = useTheme();
   const { t } = useTranslation('result');
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const sortOptions: { value: SortOption; label: string }[] = [
     { value: 'mistakes-desc', label: t('filters.countDesc') },
@@ -54,22 +80,15 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     { value: 'word-asc', label: t('filters.wordAsc') },
     { value: 'word-desc', label: t('filters.wordDesc') },
   ];
-  
-  // Local state for search input (for debouncing)
+
+  // Local state so typing stays snappy; commit shortly after the user pauses.
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
 
-  // Debounce search query - wait 2 seconds after user stops typing
   useEffect(() => {
-    const timer = setTimeout(() => {
-      onSearchChange(localSearchQuery);
-    }, 2000);
-
-    return () => {
-      clearTimeout(timer);
-    };
+    const timer = setTimeout(() => onSearchChange(localSearchQuery), 300);
+    return () => clearTimeout(timer);
   }, [localSearchQuery, onSearchChange]);
 
-  // Sync external searchQuery changes to local state
   useEffect(() => {
     setLocalSearchQuery(searchQuery);
   }, [searchQuery]);
@@ -78,339 +97,123 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     searchQuery.trim() !== '' || selectedTopicIds.length > 0 || selectedModes.length > 0;
 
   return (
-    <Paper
-      elevation={1}
+    <Box
       sx={{
-        p: { xs: 1, sm: 2.5 },
-        mb: 3,
-        borderRadius: 2,
-        bgcolor: 'background.paper',
-        width: '100%',
-        maxWidth: '100%',
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-        '& .MuiAutocomplete-root': {
-          width: '100%',
-          maxWidth: '100%',
-        },
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 1,
+        alignItems: 'center',
+        mb: 2,
       }}
     >
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          flexWrap: 'wrap',
-          gap: { xs: 1.5, sm: 2, md: 2.5 },
-          alignItems: { xs: 'stretch', sm: 'center' },
-          width: '100%',
-          maxWidth: '100%',
-          boxSizing: 'border-box',
-        }}
-      >
-        {/* Search with debounce */}
-        <Box
-          sx={{
-            width: { xs: '100%', sm: 'auto' },
-            maxWidth: { xs: '100%', sm: '300px', md: '400px' },
-            minWidth: { xs: 0, sm: 200 },
-            boxSizing: 'border-box',
-            flex: { xs: '0 0 auto', sm: '1 1 300px' },
-            flexShrink: 1,
-          }}
-        >
-          <TextField
-            fullWidth
-            placeholder={t('filters.searchPlaceholder')}
-            value={localSearchQuery}
-            onChange={(e) => setLocalSearchQuery(e.target.value)}
-            size="small"
-            InputProps={{
-              startAdornment: <Search size={20} style={{ marginRight: 8, color: 'inherit' }} />,
-              endAdornment: localSearchQuery && (
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    setLocalSearchQuery('');
-                    onSearchChange('');
-                  }}
-                  sx={{ mr: -1 }}
-                >
-                  <X size={18} />
-                </IconButton>
-              ),
-            }}
-            sx={{
-              width: '100%',
-              maxWidth: '100%',
-              minWidth: 0,
-              boxSizing: 'border-box',
-            }}
-          />
-        </Box>
-
-        {/* Topic filter */}
-        <Box
-          sx={{
-            width: { xs: '100%', sm: 'auto' },
-            maxWidth: { xs: '100%', sm: '200px', md: '220px' },
-            minWidth: { xs: 0, sm: 180 },
-            flex: '0 0 auto',
-            flexShrink: 1,
-            boxSizing: 'border-box',
-          }}
-        >
-          <Autocomplete
-            multiple
-            options={uniqueTopics}
-            value={uniqueTopics.filter((topic) => selectedTopicIds.includes(topic.id))}
-            onChange={(_, newValue) => onTopicIdsChange(newValue.map((topic) => topic.id))}
-            size="small"
-            filterSelectedOptions
-            fullWidth={isMobile}
-            getOptionLabel={(option) => option.label}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderOption={(props, option) => (
-              <li {...props} key={option.id}>{option.label}</li>
-            )}
-            renderInput={(params) => (
-              <TextField 
-                {...params} 
-                label={t('filters.byTopic')}
-                placeholder={t('filters.byTopic')}
-                fullWidth
-                sx={{ 
-                  width: '100%',
-                  maxWidth: '100%',
-                  boxSizing: 'border-box',
-                  '& .MuiInputBase-root': {
-                    width: '100%',
-                    maxWidth: '100%',
-                  },
-                }}
-              />
-            )}
-            renderTags={(value, getTagProps) => (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 0.5,
-                  maxWidth: '100%',
-                  overflow: 'hidden',
-                }}
-              >
-                {value.length > 0 ? (
-                  value.length <= 2 ? (
-                    value.map((option, index) => (
-                      <Chip
-                        {...getTagProps({ index })}
-                        key={option.id}
-                        label={option.label}
-                        size="small"
-                        sx={{ maxWidth: { xs: '120px', sm: 'none' } }}
-                      />
-                    ))
-                  ) : (
-                    <>
-                      {value.slice(0, 1).map((option, index) => (
-                        <Chip
-                          {...getTagProps({ index })}
-                          key={option.id}
-                          label={option.label}
-                          size="small"
-                          sx={{ maxWidth: { xs: '120px', sm: 'none' } }}
-                        />
-                      ))}
-                      <Chip
-                        label={`+${value.length - 1}`}
-                        size="small"
-                        color="primary"
-                      />
-                    </>
-                  )
-                ) : null}
-              </Box>
-            )}
-            sx={{
-              width: '100%',
-              maxWidth: '100%',
-              boxSizing: 'border-box',
-            }}
-            ListboxProps={{
-              style: {
-                maxHeight: 300,
-              },
-            }}
-          />
-        </Box>
-
-        {/* Mode Filter with search */}
-        <Box
-          sx={{
-            width: { xs: '100%', sm: 'auto' },
-            maxWidth: { xs: '100%', sm: '200px', md: '220px' },
-            minWidth: { xs: 0, sm: 180 },
-            flex: '0 0 auto',
-            flexShrink: 1,
-            boxSizing: 'border-box',
-          }}
-        >
-          <Autocomplete
-            multiple
-            options={uniqueModes}
-            value={selectedModes}
-            onChange={(_, newValue) => onModesChange(newValue)}
-            size="small"
-            filterSelectedOptions
-            fullWidth={isMobile}
-            getOptionLabel={(option) => getTrainingModeLabel(option)}
-            renderInput={(params) => (
-              <TextField 
-                {...params} 
-                label={t('filters.byMode')} 
-                placeholder={t('filters.byMode')}
-                fullWidth
-                sx={{ 
-                  width: '100%',
-                  maxWidth: '100%',
-                  boxSizing: 'border-box',
-                  '& .MuiInputBase-root': {
-                    width: '100%',
-                    maxWidth: '100%',
-                  },
-                }}
-              />
-            )}
-            renderTags={(value, getTagProps) => (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 0.5,
-                  maxWidth: '100%',
-                  overflow: 'hidden',
-                }}
-              >
-                {value.length > 0 ? (
-                  value.length <= 2 ? (
-                    value.map((option, index) => (
-                      <Chip
-                        {...getTagProps({ index })}
-                        key={option}
-                        label={getTrainingModeLabel(option)}
-                        size="small"
-                        sx={{ maxWidth: { xs: '120px', sm: 'none' } }}
-                      />
-                    ))
-                  ) : (
-                    <>
-                      {value.slice(0, 1).map((option, index) => (
-                        <Chip
-                          {...getTagProps({ index })}
-                          key={option}
-                          label={getTrainingModeLabel(option)}
-                          size="small"
-                          sx={{ maxWidth: { xs: '120px', sm: 'none' } }}
-                        />
-                      ))}
-                      <Chip
-                        label={`+${value.length - 1}`}
-                        size="small"
-                        color="primary"
-                      />
-                    </>
-                  )
-                ) : null}
-              </Box>
-            )}
-            sx={{
-              width: '100%',
-              maxWidth: '100%',
-              boxSizing: 'border-box',
-            }}
-            ListboxProps={{
-              style: {
-                maxHeight: 300,
-              },
-            }}
-          />
-        </Box>
-
-        {/* Sort with search */}
-        <Box
-          sx={{
-            width: { xs: '100%', sm: 'auto' },
-            maxWidth: { xs: '100%', sm: '180px', md: '200px' },
-            minWidth: { xs: 0, sm: 160 },
-            flex: '0 0 auto',
-            flexShrink: 1,
-            boxSizing: 'border-box',
-          }}
-        >
-          <Autocomplete
-            options={sortOptions}
-            value={sortOptions.find((opt) => opt.value === sortBy) || null}
-            onChange={(_, newValue) => {
-              if (newValue) {
-                onSortChange(newValue.value);
-              }
-            }}
-            size="small"
-            fullWidth={isMobile}
-            getOptionLabel={(option) => option.label}
-            renderInput={(params) => (
-              <TextField 
-                {...params} 
-                label={t('filters.sortBy')} 
-                placeholder={t('filters.sortBy')}
-                fullWidth
-                sx={{ 
-                  width: '100%',
-                  maxWidth: '100%',
-                  boxSizing: 'border-box',
-                  '& .MuiInputBase-root': {
-                    width: '100%',
-                    maxWidth: '100%',
-                  },
-                }}
-              />
-            )}
-            sx={{
-              width: '100%',
-              maxWidth: '100%',
-              boxSizing: 'border-box',
-            }}
-            ListboxProps={{
-              style: {
-                maxHeight: 300,
-              },
-            }}
-          />
-        </Box>
-
-        {/* Clear Filters */}
-        {hasActiveFilters && (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              width: { xs: '100%', sm: 'auto' },
-              justifyContent: { xs: 'flex-start', sm: 'center' },
-            }}
-          >
+      {/* Search */}
+      <TextField
+        placeholder={t('filters.searchPlaceholder')}
+        value={localSearchQuery}
+        onChange={(e) => setLocalSearchQuery(e.target.value)}
+        size="small"
+        sx={{ flex: '1 1 220px', minWidth: 0 }}
+        InputProps={{
+          startAdornment: <Search size={18} style={{ marginRight: 8, color: 'inherit', flexShrink: 0 }} />,
+          endAdornment: localSearchQuery ? (
             <IconButton
-              onClick={onClearFilters}
-              color="primary"
-              sx={{
-                flex: { xs: '0 0 auto', sm: '0 0 auto' },
+              size="small"
+              edge="end"
+              onClick={() => {
+                setLocalSearchQuery('');
+                onSearchChange('');
               }}
+              aria-label={t('filters.searchPlaceholder')}
             >
-              <X size={20} />
+              <X size={16} />
             </IconButton>
-          </Box>
+          ) : null,
+        }}
+      />
+
+      {/* Topic filter */}
+      {!hideTopicFilter && (
+        <Autocomplete
+          multiple
+          disableCloseOnSelect
+          options={uniqueTopics}
+          value={uniqueTopics.filter((topic) => selectedTopicIds.includes(topic.id))}
+          onChange={(_, newValue) => onTopicIdsChange(newValue.map((topic) => topic.id))}
+          size="small"
+          getOptionLabel={(option) => option.label}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
+          renderOption={(props, option) => (
+            <li {...props} key={option.id}>{option.label}</li>
+          )}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder={selectedTopicIds.length === 0 ? t('filters.byTopic') : undefined}
+            />
+          )}
+          renderTags={renderCompactTags(
+            (o: TopicFilterOption) => o.label,
+            (o: TopicFilterOption) => o.id,
+          )}
+          sx={{ flex: '1 1 180px', minWidth: 150 }}
+          ListboxProps={{ style: { maxHeight: 300 } }}
+        />
+      )}
+
+      {/* Mode filter */}
+      {!hideModeFilter && (
+        <Autocomplete
+          multiple
+          disableCloseOnSelect
+          options={uniqueModes}
+          value={selectedModes}
+          onChange={(_, newValue) => onModesChange(newValue)}
+          size="small"
+          getOptionLabel={(option) => getTrainingModeLabel(option)}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder={selectedModes.length === 0 ? t('filters.byMode') : undefined}
+            />
+          )}
+          renderTags={renderCompactTags(
+            (o: string) => getTrainingModeLabel(o),
+            (o: string) => o,
+          )}
+          sx={{ flex: '1 1 170px', minWidth: 150 }}
+          ListboxProps={{ style: { maxHeight: 300 } }}
+        />
+      )}
+
+      {/* Sort */}
+      <Autocomplete
+        options={sortOptions}
+        value={sortOptions.find((opt) => opt.value === sortBy) ?? sortOptions[0]}
+        onChange={(_, newValue) => newValue && onSortChange(newValue.value)}
+        size="small"
+        disableClearable
+        getOptionLabel={(option) => option.label}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            InputProps={{
+              ...params.InputProps,
+              startAdornment: <ArrowDownUp size={16} style={{ marginRight: 6, color: 'inherit', flexShrink: 0 }} />,
+            }}
+          />
         )}
-      </Box>
-    </Paper>
+        sx={{ flex: '0 1 190px', minWidth: 150 }}
+        ListboxProps={{ style: { maxHeight: 300 } }}
+      />
+
+      {/* Clear */}
+      {hasActiveFilters && (
+        <Tooltip title={t('filters.clear')}>
+          <IconButton onClick={onClearFilters} color="primary" size="small" aria-label={t('filters.clear')}>
+            <X size={18} />
+          </IconButton>
+        </Tooltip>
+      )}
+    </Box>
   );
 };
-

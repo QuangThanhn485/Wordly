@@ -1,7 +1,8 @@
 // src/features/result/components/OverviewCards.tsx
 import React from 'react';
-import { Box, Card, CardContent, Typography, useTheme } from '@mui/material';
-import { TrendingUp, AlertCircle, Star, BarChart3 } from 'lucide-react';
+import { Box, Paper, Typography, useTheme } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import { AlertCircle, TrendingUp, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { type OverviewStats } from '../utils/dataTransform';
 
@@ -9,39 +10,35 @@ interface OverviewCardsProps {
   stats: OverviewStats;
 }
 
+/**
+ * Compact stat strip: three essential figures only. The former "topics" card was
+ * dropped because that count is already visible in the By-topic view.
+ */
 export const OverviewCards: React.FC<OverviewCardsProps> = ({ stats }) => {
   const theme = useTheme();
   const { t } = useTranslation('result');
 
-  const cards = [
+  const tiles = [
     {
-      title: t('overview.uniqueWords'),
-      value: stats.totalWords,
-      icon: <AlertCircle size={24} />,
+      label: t('overview.uniqueWords'),
+      value: stats.totalWords.toLocaleString(),
+      icon: <AlertCircle size={18} />,
       color: theme.palette.error.main,
-      bgColor: theme.palette.error.light + '20',
     },
     {
-      title: t('overview.totalMistakes'),
-      value: stats.totalMistakes,
-      icon: <TrendingUp size={24} />,
+      label: t('overview.totalMistakes'),
+      value: stats.totalMistakes.toLocaleString(),
+      icon: <TrendingUp size={18} />,
       color: theme.palette.warning.main,
-      bgColor: theme.palette.warning.light + '20',
     },
     {
-      title: t('overview.mostMissed'),
+      label: t('overview.mostMissed'),
       value: stats.mostMistakenWord?.word || '—',
-      subtitle: stats.mostMistakenWord ? `${stats.mostMistakenWord.count} ${t('overview.times')}` : '',
-      icon: <Star size={24} />,
+      hint: stats.mostMistakenWord
+        ? `${stats.mostMistakenWord.count} ${t('overview.times')}`
+        : undefined,
+      icon: <Star size={18} />,
       color: theme.palette.info.main,
-      bgColor: theme.palette.info.light + '20',
-    },
-    {
-      title: t('card.topic'),
-      value: Object.keys(stats.mistakesByTopic).length,
-      icon: <BarChart3 size={24} />,
-      color: theme.palette.success.main,
-      bgColor: theme.palette.success.light + '20',
     },
   ];
 
@@ -49,73 +46,70 @@ export const OverviewCards: React.FC<OverviewCardsProps> = ({ stats }) => {
     <Box
       sx={{
         display: 'grid',
-        gridTemplateColumns: {
-          xs: '1fr',
-          sm: 'repeat(2, 1fr)',
-          md: 'repeat(4, 1fr)',
-        },
-        gap: { xs: 2, sm: 2, md: 3 },
-        mb: 3,
+        gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' },
+        gap: 1,
+        mb: 2,
       }}
     >
-      {cards.map((card, index) => (
-        <Card
+      {tiles.map((tile, index) => (
+        <Paper
           key={index}
+          variant="outlined"
           sx={{
-            background: `linear-gradient(135deg, ${card.bgColor} 0%, ${card.bgColor}00 100%)`,
-            border: `1px solid ${card.color}40`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.25,
+            px: 1.5,
+            py: 1,
             borderRadius: 2,
-            transition: 'transform 0.2s, box-shadow 0.2s',
-            '&:hover': {
-              transform: 'translateY(-4px)',
-              boxShadow: theme.shadows[8],
-            },
+            minWidth: 0,
+            // On the narrow 2-col layout the wide "most missed" tile spans the row.
+            gridColumn: { xs: index === 2 ? '1 / -1' : 'auto', sm: 'auto' },
           }}
         >
-          <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  bgcolor: card.bgColor,
-                  color: card.color,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {card.icon}
-              </Box>
-            </Box>
+          <Box
+            sx={{
+              width: 34,
+              height: 34,
+              borderRadius: 1.5,
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: tile.color,
+              bgcolor: alpha(tile.color, 0.12),
+            }}
+          >
+            {tile.icon}
+          </Box>
+          <Box sx={{ minWidth: 0 }}>
             <Typography
-              variant="h4"
-              fontWeight={700}
-              sx={{
-                color: card.color,
-                mb: 0.5,
-                fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
-              }}
+              noWrap
+              title={String(tile.value)}
+              sx={{ fontWeight: 700, fontSize: '1.15rem', lineHeight: 1.2 }}
             >
-              {typeof card.value === 'number' ? card.value.toLocaleString() : card.value}
+              {tile.value}
+              {tile.hint && (
+                <Typography
+                  component="span"
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ ml: 0.75, fontWeight: 500 }}
+                >
+                  {tile.hint}
+                </Typography>
+              )}
             </Typography>
-            {card.subtitle && (
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                {card.subtitle}
-              </Typography>
-            )}
             <Typography
-              variant="body2"
+              variant="caption"
               color="text.secondary"
-              sx={{
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                fontWeight: 500,
-              }}
+              noWrap
+              sx={{ display: 'block', lineHeight: 1.3 }}
             >
-              {card.title}
+              {tile.label}
             </Typography>
-          </CardContent>
-        </Card>
+          </Box>
+        </Paper>
       ))}
     </Box>
   );

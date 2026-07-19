@@ -4,13 +4,10 @@ import {
   Box,
   Container,
   Typography,
-  useTheme,
-  useMediaQuery,
-  Paper,
-  Tabs,
-  Tab,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, Layers, FolderTree, List as ListIcon } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
 import { useMistakesStats } from '@/features/result/hooks/useMistakesStats';
 import { OverviewCards } from '@/features/result/components/OverviewCards';
@@ -20,11 +17,11 @@ import { EmptyState } from '@/features/result/components/EmptyState';
 import { MistakeGroup } from '@/features/result/components/MistakeGroup';
 import { MistakeGroupByTopic } from '@/features/result/components/MistakeGroupByTopic';
 
+type ViewMode = 'grouped' | 'byTopic' | 'all';
+
 const ResultPage = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { t } = useTranslation('result');
-  const [viewMode, setViewMode] = React.useState<'all' | 'grouped' | 'byTopic'>('grouped');
+  const [viewMode, setViewMode] = React.useState<ViewMode>('grouped');
 
   const {
     mistakes,
@@ -45,89 +42,69 @@ const ResultPage = () => {
     hasData,
   } = useMistakesStats();
 
+  const noMatches = (
+    <Box sx={{ py: 6, textAlign: 'center' }}>
+      <Typography variant="body2" color="text.secondary">
+        {t('filters.noMatches')}
+      </Typography>
+    </Box>
+  );
+
+  const viewOptions: { value: ViewMode; label: string; icon: React.ReactNode }[] = [
+    { value: 'grouped', label: t('filters.byMode'), icon: <Layers size={16} /> },
+    { value: 'byTopic', label: t('filters.byTopic'), icon: <FolderTree size={16} /> },
+    { value: 'all', label: t('filters.all'), icon: <ListIcon size={16} /> },
+  ];
+
   return (
-    <Box
-      sx={{
-        width: '100%',
-        minHeight: '100vh',
-        bgcolor: 'background.default',
-        py: { xs: 2, sm: 3, md: 4 },
-      }}
-    >
-      <Container 
-        maxWidth="xl"
-        sx={{
-          px: { xs: 1, sm: 2, md: 3 },
-          width: '100%',
-          maxWidth: '100%',
-          boxSizing: 'border-box',
-        }}
-      >
-        {/* Header */}
-        <Box sx={{ mb: { xs: 3, sm: 4 } }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-            <BarChart3
-              size={isMobile ? 32 : 40}
-              style={{ color: 'inherit' }}
-            />
-            <Typography
-              variant="h4"
-              fontWeight={700}
-              sx={{
-                fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
-              }}
-            >
+    <Box sx={{ width: '100%', minHeight: '100vh', bgcolor: 'background.default', py: { xs: 2, md: 3 } }}>
+      <Container maxWidth="xl" sx={{ px: { xs: 1.5, sm: 2, md: 3 } }}>
+        {/* Compact toolbar: title + view switcher */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 1.5,
+            mb: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+            <BarChart3 size={24} style={{ flexShrink: 0 }} />
+            <Typography variant="h6" fontWeight={700} noWrap>
               {t('title')}
             </Typography>
           </Box>
-          <Typography
-            variant="body1"
-            color="text.secondary"
-            sx={{
-              fontSize: { xs: '0.875rem', sm: '1rem' },
-            }}
-          >
-            {t('subtitle')}
-          </Typography>
+
+          {hasData && (
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={viewMode}
+              onChange={(_, next: ViewMode | null) => next && setViewMode(next)}
+              aria-label={t('title')}
+            >
+              {viewOptions.map((option) => (
+                <ToggleButton
+                  key={option.value}
+                  value={option.value}
+                  sx={{ textTransform: 'none', px: { xs: 1, sm: 1.5 }, gap: 0.75 }}
+                >
+                  {option.icon}
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' }, fontWeight: 600 }}>
+                    {option.label}
+                  </Box>
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          )}
         </Box>
 
         {hasData ? (
           <>
-            {/* Overview Cards */}
             <OverviewCards stats={overviewStats} />
 
-            {/* View Mode Tabs */}
-            <Paper
-              elevation={1}
-              sx={{
-                mb: 3,
-                borderRadius: 2,
-                bgcolor: 'background.paper',
-              }}
-            >
-              <Tabs
-                value={viewMode}
-                onChange={(_, newValue) => setViewMode(newValue)}
-                variant={isMobile ? 'scrollable' : 'standard'}
-                scrollButtons="auto"
-                sx={{
-                  borderBottom: 1,
-                  borderColor: 'divider',
-                  '& .MuiTab-root': {
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    fontSize: { xs: '0.875rem', sm: '1rem' },
-                    minWidth: { xs: 120, sm: 160 },
-                  },
-                }}
-              >
-                <Tab label={t('filters.byMode')} value="grouped" />
-                <Tab label={t('filters.byTopic')} value="byTopic" />
-                <Tab label={t('filters.all')} value="all" />
-              </Tabs>
-            </Paper>
-
-            {/* Filter Bar */}
             <FilterBar
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
@@ -140,12 +117,23 @@ const ResultPage = () => {
               uniqueTopics={uniqueTopics}
               uniqueModes={uniqueModes}
               onClearFilters={clearFilters}
+              hideTopicFilter={viewMode === 'byTopic'}
+              hideModeFilter={viewMode === 'grouped'}
             />
 
-            {/* Results Count */}
-            {viewMode === 'all' && mistakes.length > 0 && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" color="text.secondary">
+            {viewMode === 'grouped' ? (
+              mistakesByMode.length > 0
+                ? mistakesByMode.map((group) => <MistakeGroup key={group.mode} group={group} />)
+                : noMatches
+            ) : viewMode === 'byTopic' ? (
+              mistakesByTopic.length > 0
+                ? mistakesByTopic.map((group) => (
+                    <MistakeGroupByTopic key={group.topicId} group={group} />
+                  ))
+                : noMatches
+            ) : mistakes.length > 0 ? (
+              <>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                   <Trans
                     ns="result"
                     i18nKey="showingCount"
@@ -153,56 +141,6 @@ const ResultPage = () => {
                     components={{ strong: <strong /> }}
                   />
                 </Typography>
-              </Box>
-            )}
-
-            {/* Content based on view mode */}
-            {viewMode === 'grouped' ? (
-              // Grouped view by training mode
-              mistakesByMode.length > 0 ? (
-                <>
-                  {mistakesByMode.map((group) => (
-                    <MistakeGroup key={group.mode} group={group} />
-                  ))}
-                </>
-              ) : (
-                <Paper
-                  sx={{
-                    p: 4,
-                    textAlign: 'center',
-                    bgcolor: 'background.paper',
-                    borderRadius: 2,
-                  }}
-                >
-                  <Typography variant="body1" color="text.secondary">
-                    {t('filters.noMatches')}
-                  </Typography>
-                </Paper>
-              )
-            ) : viewMode === 'byTopic' ? (
-              mistakesByTopic && mistakesByTopic.length > 0 ? (
-                <>
-                  {mistakesByTopic.map((group) => (
-                    <MistakeGroupByTopic key={group.topicId} group={group} />
-                  ))}
-                </>
-              ) : (
-                <Paper
-                  sx={{
-                    p: 4,
-                    textAlign: 'center',
-                    bgcolor: 'background.paper',
-                    borderRadius: 2,
-                  }}
-                >
-                  <Typography variant="body1" color="text.secondary">
-                    {t('filters.noMatches')}
-                  </Typography>
-                </Paper>
-              )
-            ) : (
-              // All view (original)
-              mistakes && mistakes.length > 0 ? (
                 <Box
                   sx={{
                     display: 'grid',
@@ -212,32 +150,20 @@ const ResultPage = () => {
                       md: 'repeat(3, 1fr)',
                       lg: 'repeat(4, 1fr)',
                     },
-                    gap: { xs: 2, sm: 2.5, md: 3 },
-                    mb: 4,
+                    gap: { xs: 1.5, md: 2 },
                   }}
                 >
                   {mistakes.map((mistake, index) => (
-                    <Box
+                    <MistakeCard
                       key={`${mistake.topicId}:${mistake.wordId}:${index}`}
-                    >
-                      <MistakeCard mistake={mistake} />
-                    </Box>
+                      mistake={mistake}
+                      context="all"
+                    />
                   ))}
                 </Box>
-              ) : (
-                <Paper
-                  sx={{
-                    p: 4,
-                    textAlign: 'center',
-                    bgcolor: 'background.paper',
-                    borderRadius: 2,
-                  }}
-                >
-                  <Typography variant="body1" color="text.secondary">
-                    {t('filters.noMatches')}
-                  </Typography>
-                </Paper>
-              )
+              </>
+            ) : (
+              noMatches
             )}
           </>
         ) : (

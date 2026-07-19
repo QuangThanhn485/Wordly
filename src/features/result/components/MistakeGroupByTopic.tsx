@@ -1,17 +1,10 @@
 // src/features/result/components/MistakeGroupByTopic.tsx
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-  Chip,
-  useTheme,
-  Button,
-} from '@mui/material';
+import { Box, Typography, Button, useTheme } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { MistakeCard } from './MistakeCard';
 import { type MistakesByTopic } from '../utils/dataTransform';
-import { getTrainingModeLabel } from '../utils/dataTransform';
-import { Folder } from 'lucide-react';
+import { Folder, Rocket } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { saveTrainingSession as saveReadingSession } from '@/features/train/train-start/sessionStorage';
 import { saveTrainingSession as saveListeningSession } from '@/features/train/train-listen/sessionStorage';
@@ -122,98 +115,58 @@ export const MistakeGroupByTopic: React.FC<MistakeGroupByTopicProps> = ({ group 
   };
 
   return (
-    <Box sx={{ mb: 4 }}>
-      {/* Group Header */}
-      <Paper
-        elevation={2}
+    <Box sx={{ mb: 3 }}>
+      {/* Slim header + primary action */}
+      <Box
         sx={{
-          p: { xs: 2, sm: 2.5 },
-          mb: 2.5,
-          borderRadius: 2,
-          bgcolor: 'background.paper',
-          border: `2px solid ${theme.palette.secondary.main}20`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 1,
+          mb: 1.5,
+          pb: 1,
+          borderBottom: `1px solid ${theme.palette.divider}`,
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box
-              sx={{
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: 'secondary.main',
-                color: 'secondary.contrastText',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Folder size={24} />
-            </Box>
-            <Box>
-              <Typography
-                variant="h5"
-                fontWeight={700}
-                sx={{
-                  fontSize: { xs: '1.25rem', sm: '1.5rem' },
-                  mb: 0.5,
-                  wordBreak: 'break-word',
-                }}
-              >
-                {group.topicLabel}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('group.summary', { words: group.totalWords, mistakes: group.totalMistakes })}
-              </Typography>
-            </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
+          <Box
+            sx={{
+              width: 30,
+              height: 30,
+              borderRadius: 1.5,
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'secondary.main',
+              bgcolor: alpha(theme.palette.secondary.main, 0.12),
+            }}
+          >
+            <Folder size={18} />
           </Box>
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Chip
-              label={t('group.wordsLabel', { count: group.totalWords })}
-              size="small"
-              color="secondary"
-              variant="outlined"
-            />
-            <Chip
-              label={t('group.mistakesLabel', { count: group.totalMistakes })}
-              size="small"
-              color="error"
-              variant="outlined"
-            />
-            <Button
-              variant="contained"
-              color="secondary"
-              size="small"
-              onClick={handleTrainTopMistakes}
-              disabled={group.mistakes.length === 0}
-              sx={{ whiteSpace: 'nowrap' }}
-            >
-              {t('group.trainTop', { count: topCount })}
-            </Button>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: '1rem', lineHeight: 1.25 }} noWrap>
+              {group.topicLabel}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {group.totalWords} {t('group.words')} · {group.totalMistakes} {t('group.mistakes')}
+            </Typography>
           </Box>
         </Box>
+        <Button
+          variant="contained"
+          color="secondary"
+          size="small"
+          startIcon={<Rocket size={16} />}
+          onClick={handleTrainTopMistakes}
+          sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+        >
+          {t('group.trainTop', { count: topCount })}
+        </Button>
+      </Box>
 
-        {/* Training modes in this topic */}
-        {Object.keys(group.mistakesByMode).length > 0 && (
-          <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-              {Object.entries(group.mistakesByMode).map(([mode, count]) => (
-                <Chip
-                  key={mode}
-                  label={`${getTrainingModeLabel(mode)} (${count})`}
-                  size="small"
-                  variant="outlined"
-                  sx={{
-                    fontSize: { xs: '0.6875rem', sm: '0.75rem' },
-                    height: { xs: 24, sm: 28 },
-                  }}
-                />
-              ))}
-            </Box>
-          </Box>
-        )}
-      </Paper>
-
-      {/* Mistake Cards Grid */}
+      {/* Cards */}
       <Box
         sx={{
           display: 'grid',
@@ -223,15 +176,15 @@ export const MistakeGroupByTopic: React.FC<MistakeGroupByTopicProps> = ({ group 
             md: 'repeat(3, 1fr)',
             lg: 'repeat(4, 1fr)',
           },
-          gap: { xs: 2, sm: 2.5, md: 3 },
+          gap: { xs: 1.5, md: 2 },
         }}
       >
         {group.mistakes.map((mistake, index) => (
-          <Box
+          <MistakeCard
             key={`${mistake.topicId}:${mistake.wordId}:${index}`}
-          >
-            <MistakeCard mistake={mistake} />
-          </Box>
+            mistake={mistake}
+            context="topic"
+          />
         ))}
       </Box>
     </Box>

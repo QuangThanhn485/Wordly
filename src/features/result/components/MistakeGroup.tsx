@@ -1,12 +1,7 @@
 // src/features/result/components/MistakeGroup.tsx
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-  Chip,
-  useTheme,
-} from '@mui/material';
+import { Box, Typography, useTheme } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { MistakeCard } from './MistakeCard';
 import { type MistakesByMode } from '../utils/dataTransform';
 import { BookOpen, Headphones, Edit, Mic } from 'lucide-react';
@@ -18,12 +13,12 @@ interface MistakeGroupProps {
 
 const getModeIcon = (mode: string) => {
   const icons: Record<string, React.ReactNode> = {
-    'flashcards-reading': <BookOpen size={24} />,
-    'flashcards-listening': <Headphones size={24} />,
-    'read-write': <Edit size={24} />,
-    'listen-write': <Mic size={24} />,
+    'flashcards-reading': <BookOpen size={18} />,
+    'flashcards-listening': <Headphones size={18} />,
+    'read-write': <Edit size={18} />,
+    'listen-write': <Mic size={18} />,
   };
-  return icons[mode] || <BookOpen size={24} />;
+  return icons[mode] || <BookOpen size={18} />;
 };
 
 export const MistakeGroup: React.FC<MistakeGroupProps> = ({ group }) => {
@@ -33,67 +28,42 @@ export const MistakeGroup: React.FC<MistakeGroupProps> = ({ group }) => {
   if (group.mistakes.length === 0) return null;
 
   return (
-    <Box sx={{ mb: 4 }}>
-      {/* Group Header */}
-      <Paper
-        elevation={2}
+    <Box sx={{ mb: 3 }}>
+      {/* Slim header */}
+      <Box
         sx={{
-          p: { xs: 2, sm: 2.5 },
-          mb: 2.5,
-          borderRadius: 2,
-          bgcolor: 'background.paper',
-          border: `2px solid ${theme.palette.primary.main}20`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.25,
+          mb: 1.5,
+          pb: 1,
+          borderBottom: `1px solid ${theme.palette.divider}`,
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box
-              sx={{
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {getModeIcon(group.mode)}
-            </Box>
-            <Box>
-              <Typography
-                variant="h5"
-                fontWeight={700}
-                sx={{
-                  fontSize: { xs: '1.25rem', sm: '1.5rem' },
-                  mb: 0.5,
-                }}
-              >
-                {group.label}
-            </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('group.summary', { words: group.totalWords, mistakes: group.totalMistakes })}
-              </Typography>
-            </Box>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            <Chip
-              label={t('group.wordsLabel', { count: group.totalWords })}
-              size="small"
-              color="primary"
-              variant="outlined"
-            />
-            <Chip
-              label={t('group.mistakesLabel', { count: group.totalMistakes })}
-              size="small"
-              color="error"
-              variant="outlined"
-            />
-          </Box>
+        <Box
+          sx={{
+            width: 30,
+            height: 30,
+            borderRadius: 1.5,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'primary.main',
+            bgcolor: alpha(theme.palette.primary.main, 0.12),
+          }}
+        >
+          {getModeIcon(group.mode)}
         </Box>
-      </Paper>
+        <Typography sx={{ fontWeight: 700, fontSize: '1rem', minWidth: 0 }} noWrap>
+          {group.label}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+          {group.totalWords} {t('group.words')} · {group.totalMistakes} {t('group.mistakes')}
+        </Typography>
+      </Box>
 
-      {/* Mistake Cards Grid */}
+      {/* Cards */}
       <Box
         sx={{
           display: 'grid',
@@ -103,29 +73,24 @@ export const MistakeGroup: React.FC<MistakeGroupProps> = ({ group }) => {
             md: 'repeat(3, 1fr)',
             lg: 'repeat(4, 1fr)',
           },
-          gap: { xs: 2, sm: 2.5, md: 3 },
+          gap: { xs: 1.5, md: 2 },
         }}
       >
         {group.mistakes.map((mistake, index) => {
-          // Create a mistake object specific to this mode
           const modeSpecificMistake = {
             ...mistake,
             totalMistakes: mistake.mistakesByMode[group.mode] || 0,
-            allModes: [group.mode], // Only show this mode
+            allModes: [group.mode],
           };
-
           return (
-            <Box
+            <MistakeCard
               key={`${mistake.topicId}:${mistake.wordId}:${group.mode}:${index}`}
-            >
-              <MistakeCard mistake={modeSpecificMistake} />
-            </Box>
+              mistake={modeSpecificMistake}
+              context="mode"
+            />
           );
         })}
       </Box>
     </Box>
   );
 };
-
-
-

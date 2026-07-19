@@ -16,6 +16,7 @@
     "byTopic": "By Topic",
     "byMode": "By Mode",
     "searchPlaceholder": "Search words...",
+    "clear": "Clear filters",
     "sortBy": "Sort By",
     "sortByCount": "Mistake Count",
     "sortByDate": "Recent",
