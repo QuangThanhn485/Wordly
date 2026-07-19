@@ -73,15 +73,16 @@ export const TopicTreeItem = memo(function TopicTreeItem({
 }) {
   const { t } = useTranslation('vocabulary');
   const theme = useTheme();
-  // Recognition only — deliberately faint so it never competes with selection.
-  const stateTint = scheduleState
-    ? alpha(
-        scheduleState === 'learned'
-          ? theme.palette.success.main
-          : theme.palette.info.main,
-        theme.palette.mode === 'dark' ? 0.1 : 0.08,
-      )
+  // Keep schedule recognition inside the topic content so row selection stays unambiguous.
+  const stateColor = scheduleState
+    ? scheduleState === 'learned'
+      ? theme.palette.success.main
+      : theme.palette.info.main
     : undefined;
+  const stateTint = stateColor
+    ? alpha(stateColor, theme.palette.mode === 'dark' ? 0.16 : 0.1)
+    : 'transparent';
+  const stateBorderColor = stateColor ? alpha(stateColor, 0.9) : 'transparent';
   return (
     <Box
       sx={{
@@ -109,7 +110,6 @@ export const TopicTreeItem = memo(function TopicTreeItem({
           borderRadius: 1,
           position: 'relative',
           flex: 1,
-          backgroundColor: stateTint,
           '&:hover': { backgroundColor: 'action.hover' },
           '&.Mui-selected': {
             backgroundColor: 'action.selected',
@@ -125,40 +125,60 @@ export const TopicTreeItem = memo(function TopicTreeItem({
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: '18px 18px minmax(0, 1fr) auto',
+            gridTemplateColumns: '9px minmax(0, 1fr)',
             alignItems: 'center',
             columnGap: 0.75,
             width: '100%',
             minWidth: 0,
           }}
         >
-          <Box aria-hidden sx={{ width: 18, height: 18 }} />
-          <TopicIcon size={17} aria-hidden />
-          <Tooltip
-            title={node.label}
-            placement="top-start"
-            enterDelay={650}
-            enterNextDelay={650}
-            disableInteractive
+          <Box aria-hidden sx={{ width: 9, height: 18 }} />
+          <Box
+            data-topic-schedule-state={scheduleState ?? 'none'}
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: '18px minmax(0, 1fr) auto',
+              alignItems: 'center',
+              columnGap: 0.75,
+              minWidth: 0,
+              height: 30,
+              px: 0.75,
+              borderLeft: '3px solid',
+              borderLeftColor: stateBorderColor,
+              borderRadius: 0.75,
+              backgroundColor: stateTint,
+              transition: theme.transitions.create(['background-color', 'border-color'], {
+                duration: theme.transitions.duration.shortest,
+              }),
+            }}
           >
-            <Typography
-              data-vocabulary-tree-label
-              variant="body2"
-              noWrap
-              sx={{ minWidth: 0, fontWeight: selected ? 600 : 400 }}
+            <TopicIcon size={17} aria-hidden color={stateColor} />
+            <Tooltip
+              title={node.label}
+              placement="top-start"
+              enterDelay={650}
+              enterNextDelay={650}
+              disableInteractive
             >
-              {node.label}
-            </Typography>
-          </Tooltip>
-          {vocabCount !== undefined && (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ ml: 0.5, fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
-            >
-              {vocabCount}
-            </Typography>
-          )}
+              <Typography
+                data-vocabulary-tree-label
+                variant="body2"
+                noWrap
+                sx={{ minWidth: 0, fontWeight: selected ? 600 : 400 }}
+              >
+                {node.label}
+              </Typography>
+            </Tooltip>
+            {vocabCount !== undefined && (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ ml: 0.5, fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
+              >
+                {vocabCount}
+              </Typography>
+            )}
+          </Box>
         </Box>
       </ListItemButton>
       <Tooltip title={t('actions.topicMenuAriaLabel', { name: node.label })} placement="right">
