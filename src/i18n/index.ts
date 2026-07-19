@@ -10,6 +10,7 @@ import enNavbar from './locales/en/navbar.json';
 import enVocabulary from './locales/en/vocabulary.json';
 import enTrain from './locales/en/train.json';
 import enResult from './locales/en/result.json';
+import enHistory from './locales/en/history.json';
 import enDataManagement from './locales/en/dataManagement.json';
 
 // Import Vietnamese translations
@@ -19,6 +20,7 @@ import viNavbar from './locales/vi/navbar.json';
 import viVocabulary from './locales/vi/vocabulary.json';
 import viTrain from './locales/vi/train.json';
 import viResult from './locales/vi/result.json';
+import viHistory from './locales/vi/history.json';
 import viDataManagement from './locales/vi/dataManagement.json';
 
 export const resources = {
@@ -29,6 +31,7 @@ export const resources = {
     vocabulary: enVocabulary,
     train: enTrain,
     result: enResult,
+    history: enHistory,
     dataManagement: enDataManagement,
   },
   vi: {
@@ -38,6 +41,7 @@ export const resources = {
     vocabulary: viVocabulary,
     train: viTrain,
     result: viResult,
+    history: viHistory,
     dataManagement: viDataManagement,
   },
 } as const;
@@ -54,7 +58,7 @@ i18n
     fallbackLng,
     ...(preferredLanguage ? { lng: preferredLanguage } : {}),
     defaultNS,
-    ns: ['common', 'home', 'navbar', 'vocabulary', 'train', 'result', 'dataManagement'],
+    ns: ['common', 'home', 'navbar', 'vocabulary', 'train', 'result', 'history', 'dataManagement'],
     interpolation: {
       escapeValue: false, // React already escapes values
     },

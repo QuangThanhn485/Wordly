@@ -43,6 +43,7 @@ import {
   type TrainingSession 
 } from '@/features/train/train-listen/sessionStorage';
 import { recordMistakes } from '@/features/train/train-listen/mistakesStorage';
+import { recordTrainingRun } from '@/features/train/utils/trainingHistory';
 import { loadTrainingSession as loadReadingSession } from '@/features/train/train-start/sessionStorage';
 import { CompletionModal, type SessionMistake } from '@/features/train/train-read-write/components/CompletionModal';
 import { speakEnglish, speakEnglishAsync, type SpeechOptions } from '@/utils/speechUtils';
@@ -186,6 +187,7 @@ const FlashcardsListeningPage = () => {
   const prevTrainingSourceRef = useRef<string | null>(null);
   const interactionLockedRef = useRef(false);
   const feedbackRunIdRef = useRef(0);
+  const historySavedRef = useRef(false);
 
   const presentedTargetIdx =
     pendingCorrectFeedbackCount > 0 && feedbackTargetIdx >= 0
@@ -204,6 +206,7 @@ const FlashcardsListeningPage = () => {
     
     if (topicChanged || trainingSourceChanged) {
       clearTrainingSession();
+      historySavedRef.current = false;
       setFlipped({});
       setRemovingCorrectCards({});
       setHiddenCorrectCards({});
@@ -573,6 +576,20 @@ const FlashcardsListeningPage = () => {
       if (!skipMistakeLogging && sessionMistakes.length > 0 && recordTopicId) {
         recordMistakes(sessionMistakes, recordTopicId, 'flashcards-listening');
       }
+      // Log the completed run to the training history (once per completion).
+      if (!historySavedRef.current) {
+        historySavedRef.current = true;
+        if (recordTopicId) {
+          recordTrainingRun({
+            topicId: recordTopicId,
+            mode: 'flashcards-listening',
+            words: items.length,
+            mistakes,
+            wrongWords: sessionMistakes.length,
+            trainingSource: trainingSource || undefined,
+          });
+        }
+      }
       setShowCompletionModal(true);
     }
   }, [
@@ -581,14 +598,17 @@ const FlashcardsListeningPage = () => {
     isLoading,
     items.length,
     hasStarted,
+    mistakes,
     sessionMistakes,
     skipMistakeLogging,
     recordTopicId,
+    trainingSource,
   ]);
   
   const handleRestart = useCallback(() => {
     feedbackRunIdRef.current += 1;
     interactionLockedRef.current = false;
+    historySavedRef.current = false;
     setFlipped({});
     setRemovingCorrectCards({});
     setHiddenCorrectCards({});

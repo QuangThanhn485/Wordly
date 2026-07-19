@@ -1,0 +1,29 @@
+{
+  "title": "Training History",
+  "today": "Go to today",
+  "prevMonth": "Previous month",
+  "nextMonth": "Next month",
+  "empty": {
+    "title": "No training history yet",
+    "description": "Finish a training run to see it on the calendar here.",
+    "action": "Start training"
+  },
+  "day": {
+    "sessions_one": "{{count}} session",
+    "sessions_other": "{{count}} sessions",
+    "noTraining": "No training on this day"
+  },
+  "session": {
+    "topic": "Vocabulary topic",
+    "startTraining": "Start training",
+    "new": "New",
+    "review": "Review",
+    "words_one": "{{count}} word",
+    "words_other": "{{count}} words",
+    "mistakes_one": "{{count}} mistake",
+    "mistakes_other": "{{count}} mistakes"
+  },
+  "tooltip": {
+    "sessions": "{{sessions}} sessions · {{words}} words · {{mistakes}} mistakes"
+  }
+}

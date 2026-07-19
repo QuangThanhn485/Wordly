@@ -25,6 +25,7 @@ import type { SxProps, Theme } from '@mui/material/styles';
 import {
   BarChart3,
   BookOpen,
+  CalendarDays,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -790,6 +791,7 @@ const Navbar: React.FC = () => {
             t('result'),
             <BarChart3 size={20} />,
           )}
+          {renderMainNavItem('/history', t('history'), <CalendarDays size={20} />)}
           {renderMainNavItem('/data', t('data'), <Database size={20} />)}
           <Tooltip
             title={t('settings.title')}

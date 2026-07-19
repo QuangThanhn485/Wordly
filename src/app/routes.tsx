@@ -20,6 +20,7 @@ const ListenWritePage = lazy(
   () => import('@/features/train/pages/ListenWritePage'),
 );
 const ResultPage = lazy(() => import('@/features/train/pages/ResultPage'));
+const HistoryPage = lazy(() => import('@/features/history/pages/HistoryPage'));
 const DataManagementPage = lazy(() => import('@/pages/DataManagementPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
@@ -58,6 +59,7 @@ export default function AppRoutes() {
         { path: 'train/read-write', element: lazyRoute(<ReadWritePage />) },
         { path: 'train/listen-write', element: lazyRoute(<ListenWritePage />) },
         { path: 'train/result', element: lazyRoute(<ResultPage />) },
+        { path: 'history', element: lazyRoute(<HistoryPage />) },
         { path: 'data', element: lazyRoute(<DataManagementPage />) },
       ],
     },

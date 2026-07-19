@@ -1,0 +1,29 @@
+{
+  "title": "Lịch sử luyện tập",
+  "today": "Về hôm nay",
+  "prevMonth": "Tháng trước",
+  "nextMonth": "Tháng sau",
+  "empty": {
+    "title": "Chưa có lịch sử luyện tập",
+    "description": "Hoàn thành một lượt luyện tập để xem lịch theo ngày tại đây.",
+    "action": "Bắt đầu luyện tập"
+  },
+  "day": {
+    "sessions_one": "{{count}} lượt luyện",
+    "sessions_other": "{{count}} lượt luyện",
+    "noTraining": "Không có luyện tập trong ngày này"
+  },
+  "session": {
+    "topic": "Chủ đề từ vựng",
+    "startTraining": "Bắt đầu train",
+    "new": "Mới học",
+    "review": "Ôn tập",
+    "words_one": "{{count}} từ",
+    "words_other": "{{count}} từ",
+    "mistakes_one": "{{count}} lỗi",
+    "mistakes_other": "{{count}} lỗi"
+  },
+  "tooltip": {
+    "sessions": "{{sessions}} lượt · {{words}} từ · {{mistakes}} lỗi"
+  }
+}

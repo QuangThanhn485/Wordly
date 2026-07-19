@@ -8,6 +8,7 @@ export const DATABASE_KEYS = {
   trainingSets: `${DATABASE_NAMESPACE}:training:sets`,
   trainingSessions: `${DATABASE_NAMESPACE}:training:sessions`,
   mistakes: `${DATABASE_NAMESPACE}:learning:mistakes`,
+  trainingHistory: `${DATABASE_NAMESPACE}:learning:history`,
   preferences: `${DATABASE_NAMESPACE}:preferences`,
   backupMetadata: `${DATABASE_NAMESPACE}:system:backup`,
 } as const;
@@ -205,6 +206,30 @@ const isValidRecordData = (key: string, data: unknown): boolean => {
         typeof mistake.trainingMode === 'string' &&
         typeof mistake.mistakeCount === 'number' &&
         typeof mistake.lastMistakeTime === 'number',
+      )
+    );
+  }
+  if (key === DATABASE_KEYS.trainingHistory) {
+    return (
+      isRecord(data) &&
+      Array.isArray(data.entries) &&
+      data.entries.every((entry) =>
+        isRecord(entry) &&
+        typeof entry.id === 'string' &&
+        typeof entry.completedAt === 'number' &&
+        Number.isFinite(entry.completedAt) &&
+        typeof entry.topicId === 'string' &&
+        typeof entry.topicLabel === 'string' &&
+        typeof entry.words === 'number' &&
+        typeof entry.mistakes === 'number' &&
+        typeof entry.wrongWords === 'number' &&
+        (entry.mode === undefined || typeof entry.mode === 'string') &&
+        (entry.kind === undefined || entry.kind === 'new' || entry.kind === 'review') &&
+        (entry.modes === undefined ||
+          (Array.isArray(entry.modes) &&
+            entry.modes.every((mode) => typeof mode === 'string'))) &&
+        (entry.trainingSource === undefined ||
+          typeof entry.trainingSource === 'string'),
       )
     );
   }

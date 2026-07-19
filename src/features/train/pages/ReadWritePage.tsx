@@ -26,6 +26,7 @@ import {
   type TrainingSession,
 } from '@/features/train/train-read-write/sessionStorage';
 import { recordMistakes } from '@/features/train/train-read-write/mistakesStorage';
+import { recordTrainingRun } from '@/features/train/utils/trainingHistory';
 import { loadTrainingSession as loadReadingSession } from '@/features/train/train-start/sessionStorage';
 import {
   CompletionModal,
@@ -312,6 +313,17 @@ const ReadWritePage = () => {
       if (!skipMistakeLogging && sessionMistakes.length > 0 && recordTopicId && !mistakesSaved) {
         recordMistakes(sessionMistakes, recordTopicId, 'read-write');
         setMistakesSaved(true);
+      }
+      // Log the completed run to the training history (once per completion).
+      if (recordTopicId) {
+        recordTrainingRun({
+          topicId: recordTopicId,
+          mode: 'read-write',
+          words: total,
+          mistakes,
+          wrongWords: sessionMistakes.length,
+          trainingSource: trainingSource || undefined,
+        });
       }
       setShowCompletionModal(true);
       setCompletionModalShown(true);

@@ -28,7 +28,7 @@ Wordly dùng mô hình **normalized catalog + aggregate theo chủ đề**:
 - Một key duy nhất: ít key nhưng lần ghi lớn và dễ xung đột.
 - Một key cho từng entity nhỏ: truy vấn chi tiết tốt nhưng quá nhiều key và thao tác ghi.
 
-Với `N` chủ đề, database dùng tối đa khoảng `7 + N` key đang hoạt động. Số lượng từ không làm tăng số key.
+Với `N` chủ đề, database dùng tối đa khoảng `8 + N` key đang hoạt động. Số lượng từ không làm tăng số key.
 
 ## 3. Namespace và danh sách key
 
@@ -42,6 +42,7 @@ Namespace hiện tại là `wordly:v3`.
 | `wordly:v3:training:sets` | Các tập từ tạm thời, ví dụ top lỗi | Ghi khi tạo lại tập luyện |
 | `wordly:v3:training:sessions` | Session của bốn chế độ luyện tập | Ghi khi tiến độ luyện tập đổi |
 | `wordly:v3:learning:mistakes` | Thống kê lỗi học tập | Ghi khi hoàn thành/cập nhật lỗi |
+| `wordly:v3:learning:history` | Nhật ký các lượt luyện tập đã hoàn thành | Ghi thêm một bản ghi khi hoàn thành một lượt |
 | `wordly:v3:preferences` | Theme, ngôn ngữ, chế độ xem, cài đặt flashcard và thời gian xem kết quả | Ghi khi cài đặt đổi |
 | `wordly:v3:system:backup` | Thời điểm backup gần nhất | Ghi khi tạo/khôi phục backup |
 

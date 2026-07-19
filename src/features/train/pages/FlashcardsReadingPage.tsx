@@ -30,6 +30,7 @@ import {
   type TrainingSession 
 } from '@/features/train/train-start/sessionStorage';
 import { recordMistakes } from '@/features/train/train-start/mistakesStorage';
+import { recordTrainingRun } from '@/features/train/utils/trainingHistory';
 import { CompletionModal, type SessionMistake } from '@/features/train/train-read-write/components/CompletionModal';
 import { speakEnglishAsync } from '@/utils/speechUtils';
 import {
@@ -173,6 +174,7 @@ const FlashcardsReadingPage = () => {
   const cardRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const interactionLockedRef = useRef(false);
   const feedbackRunIdRef = useRef(0);
+  const historySavedRef = useRef(false);
 
   const presentedTargetIdx =
     pendingCorrectFeedbackCount > 0 && feedbackTargetIdx >= 0
@@ -192,6 +194,7 @@ const FlashcardsReadingPage = () => {
     
     if (topicChanged || trainingSourceChanged) {
       clearTrainingSession();
+      historySavedRef.current = false;
       setFlipped({});
       setRemovingCorrectCards({});
       setHiddenCorrectCards({});
@@ -531,10 +534,43 @@ const FlashcardsReadingPage = () => {
     // Sort by mistake count (descending)
     return mistakesList.sort((a, b) => b.count - a.count);
   }, [wordMistakes, items]);
+
+  // Log the completed flashcard run once per completion.
+  useEffect(() => {
+    if (
+      allFlipped &&
+      pendingCorrectFeedbackCount === 0 &&
+      !isLoading &&
+      items.length > 0 &&
+      !historySavedRef.current
+    ) {
+      historySavedRef.current = true;
+      if (recordTopicId) {
+        recordTrainingRun({
+          topicId: recordTopicId,
+          mode: 'flashcards-reading',
+          words: items.length,
+          mistakes,
+          wrongWords: sessionMistakes.length,
+          trainingSource: trainingSource || undefined,
+        });
+      }
+    }
+  }, [
+    allFlipped,
+    pendingCorrectFeedbackCount,
+    isLoading,
+    items.length,
+    mistakes,
+    sessionMistakes,
+    recordTopicId,
+    trainingSource,
+  ]);
   
   const handleRestart = useCallback(() => {
     feedbackRunIdRef.current += 1;
     interactionLockedRef.current = false;
+    historySavedRef.current = false;
     setFlipped({});
     setRemovingCorrectCards({});
     setHiddenCorrectCards({});
