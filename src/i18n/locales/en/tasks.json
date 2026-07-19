@@ -1,0 +1,44 @@
+{
+  "title": "Review Tasks",
+  "today": "Go to today",
+  "toolbar": {
+    "today_one": "Today: {{count}}",
+    "today_other": "Today: {{count}}",
+    "overdue_one": "Overdue: {{count}}",
+    "overdue_other": "Overdue: {{count}}"
+  },
+  "empty": {
+    "title": "No review tasks yet",
+    "description": "Open the vocabulary library, use a topic's menu and pick \"Schedule reviews\" to let the app plan spaced repetition for you.",
+    "action": "Open vocabulary"
+  },
+  "day": {
+    "tasks_one": "{{count}} task",
+    "tasks_other": "{{count}} tasks",
+    "noTasks": "No tasks on this day"
+  },
+  "task": {
+    "new": "New",
+    "review": "Review",
+    "done": "Done",
+    "overdue": "Overdue",
+    "skip": "Skip",
+    "restore": "Restore",
+    "startTraining": "Start training",
+    "trainAgain": "Train again",
+    "trainEarly": "Practice early",
+    "trainEarlyHint": "Not due yet — results will not count toward this task",
+    "reviewSubsetHint": "Reviews the top 40% most-mistaken words of this topic",
+    "trainFull": "Full set",
+    "trainFullHint": "Reviews the whole topic — still counts toward completing this task",
+    "modeRate": "{{mode}} · {{rate}}% mistakes",
+    "modeNotPracticed": "{{mode}} · not practiced"
+  },
+  "tooltip": {
+    "day": "{{pending}} pending · {{done}} done"
+  },
+  "todayCard": {
+    "title": "Today's tasks",
+    "viewAll": "View all"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "title": "Nhiệm vụ ôn tập",
+  "today": "Về hôm nay",
+  "toolbar": {
+    "today_one": "Hôm nay: {{count}}",
+    "today_other": "Hôm nay: {{count}}",
+    "overdue_one": "Quá hạn: {{count}}",
+    "overdue_other": "Quá hạn: {{count}}"
+  },
+  "empty": {
+    "title": "Chưa có nhiệm vụ ôn tập",
+    "description": "Mở kho từ vựng, nhấn menu của một chủ đề và chọn \"Tạo lịch ôn tập\" để hệ thống tự xếp lịch ôn ngắt quãng.",
+    "action": "Mở kho từ vựng"
+  },
+  "day": {
+    "tasks_one": "{{count}} nhiệm vụ",
+    "tasks_other": "{{count}} nhiệm vụ",
+    "noTasks": "Không có nhiệm vụ trong ngày này"
+  },
+  "task": {
+    "new": "Học mới",
+    "review": "Ôn tập",
+    "done": "Hoàn thành",
+    "overdue": "Quá hạn",
+    "skip": "Bỏ qua",
+    "restore": "Khôi phục",
+    "startTraining": "Bắt đầu train",
+    "trainAgain": "Ôn lại",
+    "trainEarly": "Luyện trước",
+    "trainEarlyHint": "Chưa đến ngày — kết quả sẽ không tính vào nhiệm vụ này",
+    "reviewSubsetHint": "Ôn 40% từ sai nhiều nhất của bộ từ này",
+    "trainFull": "Ôn cả bộ",
+    "trainFullHint": "Ôn toàn bộ từ vựng — vẫn được tính hoàn thành nhiệm vụ",
+    "modeRate": "{{mode}} · {{rate}}% lỗi",
+    "modeNotPracticed": "{{mode}} · chưa ôn"
+  },
+  "tooltip": {
+    "day": "{{pending}} chờ ôn · {{done}} hoàn thành"
+  },
+  "todayCard": {
+    "title": "Nhiệm vụ hôm nay",
+    "viewAll": "Xem tất cả"
+  }
+}

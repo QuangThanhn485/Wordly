@@ -9,6 +9,7 @@ export const DATABASE_KEYS = {
   trainingSessions: `${DATABASE_NAMESPACE}:training:sessions`,
   mistakes: `${DATABASE_NAMESPACE}:learning:mistakes`,
   trainingHistory: `${DATABASE_NAMESPACE}:learning:history`,
+  learningTasks: `${DATABASE_NAMESPACE}:learning:tasks`,
   preferences: `${DATABASE_NAMESPACE}:preferences`,
   backupMetadata: `${DATABASE_NAMESPACE}:system:backup`,
 } as const;
@@ -230,6 +231,54 @@ const isValidRecordData = (key: string, data: unknown): boolean => {
             entry.modes.every((mode) => typeof mode === 'string'))) &&
         (entry.trainingSource === undefined ||
           typeof entry.trainingSource === 'string'),
+      )
+    );
+  }
+  if (key === DATABASE_KEYS.learningTasks) {
+    const isDayKey = (value: unknown): boolean =>
+      typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+    const isModeResult = (value: unknown): boolean =>
+      isRecord(value) &&
+      typeof value.mistakes === 'number' &&
+      value.mistakes >= 0 &&
+      typeof value.words === 'number' &&
+      value.words >= 0 &&
+      typeof value.at === 'number';
+    return (
+      isRecord(data) &&
+      isRecord(data.schedules) &&
+      Object.entries(data.schedules).every(([topicId, schedule]) =>
+        isRecord(schedule) &&
+        schedule.topicId === topicId &&
+        typeof schedule.topicLabel === 'string' &&
+        isDayKey(schedule.anchorDate) &&
+        Array.isArray(schedule.intervals) &&
+        schedule.intervals.every(
+          (interval) =>
+            typeof interval === 'number' &&
+            Number.isInteger(interval) &&
+            interval > 0,
+        ) &&
+        typeof schedule.createdAt === 'number' &&
+        typeof schedule.updatedAt === 'number',
+      ) &&
+      Array.isArray(data.tasks) &&
+      data.tasks.every((task) =>
+        isRecord(task) &&
+        typeof task.id === 'string' &&
+        typeof task.topicId === 'string' &&
+        typeof task.topicLabel === 'string' &&
+        isDayKey(task.dueDate) &&
+        (task.kind === 'new' || task.kind === 'review') &&
+        typeof task.stageIndex === 'number' &&
+        Number.isInteger(task.stageIndex) &&
+        task.stageIndex >= 0 &&
+        (task.status === 'new' || task.status === 'done' || task.status === 'skipped') &&
+        typeof task.createdAt === 'number' &&
+        (task.completedAt === undefined || typeof task.completedAt === 'number') &&
+        (task.modeResults === undefined ||
+          (isRecord(task.modeResults) &&
+            Object.values(task.modeResults).every(isModeResult))),
       )
     );
   }

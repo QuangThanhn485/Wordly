@@ -67,6 +67,20 @@
       "warning": "This action cannot be undone.",
       "topicCount": "This folder contains {{count}} topic(s)"
     },
+    "scheduleReview": {
+      "title": "Review schedule: {{name}}",
+      "intervalsLabel": "Review cycle (days after the first day)",
+      "intervalsHelper": "Default: 1, 7, 30, 90 — editable per topic",
+      "intervalsError": "Enter positive whole day numbers separated by commas",
+      "existing": "This topic already has a schedule (first day {{date}}). Creating a new one replaces its unfinished tasks.",
+      "anchorDone": "The \"New\" stage ({{date}}) is completed, so the schedule cannot be deleted — only its review cycle can be edited.",
+      "locked": "A review stage is already completed, so this schedule can no longer be edited or deleted.",
+      "deleteSchedule": "Delete schedule",
+      "create": "Create schedule",
+      "updateCycle": "Update cycle",
+      "ownDaysHint": "Dashed outline: days already scheduled for this topic",
+      "saveError": "Could not save changes. Please try again."
+    },
     "vocabForm": {
       "titleAdd": "Add New Word",
       "titleEdit": "Edit Word",
@@ -87,6 +101,7 @@
   "contextMenu": {
     "open": "Open",
     "search": "Search in folder",
+    "scheduleReview": "Schedule reviews",
     "rename": "Rename",
     "delete": "Delete",
     "newSubfolder": "New Subfolder",
@@ -154,7 +169,10 @@
     "importFolderSuccess": "Imported folder \"{{name}}\" ({{topicCount}} topics, {{wordCount}} words).",
     "downloadSampleSuccess": "Downloaded the sample import data file.",
     "cutInstruction": "Cut. Choose destination folder and Paste.",
-    "cannotDeleteRoot": "Cannot delete root folder!"
+    "cannotDeleteRoot": "Cannot delete root folder!",
+    "scheduleCreated": "Review schedule created for \"{{name}}\" ({{count}} tasks)",
+    "scheduleUpdated": "Review cycle updated for \"{{name}}\"",
+    "scheduleDeleted": "Review schedule for \"{{name}}\" deleted"
   },
   "actions": {
     "addWord": "Add Word",

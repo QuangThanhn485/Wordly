@@ -67,6 +67,20 @@
       "warning": "Hành động này không thể hoàn tác.",
       "topicCount": "Thư mục này chứa {{count}} chủ đề"
     },
+    "scheduleReview": {
+      "title": "Lịch ôn: {{name}}",
+      "intervalsLabel": "Chu kỳ ôn (ngày sau mốc đầu)",
+      "intervalsHelper": "Mặc định: 1, 7, 30, 90 — có thể sửa riêng cho bộ từ này",
+      "intervalsError": "Chỉ nhập số ngày nguyên dương, cách nhau bởi dấu phẩy",
+      "existing": "Bộ từ này đã có lịch ôn (mốc đầu {{date}}). Tạo lịch mới sẽ thay các nhiệm vụ chưa hoàn thành.",
+      "anchorDone": "Mốc \"Học mới\" ({{date}}) đã hoàn thành nên không thể xóa lịch — chỉ có thể sửa chu kỳ ôn.",
+      "locked": "Lịch đã có mốc ôn tập hoàn thành nên không thể chỉnh sửa hay xóa.",
+      "deleteSchedule": "Xóa lịch",
+      "create": "Tạo lịch",
+      "updateCycle": "Cập nhật chu kỳ",
+      "ownDaysHint": "Ô viền đứt: ngày đã xếp lịch của bộ từ này",
+      "saveError": "Không thể lưu thay đổi. Vui lòng thử lại."
+    },
     "vocabForm": {
       "titleAdd": "Thêm từ mới",
       "titleEdit": "Sửa từ",
@@ -87,6 +101,7 @@
   "contextMenu": {
     "open": "Mở",
     "search": "Tìm kiếm trong thư mục",
+    "scheduleReview": "Tạo lịch ôn tập",
     "rename": "Đổi tên",
     "delete": "Xóa",
     "newSubfolder": "Thư mục con mới",
@@ -154,7 +169,10 @@
     "importFolderSuccess": "Đã nhập thư mục \"{{name}}\" ({{topicCount}} chủ đề, {{wordCount}} từ vựng).",
     "downloadSampleSuccess": "Đã tải file dữ liệu mẫu để import.",
     "cutInstruction": "Đã cắt. Hãy chọn thư mục đích và Dán.",
-    "cannotDeleteRoot": "Không thể xóa thư mục gốc!"
+    "cannotDeleteRoot": "Không thể xóa thư mục gốc!",
+    "scheduleCreated": "Đã tạo lịch ôn cho \"{{name}}\" ({{count}} nhiệm vụ)",
+    "scheduleUpdated": "Đã cập nhật chu kỳ ôn cho \"{{name}}\"",
+    "scheduleDeleted": "Đã xóa lịch ôn của \"{{name}}\""
   },
   "actions": {
     "addWord": "Thêm từ",

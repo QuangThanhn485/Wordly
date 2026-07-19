@@ -30,6 +30,7 @@ import { useTranslation } from 'react-i18next';
 import { loadVocabularyTopicCounts, loadTreeFromStorage } from '@/features/vocabulary/utils/storageUtils';
 import { getAllTopicIds } from '@/features/vocabulary/utils/treeUtils';
 import { loadMistakesStats } from '@/features/train/train-read-write/mistakesStorage';
+import { TodayTasksCard } from '@/features/tasks/components/TodayTasksCard';
 
 interface StatCardProps {
   title: string;
@@ -283,6 +284,9 @@ const Home: React.FC = () => {
             </Button>
           </Stack>
         </Box>
+
+        {/* Today's review tasks (hidden when the day has none) */}
+        <TodayTasksCard />
 
         {/* Statistics Cards */}
         <Box

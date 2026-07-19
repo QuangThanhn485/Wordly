@@ -35,6 +35,7 @@ import {
   Headphones,
   Home,
   Library,
+  ListTodo,
   Menu,
   Mic,
   Moon,
@@ -786,6 +787,7 @@ const Navbar: React.FC = () => {
 
           {renderExpandedTrainingItems()}
 
+          {renderMainNavItem('/tasks', t('tasks'), <ListTodo size={20} />)}
           {renderMainNavItem(
             '/train/result',
             t('result'),

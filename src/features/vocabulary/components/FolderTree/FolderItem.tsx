@@ -1,5 +1,6 @@
 import React, { memo, useCallback, useMemo } from 'react';
-import { Box, Collapse, IconButton, List, ListItemButton, Tooltip, Typography } from '@mui/material';
+import { Box, Collapse, IconButton, List, ListItemButton, Tooltip, Typography, useTheme } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import {
   Folder as FolderIcon,
   FolderOpen as FolderOpenIcon,
@@ -9,6 +10,7 @@ import {
   MoreVertical as MoreIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { TopicScheduleDisplayState } from '@/features/tasks/utils/tasksStorage';
 import type { FolderNode, TopicItem } from '../../types';
 
 const MAX_VISIBLE_INDENT_LEVEL = 6;
@@ -57,6 +59,7 @@ export const TopicTreeItem = memo(function TopicTreeItem({
   vocabCount,
   selected = false,
   forceShowMenu = false,
+  scheduleState,
 }: {
   node: TopicItem;
   onClick: () => void;
@@ -65,8 +68,20 @@ export const TopicTreeItem = memo(function TopicTreeItem({
   vocabCount?: number;
   selected?: boolean;
   forceShowMenu?: boolean;
+  /** Subtle tint: 'scheduled' (has review plan) or 'learned' (anchor done). */
+  scheduleState?: TopicScheduleDisplayState;
 }) {
   const { t } = useTranslation('vocabulary');
+  const theme = useTheme();
+  // Recognition only — deliberately faint so it never competes with selection.
+  const stateTint = scheduleState
+    ? alpha(
+        scheduleState === 'learned'
+          ? theme.palette.success.main
+          : theme.palette.info.main,
+        theme.palette.mode === 'dark' ? 0.1 : 0.08,
+      )
+    : undefined;
   return (
     <Box
       sx={{
@@ -94,6 +109,7 @@ export const TopicTreeItem = memo(function TopicTreeItem({
           borderRadius: 1,
           position: 'relative',
           flex: 1,
+          backgroundColor: stateTint,
           '&:hover': { backgroundColor: 'action.hover' },
           '&.Mui-selected': {
             backgroundColor: 'action.selected',
@@ -183,6 +199,7 @@ const FolderItemComponent = function FolderItem({
   onToggle,
   vocabCountMap,
   selectedTopicId,
+  scheduleStateMap,
 }: {
   node: FolderNode;
   level?: number;
@@ -194,6 +211,7 @@ const FolderItemComponent = function FolderItem({
   onToggle?: (folderId: string, open: boolean) => void;
   vocabCountMap?: Record<string, number>; // topicId -> count
   selectedTopicId?: string | null;
+  scheduleStateMap?: Record<string, TopicScheduleDisplayState>; // topicId -> tint
 }) {
   const { t } = useTranslation('vocabulary');
 
@@ -328,6 +346,7 @@ const FolderItemComponent = function FolderItem({
                 onToggle={onToggle}
                 vocabCountMap={vocabCountMap}
                 selectedTopicId={selectedTopicId}
+                scheduleStateMap={scheduleStateMap}
               />
             ) : (
               <TopicTreeItem
@@ -339,6 +358,7 @@ const FolderItemComponent = function FolderItem({
                 vocabCount={vocabCountMap?.[child.id]}
                 selected={child.id === selectedTopicId}
                 forceShowMenu={forceShowMenu}
+                scheduleState={scheduleStateMap?.[child.id]}
               />
             ),
           )}

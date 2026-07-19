@@ -56,6 +56,7 @@ import {
   ArrowLeft as ArrowBackIcon,
   FileDown as SampleDownloadIcon,
   Search as SearchIcon,
+  CalendarPlus as ScheduleIcon,
 } from 'lucide-react';
 
 // Import types
@@ -107,7 +108,9 @@ import {
   ConfirmDeleteDialog,
   VocabFormDialog,
   SearchDialog,
+  ScheduleReviewDialog,
 } from '../components/dialogs';
+import { getTopicScheduleStates } from '@/features/tasks/utils/tasksStorage';
 import { VocabDetailPanel } from '../components/VocabDetailPanel';
 import { loadPreferences, updatePreferences } from '@/data';
 
@@ -753,6 +756,20 @@ const VocabularyPage: React.FC = () => {
     node: FolderNode;
     label: string;
   } | null>(null);
+
+  // ===== Schedule-review dialog =====
+  const [scheduleTarget, setScheduleTarget] = useState<{
+    topicId: string;
+    topicLabel: string;
+  } | null>(null);
+  // Subtle tree tints: scheduled vs learned topics. Recomputed when the
+  // schedule dialog reports a change or the tree itself changes (deletes).
+  const [taskStateVersion, setTaskStateVersion] = useState(0);
+  const topicScheduleStates = useMemo(
+    () => getTopicScheduleStates(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [taskStateVersion, tree],
+  );
 
   // ===== Vocab form dialog =====
   const [vocabFormOpen, setVocabFormOpen] = useState(false);
@@ -1748,6 +1765,15 @@ const VocabularyPage: React.FC = () => {
     setSearchOpen(false);
   }, []);
 
+  // Open the spaced-repetition scheduling dialog from a topic's context menu.
+  const startScheduleReview = useCallback(() => {
+    if (!menu || menu.type !== 'topic') return;
+    const located = treeIndex.findByPath(menu.path);
+    if (!located || located.node.kind !== 'topic') return;
+    setScheduleTarget({ topicId: located.node.id, topicLabel: located.node.label });
+    closeMenu();
+  }, [menu, treeIndex, closeMenu]);
+
   // Expand the ancestor folders so a matched node becomes visible in the tree.
   const revealPath = useCallback((path: string[], includeLast: boolean) => {
     const foldersToOpen = includeLast ? path : path.slice(0, -1);
@@ -1935,6 +1961,7 @@ const VocabularyPage: React.FC = () => {
                   onToggle={handleFolderToggle}
                   vocabCountMap={vocabCountMap}
                   selectedTopicId={selectedTopic?.id || null}
+                  scheduleStateMap={topicScheduleStates}
                 />
               </List>
             </Box>
@@ -2468,6 +2495,25 @@ const VocabularyPage: React.FC = () => {
               <ListItemText primary={t('contextMenu.deleteFolder')} />
           </MenuItem>,
         ] : [
+          <MenuItem
+            key="schedule-review"
+            onClick={startScheduleReview}
+            sx={{
+              fontSize: { xs: '0.875rem', sm: '1rem' },
+              py: { xs: 1.25, sm: 1 },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+              <ScheduleIcon size={isSmDown ? 18 : 20} />
+            </ListItemIcon>
+            <ListItemText
+              primary={t('contextMenu.scheduleReview')}
+              primaryTypographyProps={{
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+              }}
+            />
+          </MenuItem>,
+          <Divider key="divider-schedule" />,
           <MenuItem key="export-topic" onClick={handleExportTopic}>
               <ListItemIcon><ExportIcon fontSize="small" /></ListItemIcon>
             <ListItemText primary={t('contextMenu.exportTopic')} />
@@ -2612,6 +2658,19 @@ const VocabularyPage: React.FC = () => {
         vocab={detailVocab}
         onClose={closeVocabDetail}
       />
+
+      {scheduleTarget && (
+        <ScheduleReviewDialog
+          open
+          topicId={scheduleTarget.topicId}
+          topicLabel={scheduleTarget.topicLabel}
+          onClose={() => setScheduleTarget(null)}
+          onNotify={(message) => {
+            showSnack(message);
+            setTaskStateVersion((version) => version + 1);
+          }}
+        />
+      )}
 
       <SearchDialog
         open={searchOpen}

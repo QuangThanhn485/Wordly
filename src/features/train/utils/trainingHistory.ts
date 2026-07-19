@@ -11,6 +11,7 @@ import {
   writeDatabaseValue,
 } from '@/data';
 import { getTopicLabel } from '@/features/vocabulary/utils/storageUtils';
+import { applyTrainingRunToTasks } from '@/features/tasks/utils/tasksStorage';
 import type { TrainingMode } from './trainingModes';
 
 export type TrainingHistoryKind = 'new' | 'review';
@@ -99,6 +100,16 @@ export type RecordTrainingRunInput = {
 export const recordTrainingRun = (input: RecordTrainingRunInput): void => {
   try {
     if (!input.topicId) return;
+    // Feed the review-task engine first: it needs the raw per-mode result,
+    // not the per-day merge below. It no-ops for top-mistakes subset runs.
+    applyTrainingRunToTasks({
+      topicId: input.topicId,
+      mode: input.mode,
+      words: input.words,
+      mistakes: input.mistakes,
+      completedAt: input.completedAt,
+      trainingSource: input.trainingSource,
+    });
     const completedAt = input.completedAt ?? Date.now();
     const todayKey = localDayKey(completedAt);
     const label = input.topicLabel || getTopicLabel(input.topicId) || input.topicId;

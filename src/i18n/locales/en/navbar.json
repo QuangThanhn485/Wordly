@@ -4,6 +4,7 @@
   "train": "Train",
   "trainingTopic": "Training topic",
   "result": "Result",
+  "tasks": "Tasks",
   "history": "History",
   "data": "Data",
   "settings": {
@@ -36,4 +37,3 @@
     "switchLanguage": "Switch language"
   }
 }
-

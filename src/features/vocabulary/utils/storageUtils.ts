@@ -8,6 +8,10 @@ import {
   restoreDatabaseBackup,
   writeDatabaseValue,
 } from '@/data';
+import {
+  purgeAllTasks,
+  purgeTopicTasks,
+} from '@/features/tasks/utils/tasksStorage';
 import type { FolderNode, TopicItem, VocabItem } from '../types';
 
 export const VOCABULARY_CATALOG_SCHEMA_VERSION = 1 as const;
@@ -367,6 +371,8 @@ export const saveVocabularyTopic = (
 export const deleteVocabularyTopic = (topicId: string): void => {
   removeDatabaseValue(topicStorageKey(topicId));
   updateCatalogTopicCount(topicId, 0);
+  // Cascade: a deleted topic must not leave orphan review tasks behind.
+  purgeTopicTasks(topicId);
 };
 
 export const loadVocabularyTopics = (): Record<string, VocabItem[]> | null => {
@@ -419,6 +425,8 @@ export const clearVocabularyTopics = (): number => {
     .forEach(removeDatabaseValue);
   removeDatabaseValue(DATABASE_KEYS.vocabularyCatalog);
   removeDatabaseValue(DATABASE_KEYS.trainingSets);
+  // Cascade: without any topics, review schedules/tasks are all orphans.
+  purgeAllTasks();
   return topicIds.length;
 };
 

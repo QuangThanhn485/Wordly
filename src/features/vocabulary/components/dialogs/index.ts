@@ -4,4 +4,5 @@ export * from './NewTopicDialog';
 export * from './ConfirmDeleteDialog';
 export * from './VocabFormDialog';
 export * from './SearchDialog';
+export * from './ScheduleReviewDialog';
 
