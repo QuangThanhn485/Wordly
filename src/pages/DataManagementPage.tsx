@@ -39,11 +39,13 @@ import { useTranslation } from 'react-i18next';
 import {
   clearDatabase,
   createDatabaseBackup,
+  flushPendingCloudSync,
   getDatabaseUsageBytes,
   loadBackupMetadata,
   restoreDatabaseBackup,
   saveBackupMetadata,
 } from '@/data';
+import { DataSourceSettings } from '@/features/data/components/DataSourceSettings';
 
 const DataManagementPage: React.FC = () => {
   const theme = useTheme();
@@ -107,7 +109,7 @@ const DataManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [showSuccessDialog]);
+  }, [showSuccessDialog, t]);
 
   // Delete result data by date range or all
   const handleDeleteResults = useCallback(() => {
@@ -161,7 +163,7 @@ const DataManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate, deleteReportsPreset, showSuccessDialog]);
+  }, [startDate, endDate, deleteReportsPreset, showSuccessDialog, t]);
 
   const closeDeleteReportsDialog = () => {
     setDeleteResultDialogOpen(false);
@@ -186,14 +188,25 @@ const DataManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [showSuccessDialog]);
+  }, [showSuccessDialog, t]);
 
   // Delete all data except backup timestamp
-  const handleDeleteAllData = useCallback(() => {
+  const handleDeleteAllData = useCallback(async () => {
     try {
       setLoading(true);
       
       const deletedCount = clearDatabase({ preserveBackupMetadata: true });
+      try {
+        await flushPendingCloudSync();
+      } catch (syncError) {
+        console.error('Cloud sync after delete failed:', syncError);
+        setAlert({
+          type: 'error',
+          message: syncError instanceof Error
+            ? syncError.message
+            : t('messages.unknownError'),
+        });
+      }
       
       showSuccessDialog(t('messages.deleteAllSuccess', { count: deletedCount }));
       setDeleteAllDialogOpen(false);
@@ -209,7 +222,7 @@ const DataManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [showSuccessDialog]);
+  }, [showSuccessDialog, t]);
 
   // Import from backup file
   const handleImport = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -217,13 +230,24 @@ const DataManagementPage: React.FC = () => {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         setLoading(true);
         const content = e.target?.result as string;
         const backupData = JSON.parse(content);
         const restored = restoreDatabaseBackup(backupData);
         saveBackupMetadata(restored.exportedAt);
+        try {
+          await flushPendingCloudSync();
+        } catch (syncError) {
+          console.error('Cloud sync after restore failed:', syncError);
+          setAlert({
+            type: 'error',
+            message: syncError instanceof Error
+              ? syncError.message
+              : t('messages.unknownError'),
+          });
+        }
 
         showSuccessDialog(t('messages.restoreSuccess'));
         setImportDialogOpen(false);
@@ -244,7 +268,7 @@ const DataManagementPage: React.FC = () => {
       }
     };
     reader.readAsText(file);
-  }, [showSuccessDialog]);
+  }, [showSuccessDialog, t]);
 
   const backupTimestamp = getBackupTimestamp();
   const backupExists = Boolean(backupTimestamp);
@@ -262,7 +286,6 @@ const DataManagementPage: React.FC = () => {
   const isDark = theme.palette.mode === 'dark';
   const dateLocale = i18n.language || undefined;
   const formatDateTime = (value: Date) => value.toLocaleString(dateLocale);
-  const formatDate = (value: Date) => value.toLocaleDateString(dateLocale);
   const storageUsageKb = getDatabaseUsageBytes() / 1024;
 
   const startOfDay = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate(), 0, 0, 0, 0);
@@ -325,9 +348,9 @@ const DataManagementPage: React.FC = () => {
 
   const iconBadgeSx = (color: string) =>
     ({
-      width: 44,
-      height: 44,
-      borderRadius: 999,
+      width: 36,
+      height: 36,
+      borderRadius: 1,
       display: 'grid',
       placeItems: 'center',
       flexShrink: 0,
@@ -370,82 +393,26 @@ const DataManagementPage: React.FC = () => {
           width: '100%',
           minHeight: '100vh',
           bgcolor: 'background.default',
-          py: { xs: 2, sm: 3, md: 4 },
+          py: { xs: 2, sm: 2.5 },
         }}
       >
         <Container maxWidth="lg">
-          {/* Header */}
-          <Paper
+          <Box
             sx={{
-              ...surfaceSx,
-              p: { xs: 2.25, sm: 3 },
-              mb: { xs: 2.5, sm: 3.5 },
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              mb: 2.5,
             }}
           >
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: { xs: 'flex-start', sm: 'center' },
-                justifyContent: 'space-between',
-                gap: 2,
-                flexWrap: 'wrap',
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0, flex: '1 1 320px' }}>
-                <Box sx={iconBadgeSx(theme.palette.primary.main)}>
-                  <Database size={22} />
-                </Box>
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography
-                    variant="h4"
-                    fontWeight={900}
-                    sx={{
-                      fontSize: { xs: '1.6rem', sm: '2.1rem', md: '2.4rem' },
-                      letterSpacing: '-0.03em',
-                      lineHeight: 1.1,
-                    }}
-                    noWrap
-                  >
-                    {t('title')}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.4 }}>
-                    {t('backup.subtitle')}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={1}
-                sx={{
-                  alignItems: { xs: 'stretch', sm: 'center' },
-                  width: { xs: '100%', sm: 'auto' },
-                }}
-              >
-                <Button
-                  variant="contained"
-                  startIcon={<Upload size={18} />}
-                  onClick={() => setBackupDialogOpen(true)}
-                  sx={{ borderRadius: 2, py: 1.05, fontWeight: 900 }}
-                >
-                  {t('buttons.startBackup')}
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<RotateCcw size={18} />}
-                  onClick={() => setImportDialogOpen(true)}
-                  sx={{
-                    borderRadius: 2,
-                    py: 1.05,
-                    fontWeight: 900,
-                    borderColor: alpha(theme.palette.divider, isDark ? 0.28 : 0.65),
-                  }}
-                >
-                  {t('buttons.startRestore')}
-                </Button>
-              </Stack>
+            <Box sx={iconBadgeSx(theme.palette.primary.main)}>
+              <Database size={20} />
             </Box>
-          </Paper>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h5" fontWeight={700}>{t('title')}</Typography>
+              <Typography variant="body2" color="text.secondary">{t('backup.subtitle')}</Typography>
+            </Box>
+          </Box>
 
           {/* Alert */}
           {alert && (
@@ -510,7 +477,7 @@ const DataManagementPage: React.FC = () => {
                     <Box sx={iconBadgeSx(theme.palette.success.main)}>
                       <CheckCircle size={22} />
                     </Box>
-                    <Typography variant="h6" fontWeight={900} sx={{ letterSpacing: '-0.01em' }} noWrap>
+                    <Typography variant="h6" fontWeight={700} noWrap>
                       {successDialog.title}
                     </Typography>
                   </Box>
@@ -535,6 +502,10 @@ const DataManagementPage: React.FC = () => {
               </DialogActions>
             </Dialog>
           )}
+
+          <Box sx={{ mb: { xs: 2.5, sm: 3 } }}>
+            <DataSourceSettings />
+          </Box>
 
           {/* Overview + Actions (compact layout) */}
           <Paper sx={{ ...surfaceSx, overflow: 'hidden', mb: { xs: 2.5, sm: 3 } }}>

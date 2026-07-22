@@ -48,6 +48,25 @@ const recordCache = new Map<
   { serialized: string; record: DatabaseRecord<unknown> }
 >();
 
+export type DatabaseMutation = {
+  kind: 'write' | 'remove' | 'restore' | 'clear';
+  keys: string[];
+};
+
+type DatabaseMutationListener = (mutation: DatabaseMutation) => void;
+const mutationListeners = new Set<DatabaseMutationListener>();
+
+const notifyDatabaseMutation = (mutation: DatabaseMutation): void => {
+  mutationListeners.forEach((listener) => listener(mutation));
+};
+
+export const addDatabaseMutationListener = (
+  listener: DatabaseMutationListener,
+): (() => void) => {
+  mutationListeners.add(listener);
+  return () => mutationListeners.delete(listener);
+};
+
 const createId = (): string => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -376,6 +395,11 @@ const listRawDatabaseKeys = (): string[] => {
   return keys.sort();
 };
 
+export const hasValidLocalDatabase = (): boolean => {
+  const meta = readRawRecord(DATABASE_KEYS.meta);
+  return Boolean(meta && isValidRecordData(DATABASE_KEYS.meta, meta.data));
+};
+
 const writeRawRecord = <T,>(
   key: string,
   data: T,
@@ -397,6 +421,7 @@ const writeRawRecord = <T,>(
     serialized,
     record: record as DatabaseRecord<unknown>,
   });
+  notifyDatabaseMutation({ kind: 'write', keys: [key] });
   return record;
 };
 
@@ -461,6 +486,7 @@ export const removeDatabaseValue = (key: string): boolean => {
   const existed = localStorage.getItem(key) !== null;
   localStorage.removeItem(key);
   recordCache.delete(key);
+  if (existed) notifyDatabaseMutation({ kind: 'remove', keys: [key] });
   return existed;
 };
 
@@ -495,10 +521,10 @@ export const createDatabaseBackup = (exportedAt = Date.now()): DatabaseBackup =>
     exportedAt,
     records,
   };
-  return validateBackup(backup);
+  return validateDatabaseBackup(backup);
 };
 
-const validateBackup = (backup: unknown): DatabaseBackup => {
+export const validateDatabaseBackup = (backup: unknown): DatabaseBackup => {
   if (
     !isRecord(backup) ||
     backup.format !== 'wordly-key-value-backup' ||
@@ -573,7 +599,7 @@ const validateBackup = (backup: unknown): DatabaseBackup => {
 
 export const restoreDatabaseBackup = (input: unknown): DatabaseBackup => {
   initializeDatabase();
-  const backup = validateBackup(input);
+  const backup = validateDatabaseBackup(input);
   const previousValues = new Map<string, string>();
   listRawDatabaseKeys().forEach((key) => {
     const value = localStorage.getItem(key);
@@ -592,6 +618,10 @@ export const restoreDatabaseBackup = (input: unknown): DatabaseBackup => {
     });
     initialized = false;
     initializeDatabase();
+    notifyDatabaseMutation({
+      kind: 'restore',
+      keys: Object.keys(backup.records),
+    });
     return backup;
   } catch (error) {
     listRawDatabaseKeys().forEach((key) => localStorage.removeItem(key));
@@ -618,6 +648,7 @@ export const clearDatabase = (
   if (preservedBackup) {
     localStorage.setItem(DATABASE_KEYS.backupMetadata, preservedBackup);
   }
+  notifyDatabaseMutation({ kind: 'clear', keys });
   return keys.filter((key) => key !== DATABASE_KEYS.meta).length;
 };
 
