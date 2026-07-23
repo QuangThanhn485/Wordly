@@ -66,21 +66,19 @@ export const TrainingToolbar = ({
           display: hasCenterContent ? 'grid' : 'flex',
           gridTemplateColumns: hasCenterContent
             ? {
-                xs: 'minmax(0, 1fr) auto',
+                xs: 'auto minmax(0, 1fr) auto',
                 md: 'minmax(170px, 1fr) minmax(150px, auto) minmax(170px, 1fr)',
               }
             : undefined,
-          gridTemplateRows: hasCenterContent
-            ? { xs: 'auto auto', md: 'auto' }
-            : undefined,
+          gridTemplateRows: hasCenterContent ? 'auto' : undefined,
           flexDirection: hasCenterContent
             ? undefined
             : 'row',
           flexWrap: hasCenterContent ? 'nowrap' : { xs: 'wrap', md: 'nowrap' },
           alignItems: 'center',
           justifyContent: 'space-between',
-          columnGap: { xs: 1, sm: 1.5 },
-          rowGap: { xs: 0.625, md: 0 },
+          columnGap: { xs: 0.5, sm: 0.75, md: 1.5 },
+          rowGap: 0,
           position: 'relative',
         }}
       >
@@ -107,9 +105,9 @@ export const TrainingToolbar = ({
             onClick={() => onModeChange(mode === 'vi-en' ? 'en-vi' : 'vi-en')}
             aria-label={t('toolbar.switchDirection')}
             sx={{
-              minWidth: { xs: 84, md: 104 },
-              width: { xs: 84, md: 'auto' },
-              maxWidth: { xs: 84, md: 'none' },
+              minWidth: { xs: 76, md: 104 },
+              width: { xs: 76, md: 'auto' },
+              maxWidth: { xs: 76, md: 'none' },
               px: { xs: 0.5, md: 1.25 },
               fontSize: { xs: '0.75rem', md: '0.8125rem' },
               '& .MuiButton-startIcon': {
@@ -178,11 +176,11 @@ export const TrainingToolbar = ({
           <Box
             sx={{
               minWidth: 0,
-              gridColumn: { xs: '1 / -1', md: '2' },
-              gridRow: { xs: '2', md: '1' },
+              gridColumn: '2',
+              gridRow: '1',
               justifySelf: 'center',
               width: '100%',
-              maxWidth: { xs: '100%', md: 440 },
+              maxWidth: 440,
               display: 'flex',
               justifyContent: 'center',
             }}
@@ -204,7 +202,7 @@ export const TrainingToolbar = ({
             pr: 0,
             ml: hasCenterContent ? 0 : 'auto',
             gridColumn: hasCenterContent
-              ? { xs: '2', md: '3' }
+              ? '3'
               : undefined,
             gridRow: hasCenterContent
               ? '1'
@@ -242,10 +240,11 @@ export const TrainingToolbar = ({
               </Typography>
             </Box>
             <Box
+              aria-label={t('toolbar.mistakesValue', { count: mistakes })}
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 0.5,
+                gap: { xs: 0.25, md: 0.5 },
                 color: mistakes > 0 ? 'error.main' : 'text.secondary',
                 whiteSpace: 'nowrap',
               }}
@@ -259,7 +258,12 @@ export const TrainingToolbar = ({
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
-                {t('toolbar.mistakesValue', { count: mistakes })}
+                <Box component="span" sx={{ display: { xs: 'inline', md: 'none' } }}>
+                  {mistakes}
+                </Box>
+                <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+                  {t('toolbar.mistakesValue', { count: mistakes })}
+                </Box>
               </Typography>
             </Box>
           </Box>
@@ -276,7 +280,7 @@ export const TrainingToolbar = ({
               alignItems: 'center',
               gap: 0.25,
               flexShrink: 0,
-              minWidth: 68,
+              minWidth: { xs: 'auto', md: 68 },
               justifyContent: 'flex-end',
               position: 'static',
               zIndex: 1,
