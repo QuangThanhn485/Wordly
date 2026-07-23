@@ -17,6 +17,8 @@ import {
   Typography,
   ToggleButtonGroup,
   ToggleButton,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { VocabItem } from '../../types';
@@ -42,6 +44,8 @@ type SuggestOption = {
 export const VocabFormDialog: React.FC<VocabFormDialogProps> = React.memo(
   ({ open, mode, data, onChange, onClose, onSave }) => {
     const { t } = useTranslation(['vocabulary', 'common']);
+    const theme = useTheme();
+    const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const [localData, setLocalData] = React.useState<VocabItem>(data);
     const [suggestions, setSuggestions] = React.useState<SuggestOption[]>([]);
     const [loadingSuggest, setLoadingSuggest] = React.useState(false);
@@ -191,7 +195,13 @@ export const VocabFormDialog: React.FC<VocabFormDialogProps> = React.memo(
     }, [searchTerm, inputLang]);
 
     return (
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="sm"
+        fullWidth
+        fullScreen={fullScreen}
+      >
         <DialogTitle>
           {mode === 'add' ? t('dialogs.vocabForm.titleAdd') : t('dialogs.vocabForm.titleEdit')}
         </DialogTitle>

@@ -72,8 +72,8 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({
         sx: {
           width: { xs: '100%', md: '60vw' },
           maxWidth: 960,
-          minWidth: 360,
-          height: '100vh',
+          minWidth: { xs: 0, md: 360 },
+          height: { xs: '100dvh', md: '100vh' },
           borderTopLeftRadius: { xs: 0, md: 16 },
           borderBottomLeftRadius: { xs: 0, md: 16 },
           boxShadow: 8,

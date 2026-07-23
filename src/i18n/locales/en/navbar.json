@@ -7,6 +7,11 @@
   "tasks": "Tasks",
   "history": "History",
   "data": "Data",
+  "more": "More",
+  "openMenu": "Open menu",
+  "closeMenu": "Close menu",
+  "mobileNavigation": "Main navigation",
+  "backToVocabulary": "Back to vocabulary",
   "settings": {
     "title": "Settings",
     "close": "Close settings",

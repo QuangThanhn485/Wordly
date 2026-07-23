@@ -5,6 +5,7 @@ import {
   Box,
   Typography,
   List,
+  ListItemButton,
   ListItemText,
   IconButton,
   Table,
@@ -113,6 +114,7 @@ import {
 import { getTopicScheduleStates } from '@/features/tasks/utils/tasksStorage';
 import { VocabDetailPanel } from '../components/VocabDetailPanel';
 import { loadPreferences, updatePreferences } from '@/data';
+import { MOBILE_PAGE_VIEWPORT_HEIGHT } from '@/layouts/mobileLayoutConstants';
 
 const getJsonDownloadName = (label: string): string => {
   const safeLabel = label
@@ -427,6 +429,168 @@ const VocabTableBody = React.memo(function VocabTableBody({
         />
       ))}
     </TableBody>
+  );
+});
+
+type MobileVocabularyListProps = VocabTableBodyProps & {
+  allSelected: boolean;
+  partiallySelected: boolean;
+  onSelectAll: (event: React.ChangeEvent<HTMLInputElement>) => void;
+};
+
+const MobileVocabularyList = React.memo(function MobileVocabularyList({
+  entries,
+  selectedVocabs,
+  allSelected,
+  partiallySelected,
+  getSpeakAriaLabel,
+  getMenuAriaLabel,
+  onToggleSelection,
+  onOpenDetail,
+  onOpenMenu,
+  onSelectAll,
+}: MobileVocabularyListProps) {
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        overflowY: 'auto',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1,
+        scrollbarGutter: 'stable',
+      }}
+    >
+      <Box
+        sx={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 2,
+          minHeight: 46,
+          px: 0.75,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.5,
+          bgcolor: 'background.paper',
+          borderBottom: '2px solid',
+          borderColor: 'primary.main',
+        }}
+      >
+        <Checkbox
+          size="small"
+          indeterminate={partiallySelected}
+          checked={allSelected}
+          onChange={onSelectAll}
+          inputProps={{ 'aria-label': 'Select all vocabulary' }}
+          sx={{ width: 40, height: 40 }}
+        />
+        <Typography
+          color="text.secondary"
+          sx={{ fontSize: '0.75rem', fontWeight: 700, lineHeight: 1.2 }}
+        >
+          {entries.length}
+        </Typography>
+      </Box>
+
+      <List disablePadding>
+        {entries.map(({ item, originalIndex }) => {
+          const identity = getVocabItemIdentity(item);
+          return (
+            <Box
+              key={item.id || `${item.word}:${originalIndex}`}
+              sx={{
+                minHeight: 76,
+                display: 'grid',
+                gridTemplateColumns: '44px minmax(0, 1fr) 88px',
+                alignItems: 'stretch',
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                '&:last-child': { borderBottom: 0 },
+              }}
+            >
+              <Box sx={{ display: 'grid', placeItems: 'center' }}>
+                <Checkbox
+                  size="small"
+                  checked={selectedVocabs.has(identity)}
+                  onChange={() => onToggleSelection(identity)}
+                  inputProps={{ 'aria-label': item.word }}
+                  sx={{ width: 40, height: 40 }}
+                />
+              </Box>
+
+              <ListItemButton
+                onClick={() => onOpenDetail(item)}
+                sx={{
+                  minWidth: 0,
+                  px: 0.5,
+                  py: 1,
+                  borderRadius: 0,
+                  alignItems: 'center',
+                }}
+              >
+                <Box sx={{ minWidth: 0, width: '100%' }}>
+                  <Typography
+                    sx={{
+                      color: 'text.primary',
+                      fontSize: '0.9375rem',
+                      lineHeight: 1.3,
+                      fontWeight: 700,
+                      overflowWrap: 'anywhere',
+                    }}
+                  >
+                    {item.word}
+                  </Typography>
+                  <Typography
+                    color="text.secondary"
+                    sx={{
+                      mt: 0.25,
+                      fontSize: '0.8125rem',
+                      lineHeight: 1.35,
+                      overflowWrap: 'anywhere',
+                    }}
+                  >
+                    {item.vnMeaning}
+                  </Typography>
+                  {(item.type || item.pronunciation) && (
+                    <Typography
+                      noWrap
+                      color="text.secondary"
+                      sx={{ mt: 0.375, fontSize: '0.6875rem', lineHeight: 1.2 }}
+                    >
+                      {[item.type, item.pronunciation].filter(Boolean).join('  |  ')}
+                    </Typography>
+                  )}
+                </Box>
+              </ListItemButton>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                <IconButton
+                  aria-label={getSpeakAriaLabel(item.word)}
+                  onClick={() =>
+                    speak(item.word, {
+                      phonetic: item.pronunciation,
+                      partOfSpeech: item.type,
+                    })
+                  }
+                  sx={{ width: 44, height: 44, color: 'primary.main' }}
+                >
+                  <VolumeUpIcon size={18} />
+                </IconButton>
+                <IconButton
+                  aria-label={getMenuAriaLabel(item.word)}
+                  onClick={(event) => onOpenMenu(event, item, originalIndex)}
+                  sx={{ width: 44, height: 44 }}
+                >
+                  <MoreVertIcon size={19} />
+                </IconButton>
+              </Box>
+            </Box>
+          );
+        })}
+      </List>
+    </Paper>
   );
 });
 
@@ -1839,8 +2003,14 @@ const VocabularyPage: React.FC = () => {
     <Box
       ref={pageRootRef}
       sx={{
-        minHeight: { xs: 'calc(100dvh - 56px)', sm: 'calc(100dvh - 64px)', md: '100dvh' },
-        height: { xs: 'calc(100dvh - 56px)', sm: 'calc(100dvh - 64px)', md: '100dvh' },
+        minHeight: {
+          xs: MOBILE_PAGE_VIEWPORT_HEIGHT,
+          md: '100dvh',
+        },
+        height: {
+          xs: MOBILE_PAGE_VIEWPORT_HEIGHT,
+          md: '100dvh',
+        },
         display: 'flex',
         flexDirection: { xs: 'column', md: 'row' },
         overflow: 'hidden',
@@ -1889,6 +2059,9 @@ const VocabularyPage: React.FC = () => {
               py: 0,
               height: 56,
               minHeight: 56,
+              position: 'sticky',
+              top: 0,
+              zIndex: 2,
               boxSizing: 'border-box',
               flexShrink: 0,
               display: 'flex',
@@ -1900,7 +2073,7 @@ const VocabularyPage: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
                   <MenuBookIcon size={20} style={{ marginRight: 8, flexShrink: 0, color: 'inherit' }} />
                   <Typography variant="subtitle1" noWrap sx={{ minWidth: 0, fontWeight: 700 }}>
-                    {t('title')}
+                    {isMdDown ? t('mobileTreeTitle') : t('title')}
                   </Typography>
                 </Box>
                 <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0 }}>
@@ -1945,6 +2118,7 @@ const VocabularyPage: React.FC = () => {
                 minHeight: 0,
                 overflowY: 'auto',
                 overflowX: 'hidden',
+                overscrollBehaviorY: 'contain',
                 px: 0.5,
                 py: 1,
                 scrollbarGutter: 'stable',
@@ -2248,6 +2422,50 @@ const VocabularyPage: React.FC = () => {
           minHeight: 0,
         }}>
           {selectedTopic ? (
+            isSmDown ? (
+              <>
+                <MobileVocabularyList
+                  entries={sortedVocabEntries}
+                  selectedVocabs={selectedVocabs}
+                  compact
+                  allSelected={
+                    sortedVocabEntries.length > 0 &&
+                    selectedVocabs.size === sortedVocabEntries.length
+                  }
+                  partiallySelected={
+                    selectedVocabs.size > 0 &&
+                    selectedVocabs.size < sortedVocabEntries.length
+                  }
+                  getSpeakAriaLabel={getSpeakAriaLabel}
+                  getMenuAriaLabel={getMenuAriaLabel}
+                  onToggleSelection={handleToggleVocabSelection}
+                  onOpenDetail={openVocabDetail}
+                  onOpenMenu={handleRowMenuOpen}
+                  onSelectAll={handleSelectAllVocabs}
+                />
+                <Menu
+                  anchorEl={rowMenuAnchor?.anchorEl}
+                  open={rowMenuAnchor !== null}
+                  onClose={handleRowMenuClose}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                >
+                  <MenuItem
+                    onClick={() => {
+                      if (!rowMenuAnchor) return;
+                      const { item, index } = rowMenuAnchor;
+                      handleRowMenuClose();
+                      openEditVocabForm(item, index);
+                    }}
+                  >
+                    <ListItemIcon>
+                      <EditIcon size={18} />
+                    </ListItemIcon>
+                    <ListItemText>{t('actions.editWord')}</ListItemText>
+                  </MenuItem>
+                </Menu>
+              </>
+            ) : (
             <Paper 
               elevation={0} 
               sx={{ 
@@ -2348,6 +2566,7 @@ const VocabularyPage: React.FC = () => {
                 </Menu>
               </TableContainer>
             </Paper>
+            )
           ) : (
             <Box
               sx={{

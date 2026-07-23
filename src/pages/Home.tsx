@@ -31,6 +31,7 @@ import { loadVocabularyTopicCounts, loadTreeFromStorage } from '@/features/vocab
 import { getAllTopicIds } from '@/features/vocabulary/utils/treeUtils';
 import { loadMistakesStats } from '@/features/train/train-read-write/mistakesStorage';
 import { TodayTasksCard } from '@/features/tasks/components/TodayTasksCard';
+import { MOBILE_PAGE_VIEWPORT_HEIGHT } from '@/layouts/mobileLayoutConstants';
 
 interface StatCardProps {
   title: string;
@@ -45,39 +46,45 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, subtitle
 
   return (
     <Card
-      elevation={2}
+      elevation={0}
       sx={{
         height: '100%',
-        background: `linear-gradient(135deg, ${alpha(color, 0.1)} 0%, ${alpha(color, 0.05)} 100%)`,
+        bgcolor: alpha(color, theme.palette.mode === 'dark' ? 0.08 : 0.045),
         border: `1px solid ${alpha(color, 0.2)}`,
-        transition: 'all 0.3s ease',
+        borderRadius: 1,
+        transition: 'border-color 160ms ease, box-shadow 160ms ease',
         '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: `0 8px 24px ${alpha(color, 0.25)}`,
+          borderColor: alpha(color, 0.45),
+          boxShadow: `0 6px 16px ${alpha(color, 0.12)}`,
         },
       }}
     >
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <Box>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
+      <CardContent sx={{ p: { xs: 1.25, sm: 2 }, '&:last-child': { pb: { xs: 1.25, sm: 2 } } }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 0.75 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography noWrap color="text.secondary" sx={{ fontSize: { xs: '0.6875rem', sm: '0.875rem' }, lineHeight: 1.25 }}>
               {title}
             </Typography>
-            <Typography variant="h3" fontWeight={700} color={color} sx={{ mb: 0.5 }}>
+            <Typography fontWeight={700} color={color} sx={{ mt: 0.5, mb: { sm: 0.5 }, fontSize: { xs: '1.5rem', sm: '2.75rem' }, lineHeight: 1.1 }}>
               {value}
             </Typography>
             {subtitle && (
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
                 {subtitle}
               </Typography>
             )}
           </Box>
           <Box
             sx={{
-              p: 1.5,
-              borderRadius: 2,
+              width: { xs: 34, sm: 48 },
+              height: { xs: 34, sm: 48 },
+              display: 'grid',
+              placeItems: 'center',
+              flexShrink: 0,
+              borderRadius: 1,
               bgcolor: alpha(color, 0.15),
               color: color,
+              '& svg': { width: { xs: 19, sm: 28 }, height: { xs: 19, sm: 28 } },
             }}
           >
             {icon}
@@ -106,37 +113,42 @@ const TrainingModeCard: React.FC<TrainingModeCardProps> = ({
 }) => {
   return (
     <Card
-      elevation={1}
+      elevation={0}
       sx={{
         height: '100%',
         cursor: 'pointer',
-        transition: 'all 0.3s ease',
+        borderRadius: 1,
+        transition: 'border-color 160ms ease, box-shadow 160ms ease',
         border: `1px solid ${alpha(color, 0.2)}`,
         '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: 4,
+          boxShadow: 2,
           borderColor: color,
         },
       }}
       onClick={onClick}
     >
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+      <CardContent sx={{ p: { xs: 1.25, sm: 2 }, '&:last-child': { pb: { xs: 1.25, sm: 2 } } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, mb: { xs: 0, sm: 2 } }}>
           <Box
             sx={{
-              p: 1.5,
-              borderRadius: 2,
+              width: { xs: 36, sm: 52 },
+              height: { xs: 36, sm: 52 },
+              flexShrink: 0,
+              display: 'grid',
+              placeItems: 'center',
+              borderRadius: 1,
               bgcolor: alpha(color, 0.1),
               color: color,
+              '& svg': { width: { xs: 20, sm: 28 }, height: { xs: 20, sm: 28 } },
             }}
           >
             {icon}
           </Box>
-          <Typography variant="h6" fontWeight={600}>
+          <Typography sx={{ minWidth: 0, fontSize: { xs: '0.8125rem', sm: '1.25rem' }, lineHeight: 1.3, fontWeight: 700, overflowWrap: 'anywhere' }}>
             {title}
           </Typography>
         </Box>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
           {description}
         </Typography>
       </CardContent>
@@ -232,53 +244,62 @@ const Home: React.FC = () => {
   return (
     <Box
       sx={{
-        minHeight: '100vh',
+        minHeight: {
+          xs: MOBILE_PAGE_VIEWPORT_HEIGHT,
+          md: '100vh',
+        },
         width: '100%',
         bgcolor: 'background.default',
-        pt: { xs: 3, sm: 4, md: 6 },
-        pb: 6,
+        pt: { xs: 2, sm: 4, md: 6 },
+        pb: { xs: 2, md: 6 },
       }}
     >
       <Container maxWidth="lg">
         {/* Hero Section */}
-        <Box sx={{ mb: { xs: 4, sm: 6 }, textAlign: 'center' }}>
+        <Box sx={{ mb: { xs: 2.5, sm: 6 }, textAlign: { xs: 'left', sm: 'center' } }}>
           <Typography
-            variant={isMobile ? 'h3' : 'h2'}
+            variant="h2"
             fontWeight={800}
             gutterBottom
             sx={{
-              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              mb: 2,
+              color: 'text.primary',
+              fontSize: { xs: '1.75rem', sm: '3.75rem' },
+              lineHeight: 1.1,
+              letterSpacing: 0,
+              mb: { xs: 0.75, sm: 2 },
             }}
           >
             {t('title')}
           </Typography>
           <Typography
-            variant={isMobile ? 'h6' : 'h5'}
+            variant="h5"
             color="text.secondary"
-            sx={{ mb: 3, maxWidth: 600, mx: 'auto' }}
+            sx={{
+              mb: { xs: 1.75, sm: 3 },
+              maxWidth: 600,
+              mx: { sm: 'auto' },
+              fontSize: { xs: '0.9375rem', sm: '1.5rem' },
+              lineHeight: { xs: 1.45, sm: 1.35 },
+            }}
           >
             {t('subtitle')}
           </Typography>
-          <Stack direction="row" spacing={2} justifyContent="center" flexWrap="wrap" gap={2}>
+          <Stack direction="row" spacing={1} justifyContent={{ xs: 'stretch', sm: 'center' }}>
             <Button
               variant="contained"
-              size="large"
+              size={isMobile ? 'medium' : 'large'}
               startIcon={<Library size={20} />}
               onClick={() => navigate('/vocabulary')}
-              sx={{ borderRadius: 2 }}
+              sx={{ borderRadius: 1, flex: { xs: 1, sm: '0 0 auto' }, minWidth: 0 }}
             >
               {t('buttons.vocabulary')}
             </Button>
             <Button
               variant="outlined"
-              size="large"
+              size={isMobile ? 'medium' : 'large'}
               startIcon={<BarChart3 size={20} />}
               onClick={() => navigate('/train/result')}
-              sx={{ borderRadius: 2 }}
+              sx={{ borderRadius: 1, flex: { xs: 1, sm: '0 0 auto' }, minWidth: 0 }}
             >
               {t('buttons.viewResults')}
             </Button>
@@ -293,12 +314,12 @@ const Home: React.FC = () => {
           sx={{
             display: 'grid',
             gridTemplateColumns: {
-              xs: '1fr',
+              xs: 'repeat(2, minmax(0, 1fr))',
               sm: 'repeat(2, 1fr)',
               md: 'repeat(4, 1fr)',
             },
-            gap: 3,
-            mb: { xs: 4, sm: 6 },
+            gap: { xs: 1, sm: 3 },
+            mb: { xs: 3, sm: 6 },
           }}
         >
           <StatCard
@@ -333,9 +354,9 @@ const Home: React.FC = () => {
 
         {/* Training Modes Section */}
         <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-            <Zap size={28} color={theme.palette.primary.main} />
-            <Typography variant={isMobile ? 'h5' : 'h4'} fontWeight={700}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: { xs: 1.25, sm: 3 } }}>
+            <Zap size={isMobile ? 20 : 28} color={theme.palette.primary.main} />
+            <Typography sx={{ fontSize: { xs: '1.0625rem', sm: '2.125rem' }, lineHeight: 1.25, fontWeight: 700 }}>
               {t('trainingModes.title')}
             </Typography>
           </Box>
@@ -343,11 +364,11 @@ const Home: React.FC = () => {
             sx={{
               display: 'grid',
               gridTemplateColumns: {
-                xs: '1fr',
+                xs: 'repeat(2, minmax(0, 1fr))',
                 sm: 'repeat(2, 1fr)',
                 md: 'repeat(4, 1fr)',
               },
-              gap: 3,
+              gap: { xs: 1, sm: 3 },
             }}
           >
             {trainingModes.map((mode, index) => (
@@ -364,8 +385,10 @@ const Home: React.FC = () => {
         <Card
           elevation={2}
           sx={{
-            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
+            display: { xs: 'none', md: 'block' },
+            bgcolor: 'background.paper',
             border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+            borderRadius: 1,
           }}
         >
           <CardContent sx={{ p: { xs: 3, sm: 4 } }}>

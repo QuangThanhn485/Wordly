@@ -91,8 +91,8 @@ export const AnswerReviewPanel = ({
     >
       <Box
         sx={{
-          px: { xs: 2, sm: 3 },
-          py: { xs: 2, sm: 2.5 },
+          px: { xs: 1.5, sm: 3 },
+          py: { xs: 1.5, sm: 2.5 },
           display: 'flex',
           alignItems: 'center',
           gap: 1.25,
@@ -129,11 +129,11 @@ export const AnswerReviewPanel = ({
 
       <Box
         sx={{
-          px: { xs: 2, sm: 3 },
-          py: { xs: 2.5, sm: 3 },
+          px: { xs: 1.5, sm: 3 },
+          py: { xs: 2, sm: 3 },
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 0.9fr) minmax(0, 1.1fr)' },
-          gap: { xs: 2, sm: 3 },
+          gap: { xs: 1.5, sm: 3 },
         }}
       >
         <Box sx={{ minWidth: 0 }}>
@@ -219,7 +219,7 @@ export const AnswerReviewPanel = ({
       <Box
         sx={{
           minHeight: 64,
-          px: { xs: 2, sm: 3 },
+          px: { xs: 1.5, sm: 3 },
           py: 1.25,
           display: 'flex',
           flexDirection: { xs: 'column', sm: 'row' },

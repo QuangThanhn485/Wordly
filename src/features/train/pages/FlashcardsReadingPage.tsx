@@ -5,7 +5,6 @@ import {
   Skeleton,
   Typography,
   useTheme,
-  useMediaQuery,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { BookOpen } from 'lucide-react';
@@ -37,6 +36,12 @@ import {
   createTrainingSearchParams,
   getTrainingTopicParams,
 } from '@/features/train/utils/topicSession';
+import {
+  flashcardGridSx,
+  flashcardHeightSx,
+  flashcardRemovalMaxHeightSx,
+} from '@/features/train/components/flashcardGridStyles';
+import { MOBILE_MAIN_VIEWPORT_HEIGHT } from '@/layouts/mobileLayoutConstants';
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
@@ -87,8 +92,6 @@ const getHiddenCorrectCardsFromFlipped = (flipped: Record<number, boolean>) => {
 
 const FlashcardsReadingPage = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const { t } = useTranslation('train');
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -651,7 +654,7 @@ const FlashcardsReadingPage = () => {
     <Box
       sx={{
         width: '100%',
-        minHeight: '100vh',
+        minHeight: { xs: MOBILE_MAIN_VIEWPORT_HEIGHT, md: '100vh' },
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
@@ -750,29 +753,20 @@ const FlashcardsReadingPage = () => {
             width: '100%',
             maxWidth: 1280,
             mx: 'auto',
-            px: { xs: 1.5, sm: 3, md: 4 },
-            py: { xs: 1.5, sm: 2.5 },
+            px: { xs: 1, sm: 3, md: 4 },
+            py: { xs: 1.25, sm: 2.5 },
             boxSizing: 'border-box',
           }}
         >
           {isLoading ? (
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: {
-                  xs: 'repeat(1, minmax(0, 1fr))',
-                  sm: 'repeat(auto-fill, minmax(280px, 1fr))',
-                },
-                gap: { xs: 1.25, sm: 2, md: 2.5 },
-              }}
-            >
+            <Box sx={flashcardGridSx}>
               {[...Array(8)].map((_, idx) => (
                 <Skeleton
                   key={idx}
                   variant="rounded"
-                  height={isMobile ? 168 : isTablet ? 204 : 224}
                   sx={{
                     width: '100%',
+                    height: flashcardHeightSx,
                     borderRadius: 1,
                   }}
                 />
@@ -785,13 +779,7 @@ const FlashcardsReadingPage = () => {
           ) : (
             <Box
               sx={{
-                display: 'grid',
-                gridTemplateColumns: {
-                  xs: 'repeat(1, minmax(0, 1fr))',
-                  sm: 'repeat(auto-fill, minmax(280px, 1fr))',
-                },
-                gap: { xs: 1.25, sm: 2, md: 2.5 },
-                alignItems: 'stretch',
+                ...flashcardGridSx,
                 pb: { xs: 2, sm: 3 },
               }}
             >
@@ -816,7 +804,9 @@ const FlashcardsReadingPage = () => {
                         ? 'scale(0.96) translateY(-6px)'
                         : 'scale(1) translateY(0)',
                       transformOrigin: 'center',
-                      maxHeight: isRemoving ? 0 : { xs: 176, sm: 220, md: 240 },
+                      maxHeight: isRemoving
+                        ? 0
+                        : flashcardRemovalMaxHeightSx,
                       overflow: 'hidden',
                       transition:
                         'opacity 280ms ease, transform 280ms ease, max-height 320ms ease',

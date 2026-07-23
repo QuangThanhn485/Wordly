@@ -22,4 +22,22 @@ export const getTheme = (mode: 'light' | 'dark') =>
     typography: {
       fontFamily: 'Roboto, sans-serif',
     },
+    components: {
+      MuiCssBaseline: {
+        styleOverrides: {
+          html: {
+            minHeight: '100%',
+            overflowX: 'hidden',
+            WebkitTextSizeAdjust: '100%',
+          },
+          body: {
+            minHeight: '100%',
+            overflowX: 'hidden',
+          },
+          '#root': {
+            minHeight: '100dvh',
+          },
+        },
+      },
+    },
   });

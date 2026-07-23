@@ -17,6 +17,8 @@ const MAX_VISIBLE_INDENT_LEVEL = 6;
 const TREE_ROW_HEIGHT = 40;
 
 const getRowPaddingLeft = (level: number): number => 8 + Math.min(level, MAX_VISIBLE_INDENT_LEVEL) * 16;
+const getMobileRowPaddingLeft = (level: number): number =>
+  6 + Math.min(level, MAX_VISIBLE_INDENT_LEVEL) * 12;
 
 // ===== Sort Helper =====
 /**
@@ -102,10 +104,13 @@ export const TopicTreeItem = memo(function TopicTreeItem({
         selected={selected}
         sx={{
           minWidth: 0,
-          minHeight: TREE_ROW_HEIGHT,
-          height: TREE_ROW_HEIGHT,
-          pl: `${getRowPaddingLeft(level)}px`,
-          pr: '40px',
+          minHeight: { xs: 48, md: TREE_ROW_HEIGHT },
+          height: { xs: 48, md: TREE_ROW_HEIGHT },
+          pl: {
+            xs: `${getMobileRowPaddingLeft(level)}px`,
+            md: `${getRowPaddingLeft(level)}px`,
+          },
+          pr: { xs: '48px', md: '40px' },
           py: 0,
           borderRadius: 1,
           position: 'relative',
@@ -159,6 +164,9 @@ export const TopicTreeItem = memo(function TopicTreeItem({
               enterDelay={650}
               enterNextDelay={650}
               disableInteractive
+              disableHoverListener={forceShowMenu}
+              disableFocusListener={forceShowMenu}
+              disableTouchListener={forceShowMenu}
             >
               <Typography
                 data-vocabulary-tree-label
@@ -181,7 +189,13 @@ export const TopicTreeItem = memo(function TopicTreeItem({
           </Box>
         </Box>
       </ListItemButton>
-      <Tooltip title={t('actions.topicMenuAriaLabel', { name: node.label })} placement="right">
+      <Tooltip
+        title={t('actions.topicMenuAriaLabel', { name: node.label })}
+        placement="right"
+        disableHoverListener={forceShowMenu}
+        disableFocusListener={forceShowMenu}
+        disableTouchListener={forceShowMenu}
+      >
         <IconButton
           className="tree-menu-button"
           size="small"
@@ -191,9 +205,9 @@ export const TopicTreeItem = memo(function TopicTreeItem({
           }}
           sx={{
             position: 'absolute',
-            right: 6,
-            width: 28,
-            height: 28,
+            right: { xs: 2, md: 6 },
+            width: { xs: 40, md: 28 },
+            height: { xs: 40, md: 28 },
             opacity: forceShowMenu ? 1 : 0,
             pointerEvents: forceShowMenu ? 'auto' : 'none',
             transition: 'opacity 120ms ease',
@@ -279,10 +293,13 @@ const FolderItemComponent = function FolderItem({
           onContextMenu={forceShowMenu ? undefined : (e) => onContext('folder', path, e)}
           sx={{
             minWidth: 0,
-            minHeight: TREE_ROW_HEIGHT,
-            height: TREE_ROW_HEIGHT,
-            pl: `${getRowPaddingLeft(level)}px`,
-            pr: '40px',
+            minHeight: { xs: 48, md: TREE_ROW_HEIGHT },
+            height: { xs: 48, md: TREE_ROW_HEIGHT },
+            pl: {
+              xs: `${getMobileRowPaddingLeft(level)}px`,
+              md: `${getRowPaddingLeft(level)}px`,
+            },
+            pr: { xs: '48px', md: '40px' },
             py: 0,
             borderRadius: 1,
             position: 'relative',
@@ -310,6 +327,9 @@ const FolderItemComponent = function FolderItem({
               enterDelay={650}
               enterNextDelay={650}
               disableInteractive
+              disableHoverListener={forceShowMenu}
+              disableFocusListener={forceShowMenu}
+              disableTouchListener={forceShowMenu}
             >
               <Typography
                 data-vocabulary-tree-label
@@ -322,7 +342,13 @@ const FolderItemComponent = function FolderItem({
             </Tooltip>
           </Box>
         </ListItemButton>
-        <Tooltip title={t('actions.folderMenuAriaLabel', { name: node.label })} placement="right">
+        <Tooltip
+          title={t('actions.folderMenuAriaLabel', { name: node.label })}
+          placement="right"
+          disableHoverListener={forceShowMenu}
+          disableFocusListener={forceShowMenu}
+          disableTouchListener={forceShowMenu}
+        >
           <IconButton
             className="tree-menu-button"
             size="small"
@@ -332,9 +358,9 @@ const FolderItemComponent = function FolderItem({
             }}
             sx={{
               position: 'absolute',
-              right: 6,
-              width: 28,
-              height: 28,
+              right: { xs: 2, md: 6 },
+              width: { xs: 40, md: 28 },
+              height: { xs: 40, md: 28 },
               opacity: forceShowMenu ? 1 : 0,
               pointerEvents: forceShowMenu ? 'auto' : 'none',
               transition: 'opacity 120ms ease',

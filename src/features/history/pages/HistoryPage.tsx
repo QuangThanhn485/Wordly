@@ -15,6 +15,7 @@ import { getKindMeta } from '../utils/modeMeta';
 import type { TrainingHistoryKind } from '@/features/train/utils/trainingHistory';
 import { HistoryCalendar } from '../components/HistoryCalendar';
 import { DayDetail } from '../components/DayDetail';
+import { MOBILE_PAGE_VIEWPORT_HEIGHT } from '@/layouts/mobileLayoutConstants';
 
 const startOfMonth = (date: Date): Date => new Date(date.getFullYear(), date.getMonth(), 1);
 
@@ -65,7 +66,7 @@ const HistoryPage: React.FC = () => {
 
   if (!hasData) {
     return (
-      <Box sx={{ width: '100%', minHeight: '100vh', bgcolor: 'background.default', py: { xs: 2, md: 3 } }}>
+      <Box sx={{ width: '100%', minHeight: { xs: MOBILE_PAGE_VIEWPORT_HEIGHT, md: '100vh' }, bgcolor: 'background.default', py: { xs: 1.5, md: 3 } }}>
         <Container maxWidth="sm">
           <Box
             sx={{
@@ -96,7 +97,7 @@ const HistoryPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ width: '100%', minHeight: '100vh', bgcolor: 'background.default', py: { xs: 2, md: 3 } }}>
+    <Box sx={{ width: '100%', minHeight: { xs: MOBILE_PAGE_VIEWPORT_HEIGHT, md: '100vh' }, bgcolor: 'background.default', py: { xs: 1.5, md: 3 } }}>
       <Container maxWidth="xl" sx={{ px: { xs: 1.5, sm: 2, md: 3 } }}>
         {/* Toolbar: title + jump to today */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mb: 2 }}>

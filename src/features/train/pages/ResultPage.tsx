@@ -16,6 +16,7 @@ import { FilterBar } from '@/features/result/components/FilterBar';
 import { EmptyState } from '@/features/result/components/EmptyState';
 import { MistakeGroup } from '@/features/result/components/MistakeGroup';
 import { MistakeGroupByTopic } from '@/features/result/components/MistakeGroupByTopic';
+import { MOBILE_PAGE_VIEWPORT_HEIGHT } from '@/layouts/mobileLayoutConstants';
 
 type ViewMode = 'grouped' | 'byTopic' | 'all';
 
@@ -57,7 +58,7 @@ const ResultPage = () => {
   ];
 
   return (
-    <Box sx={{ width: '100%', minHeight: '100vh', bgcolor: 'background.default', py: { xs: 2, md: 3 } }}>
+    <Box sx={{ width: '100%', minHeight: { xs: MOBILE_PAGE_VIEWPORT_HEIGHT, md: '100vh' }, bgcolor: 'background.default', py: { xs: 1.5, md: 3 } }}>
       <Container maxWidth="xl" sx={{ px: { xs: 1.5, sm: 2, md: 3 } }}>
         {/* Compact toolbar: title + view switcher */}
         <Box

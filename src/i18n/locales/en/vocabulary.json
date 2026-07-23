@@ -1,5 +1,6 @@
 {
   "title": "Vocabulary",
+  "mobileTreeTitle": "Topics",
   "defaults": {
     "folder": "Folder",
     "newFolder": "New Folder",

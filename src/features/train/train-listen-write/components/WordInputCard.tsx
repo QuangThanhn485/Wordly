@@ -167,9 +167,9 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
     >
       <Box
         sx={{
-          minHeight: 64,
-          px: { xs: 2, sm: 2.5 },
-          py: 1.25,
+          minHeight: { xs: 52, sm: 64 },
+          px: { xs: 1.5, sm: 2.5 },
+          py: { xs: 0.875, sm: 1.25 },
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -188,8 +188,8 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
         >
           <Box
             sx={{
-              width: 36,
-              height: 36,
+              width: { xs: 32, sm: 36 },
+              height: { xs: 32, sm: 36 },
               flexShrink: 0,
               display: 'grid',
               placeItems: 'center',
@@ -218,7 +218,12 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
             <Typography
               noWrap
               color="text.secondary"
-              sx={{ mt: 0.125, fontSize: '0.75rem', lineHeight: 1.3 }}
+              sx={{
+                display: { xs: 'none', sm: 'block' },
+                mt: 0.125,
+                fontSize: '0.75rem',
+                lineHeight: 1.3,
+              }}
             >
               {taskDescription}
             </Typography>
@@ -258,9 +263,9 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
         <>
           <Box
             sx={{
-              minHeight: { xs: 174, sm: 204 },
-              px: { xs: 2, sm: 3 },
-              py: { xs: 2.5, sm: 3 },
+              minHeight: { xs: 154, sm: 204 },
+              px: { xs: 1.5, sm: 3 },
+              py: { xs: 2, sm: 3 },
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -331,14 +336,14 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
             component="form"
             onSubmit={handleSubmit}
             sx={{
-              px: { xs: 2, sm: 3 },
-              py: { xs: 2, sm: 2.5 },
+              px: { xs: 1.5, sm: 3 },
+              py: { xs: 1.5, sm: 2.5 },
               borderTop: '1px solid',
               borderColor: 'divider',
             }}
           >
             <Stack
-              direction={{ xs: 'column', sm: 'row' }}
+              direction="row"
               spacing={1}
               alignItems="flex-start"
             >
@@ -400,9 +405,10 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                 color="primary"
                 disabled={!userInput.trim() || !hasStarted}
                 endIcon={<Send size={16} />}
+                aria-label={t('listenWriteCard.check')}
                 sx={{
-                  width: { xs: '100%', sm: 'auto' },
-                  minWidth: { sm: 132 },
+                  width: { xs: 56, sm: 'auto' },
+                  minWidth: { xs: 56, sm: 132 },
                   minHeight: 56,
                   borderRadius: 1,
                   px: 2,
@@ -410,9 +416,14 @@ export const WordInputCard: React.FC<WordInputCardProps> = ({
                   lineHeight: 1.2,
                   fontWeight: 700,
                   boxShadow: 'none',
+                  '& .MuiButton-endIcon': {
+                    m: { xs: 0, sm: '0 0 0 8px' },
+                  },
                 }}
               >
-                {t('listenWriteCard.check')}
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  {t('listenWriteCard.check')}
+                </Box>
               </Button>
             </Stack>
 

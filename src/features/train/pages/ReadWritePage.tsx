@@ -37,6 +37,7 @@ import {
   createTrainingSearchParams,
   getTrainingTopicParams,
 } from '@/features/train/utils/topicSession';
+import { MOBILE_MAIN_VIEWPORT_HEIGHT } from '@/layouts/mobileLayoutConstants';
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
@@ -486,7 +487,7 @@ const ReadWritePage = () => {
     <Box
       sx={{
         width: '100%',
-        minHeight: '100vh',
+        minHeight: { xs: MOBILE_MAIN_VIEWPORT_HEIGHT, md: '100vh' },
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',

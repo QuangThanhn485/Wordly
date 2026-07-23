@@ -26,6 +26,7 @@ import {
 } from '../utils/tasksStorage';
 import { startReviewTraining } from '../utils/reviewTraining';
 import { dayKeyOf, parseDayKey, todayKey } from '../utils/taskDates';
+import { MOBILE_PAGE_VIEWPORT_HEIGHT } from '@/layouts/mobileLayoutConstants';
 
 const startOfMonth = (date: Date): Date => new Date(date.getFullYear(), date.getMonth(), 1);
 
@@ -120,7 +121,7 @@ const TasksPage: React.FC = () => {
 
   if (tasks.length === 0) {
     return (
-      <Box sx={{ width: '100%', minHeight: '100vh', bgcolor: 'background.default', py: { xs: 2, md: 3 } }}>
+      <Box sx={{ width: '100%', minHeight: { xs: MOBILE_PAGE_VIEWPORT_HEIGHT, md: '100vh' }, bgcolor: 'background.default', py: { xs: 1.5, md: 3 } }}>
         <Container maxWidth="sm">
           <Box
             sx={{
@@ -155,7 +156,7 @@ const TasksPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ width: '100%', minHeight: '100vh', bgcolor: 'background.default', py: { xs: 2, md: 3 } }}>
+    <Box sx={{ width: '100%', minHeight: { xs: MOBILE_PAGE_VIEWPORT_HEIGHT, md: '100vh' }, bgcolor: 'background.default', py: { xs: 1.5, md: 3 } }}>
       <Container maxWidth="xl" sx={{ px: { xs: 1.5, sm: 2, md: 3 } }}>
         {/* Toolbar: title + today/overdue signals + jump-to-today */}
         <Box

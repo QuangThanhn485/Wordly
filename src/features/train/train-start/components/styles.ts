@@ -98,7 +98,7 @@ const boxRotate = (flipped: boolean) => ({
 
 const cardContainer = {
   width: '100%',
-  height: { xs: 168, sm: 204, md: 224 },
+  height: { xs: 156, sm: 184, md: 224 },
   perspective: 1200,
   cursor: 'pointer',
   mx: 'auto',
@@ -118,11 +118,21 @@ const shakeKF = keyframes`
 const solvedBadgeSx = (theme: Theme) => ({
   borderRadius: 1,
   fontWeight: 600,
+  height: { xs: 22, sm: 24, md: 24 },
+  '& .MuiChip-label': {
+    px: { xs: 0.625, sm: 0.875 },
+    fontSize: { xs: '0.625rem', sm: '0.6875rem' },
+  },
+  '& .MuiChip-icon': {
+    width: { xs: 13, sm: 15 },
+    height: { xs: 13, sm: 15 },
+    ml: { xs: 0.5, sm: 0.625 },
+    color: theme.palette.success.main,
+  },
   border: '1px solid',
   borderColor: alpha(theme.palette.success.main, theme.palette.mode === 'dark' ? 0.5 : 0.35),
   bgcolor: alpha(theme.palette.success.main, theme.palette.mode === 'dark' ? 0.18 : 0.12),
   color: theme.palette.success.main,
-  '& .MuiChip-icon': { color: theme.palette.success.main },
 });
 
 export { cardFront, cardBackRotate, boxRotate, cardContainer, shakeKF, solvedBadgeSx };

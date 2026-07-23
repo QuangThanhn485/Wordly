@@ -66,20 +66,21 @@ export const TrainingToolbar = ({
           display: hasCenterContent ? 'grid' : 'flex',
           gridTemplateColumns: hasCenterContent
             ? {
-                xs: 'minmax(0, 1fr) 90px minmax(0, 1fr)',
-                sm: 'minmax(170px, 1fr) minmax(150px, auto) minmax(170px, 1fr)',
+                xs: 'minmax(0, 1fr) auto',
+                md: 'minmax(170px, 1fr) minmax(150px, auto) minmax(170px, 1fr)',
               }
             : undefined,
           gridTemplateRows: hasCenterContent
-            ? { xs: 'auto auto', sm: 'auto' }
+            ? { xs: 'auto auto', md: 'auto' }
             : undefined,
           flexDirection: hasCenterContent
             ? undefined
-            : { xs: 'column', sm: 'row' },
+            : 'row',
+          flexWrap: hasCenterContent ? 'nowrap' : { xs: 'wrap', md: 'nowrap' },
           alignItems: 'center',
           justifyContent: 'space-between',
           columnGap: { xs: 1, sm: 1.5 },
-          rowGap: { xs: 0.75, sm: 0 },
+          rowGap: { xs: 0.625, md: 0 },
           position: 'relative',
         }}
       >
@@ -91,7 +92,7 @@ export const TrainingToolbar = ({
             minWidth: 0,
             flexShrink: 0,
             flexWrap: 'nowrap',
-            gridColumn: hasCenterContent ? '1' : undefined,
+            gridColumn: hasCenterContent ? { xs: '1', md: '1' } : undefined,
             gridRow: hasCenterContent ? '1' : undefined,
             justifySelf: hasCenterContent ? 'start' : undefined,
           }}
@@ -106,17 +107,13 @@ export const TrainingToolbar = ({
             onClick={() => onModeChange(mode === 'vi-en' ? 'en-vi' : 'vi-en')}
             aria-label={t('toolbar.switchDirection')}
             sx={{
-              minWidth: hasCenterContent ? { xs: 84, sm: 104 } : 104,
-              width: hasCenterContent ? { xs: 84, sm: 'auto' } : 'auto',
-              maxWidth: hasCenterContent ? { xs: 84, sm: 'none' } : 'none',
-              px: hasCenterContent ? { xs: 0.5, sm: 1.25 } : 1.25,
-              fontSize: hasCenterContent
-                ? { xs: '0.75rem', sm: '0.8125rem' }
-                : undefined,
+              minWidth: { xs: 84, md: 104 },
+              width: { xs: 84, md: 'auto' },
+              maxWidth: { xs: 84, md: 'none' },
+              px: { xs: 0.5, md: 1.25 },
+              fontSize: { xs: '0.75rem', md: '0.8125rem' },
               '& .MuiButton-startIcon': {
-                display: hasCenterContent
-                  ? { xs: 'none', sm: 'inherit' }
-                  : 'inherit',
+                display: { xs: 'none', md: 'inherit' },
               },
               borderColor: alpha(theme.palette.primary.main, isDark ? 0.5 : 0.34),
               bgcolor: alpha(theme.palette.primary.main, isDark ? 0.1 : 0.035),
@@ -152,13 +149,13 @@ export const TrainingToolbar = ({
             aria-label={t('buttons.restart')}
             sx={{
               color: 'text.secondary',
-              minWidth: hasCenterContent ? { xs: 32, sm: 'auto' } : undefined,
-              width: hasCenterContent ? { xs: 32, sm: 'auto' } : 'auto',
-              maxWidth: hasCenterContent ? { xs: 32, sm: 'none' } : 'none',
-              px: hasCenterContent ? { xs: 0, sm: 1 } : 1,
+              minWidth: { xs: 38, md: 'auto' },
+              width: { xs: 38, md: 'auto' },
+              maxWidth: { xs: 38, md: 'none' },
+              px: { xs: 0, md: 1 },
               '& .MuiButton-startIcon': {
-                mr: hasCenterContent ? { xs: 0, sm: 1 } : 1,
-                ml: hasCenterContent ? { xs: 0, sm: -0.5 } : -0.5,
+                mr: { xs: 0, md: 1 },
+                ml: { xs: 0, md: -0.5 },
               },
               '&:hover': {
                 color: 'text.primary',
@@ -169,9 +166,7 @@ export const TrainingToolbar = ({
             <Box
               component="span"
               sx={{
-                display: hasCenterContent
-                  ? { xs: 'none', sm: 'inline' }
-                  : 'inline',
+                display: { xs: 'none', md: 'inline' },
               }}
             >
               {t('buttons.restart')}
@@ -183,11 +178,11 @@ export const TrainingToolbar = ({
           <Box
             sx={{
               minWidth: 0,
-              gridColumn: '2',
-              gridRow: '1',
+              gridColumn: { xs: '1 / -1', md: '2' },
+              gridRow: { xs: '2', md: '1' },
               justifySelf: 'center',
               width: '100%',
-              maxWidth: 440,
+              maxWidth: { xs: '100%', md: 440 },
               display: 'flex',
               justifyContent: 'center',
             }}
@@ -199,19 +194,20 @@ export const TrainingToolbar = ({
         <Box
           sx={{
             minWidth: 0,
-            width: { xs: '100%', sm: 'auto' },
-            flex: { sm: 1 },
+            width: 'auto',
+            flex: { md: 1 },
             minHeight: 32,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: { sm: 'flex-end' },
+            justifyContent: 'flex-end',
             gap: 0.5,
-            pr: { xs: 9, sm: 0 },
+            pr: 0,
+            ml: hasCenterContent ? 0 : 'auto',
             gridColumn: hasCenterContent
-              ? { xs: '1 / -1', sm: '3' }
+              ? { xs: '2', md: '3' }
               : undefined,
             gridRow: hasCenterContent
-              ? { xs: '2', sm: '1' }
+              ? '1'
               : undefined,
             justifySelf: hasCenterContent ? 'stretch' : undefined,
           }}
@@ -226,7 +222,7 @@ export const TrainingToolbar = ({
           >
             <Box
               sx={{
-                display: 'flex',
+                display: { xs: 'none', md: 'flex' },
                 alignItems: 'center',
                 gap: 0.5,
                 color: 'text.secondary',
@@ -271,7 +267,7 @@ export const TrainingToolbar = ({
           <Divider
             orientation="vertical"
             flexItem
-            sx={{ display: { xs: 'none', sm: 'block' }, mx: 0.5 }}
+            sx={{ display: { xs: 'none', md: 'block' }, mx: 0.5 }}
           />
 
           <Box
@@ -282,9 +278,7 @@ export const TrainingToolbar = ({
               flexShrink: 0,
               minWidth: 68,
               justifyContent: 'flex-end',
-              position: { xs: 'absolute', sm: 'static' },
-              right: { xs: 0, sm: 'auto' },
-              bottom: { xs: 0, sm: 'auto' },
+              position: 'static',
               zIndex: 1,
             }}
           >

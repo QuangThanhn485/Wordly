@@ -40,6 +40,17 @@ export const WordCard: React.FC<WordCardProps> = ({
   const { t } = useTranslation('train');
   const isDark = theme.palette.mode === 'dark';
   const frontAccent = theme.palette.primary.main;
+  const frontWord = showLang === 'vi' ? en : vi;
+  const longestFrontSegment = Math.max(
+    ...frontWord.split(/\s+/).map((segment) => segment.length),
+  );
+  const compactFrontFontSize =
+    longestFrontSegment >= 18
+      ? '0.6875rem'
+      : longestFrontSegment >= 12
+        ? '0.8125rem'
+        : '0.9375rem';
+
   return (
     <Box
       onClick={() => {
@@ -78,12 +89,12 @@ export const WordCard: React.FC<WordCardProps> = ({
             sx={{
               width: '100%',
               height: '100%',
-              p: { xs: 1.5, sm: 2, md: 2.25 },
+              p: { xs: 0.75, sm: 1.25, md: 2.25 },
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'space-between',
-              '&:last-child': { pb: { xs: 1.5, sm: 2, md: 2.25 } },
+              '&:last-child': { pb: { xs: 0.75, sm: 1.25, md: 2.25 } },
             }}
           >
             <Typography
@@ -97,7 +108,7 @@ export const WordCard: React.FC<WordCardProps> = ({
                 letterSpacing: 0,
                 lineHeight: 1,
                 userSelect: 'none',
-                fontSize: '0.6875rem',
+                fontSize: { xs: '0.5625rem', sm: '0.625rem', md: '0.6875rem' },
               }}
             >
               {showLang === 'vi' ? 'EN' : 'VI'}
@@ -119,7 +130,11 @@ export const WordCard: React.FC<WordCardProps> = ({
                 align="center"
                 fontWeight={700}
                 sx={{
-                  fontSize: { xs: '1.25rem', sm: '1.45rem', md: '1.625rem' },
+                  fontSize: {
+                    xs: compactFrontFontSize,
+                    sm: '1.2rem',
+                    md: '1.625rem',
+                  },
                   lineHeight: 1.2,
                   letterSpacing: 0,
                   width: '100%',
@@ -130,7 +145,7 @@ export const WordCard: React.FC<WordCardProps> = ({
                   color: 'inherit',
                 }}
               >
-                {showLang === 'vi' ? en : vi}
+                {frontWord}
               </Typography>
               <Box
                 sx={{
@@ -138,7 +153,7 @@ export const WordCard: React.FC<WordCardProps> = ({
                   height: '1px',
                   borderRadius: 1,
                   bgcolor: alpha(frontAccent, isDark ? 0.35 : 0.25),
-                  mt: { xs: 1, sm: 1.25 },
+                  mt: { xs: 0.625, sm: 0.875, md: 1.25 },
                 }}
               />
             </Box>
@@ -148,6 +163,7 @@ export const WordCard: React.FC<WordCardProps> = ({
               align="center"
               sx={{
                 userSelect: 'none',
+                display: { xs: 'none', md: 'block' },
                 color: 'text.secondary',
                 fontWeight: 500,
                 letterSpacing: 0,
@@ -165,12 +181,12 @@ export const WordCard: React.FC<WordCardProps> = ({
             sx={{
               width: '100%',
               height: '100%',
-              p: { xs: 1.5, sm: 2, md: 2.25 },
+              p: { xs: 0.75, sm: 1.25, md: 2.25 },
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'flex-start',
-              '&:last-child': { pb: { xs: 1.5, sm: 2, md: 2.25 } },
+              '&:last-child': { pb: { xs: 0.75, sm: 1.25, md: 2.25 } },
             }}
           >
             <Chip icon={<CheckCircleIcon size={16} />} label={t('common.correct')} size="small" sx={solvedBadgeSx(theme)} />
@@ -179,8 +195,8 @@ export const WordCard: React.FC<WordCardProps> = ({
               sx={{
                 width: '100%',
                 display: 'grid',
-                gap: { xs: 0.5, sm: 0.75 },
-                mt: { xs: 0.75, sm: 1 },
+                gap: { xs: 0.25, sm: 0.5, md: 0.75 },
+                mt: { xs: 0.375, sm: 0.625, md: 1 },
               }}
             >
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
@@ -191,7 +207,8 @@ export const WordCard: React.FC<WordCardProps> = ({
                     fontWeight: 600,
                     color: 'text.secondary',
                     userSelect: 'none',
-                    fontSize: { xs: '0.625rem', sm: '0.6875rem' },
+                    fontSize: { xs: '0.5rem', sm: '0.625rem', md: '0.6875rem' },
+                    lineHeight: 1,
                   }}
                 >
                   EN
@@ -207,7 +224,8 @@ export const WordCard: React.FC<WordCardProps> = ({
                     maxWidth: '100%',
                     whiteSpace: 'normal',
                     wordBreak: 'break-word',
-                    fontSize: { xs: '1rem', sm: '1.05rem' },
+                    fontSize: { xs: '0.75rem', sm: '0.9375rem', md: '1.05rem' },
+                    lineHeight: 1.15,
                     color: 'inherit',
                   }}
                 >
@@ -225,7 +243,8 @@ export const WordCard: React.FC<WordCardProps> = ({
                     fontWeight: 600,
                     color: 'text.secondary',
                     userSelect: 'none',
-                    fontSize: { xs: '0.625rem', sm: '0.6875rem' },
+                    fontSize: { xs: '0.5rem', sm: '0.625rem', md: '0.6875rem' },
+                    lineHeight: 1,
                   }}
                 >
                   VI
@@ -234,7 +253,8 @@ export const WordCard: React.FC<WordCardProps> = ({
                   variant="body1"
                   align="center"
                   sx={{
-                    fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                    fontSize: { xs: '0.6875rem', sm: '0.875rem', md: '1.05rem' },
+                    lineHeight: 1.15,
                     fontWeight: 600,
                     width: '100%',
                     maxWidth: '100%',
@@ -249,14 +269,22 @@ export const WordCard: React.FC<WordCardProps> = ({
               </Box>
 
               {meaning && (
-                <Box sx={{ mt: { xs: 0.25, sm: 0.5 } }}>
-                  <Typography variant="overline" align="center" sx={{ display: 'block', color: 'text.secondary' }}>
+                <Box sx={{ mt: { xs: 0, sm: 0.25, md: 0.5 }, minWidth: 0 }}>
+                  <Typography variant="overline" align="center" sx={{ display: { xs: 'none', sm: 'block' }, color: 'text.secondary' }}>
                     Meaning
                   </Typography>
                   <Typography
                     variant="body2"
                     align="center"
-                    sx={{ fontSize: { xs: '0.875rem', sm: '0.95rem' }, lineHeight: 1.5, wordBreak: 'break-word' }}
+                    sx={{
+                      fontSize: { xs: '0.625rem', sm: '0.8125rem', md: '0.95rem' },
+                      lineHeight: { xs: 1.15, sm: 1.35, md: 1.5 },
+                      wordBreak: 'break-word',
+                      display: '-webkit-box',
+                      WebkitBoxOrient: 'vertical',
+                      WebkitLineClamp: { xs: 2, sm: 2, md: 3 },
+                      overflow: 'hidden',
+                    }}
                   >
                     {meaning}
                   </Typography>

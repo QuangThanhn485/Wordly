@@ -32,8 +32,8 @@ export const TrainingHeader = ({
     <Box
       component="header"
       sx={{
-        position: 'sticky',
-        top: { xs: 56, sm: 64, md: 0 },
+        position: { xs: 'static', md: 'sticky' },
+        top: 0,
         zIndex: (theme) => theme.zIndex.appBar - 1,
         width: '100%',
         flexShrink: 0,
@@ -44,13 +44,16 @@ export const TrainingHeader = ({
     >
       <Box
         sx={{
-          minHeight: 56,
-          height: 56,
-          px: { xs: 1.5, sm: 2 },
+          minHeight: { xs: 38, md: 56 },
+          height: { xs: 38, md: 56 },
+          px: { xs: 1.25, md: 2 },
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) minmax(112px, 240px)',
+          gridTemplateColumns: {
+            xs: 'minmax(0, 1fr)',
+            md: 'minmax(0, 1fr) minmax(112px, 240px)',
+          },
           alignItems: 'center',
-          gap: { xs: 1.5, sm: 3 },
+          gap: { xs: 0, md: 3 },
           borderBottom: '1px solid',
           borderColor: 'divider',
           boxSizing: 'border-box',
@@ -59,7 +62,7 @@ export const TrainingHeader = ({
         <Box
           sx={{
             minWidth: 0,
-            display: 'flex',
+            display: { xs: 'none', md: 'flex' },
             alignItems: 'center',
             gap: 1.125,
           }}
@@ -112,12 +115,12 @@ export const TrainingHeader = ({
           </Box>
         </Box>
 
-        <Box sx={{ minWidth: 0 }}>
+        <Box sx={{ minWidth: 0, width: '100%' }}>
           <Typography
             noWrap
             color="text.secondary"
             sx={{
-              mb: 0.5,
+              mb: { xs: 0.375, md: 0.5 },
               textAlign: 'right',
               fontSize: '0.75rem',
               lineHeight: 1,
@@ -140,7 +143,7 @@ export const TrainingHeader = ({
               percent: Math.round(progress),
             })}
             sx={{
-              height: 5,
+              height: { xs: 4, md: 5 },
               borderRadius: 1,
               bgcolor: 'action.hover',
             }}
@@ -150,14 +153,14 @@ export const TrainingHeader = ({
 
       <Box
         sx={{
-          minHeight: 48,
-          px: { xs: 1.5, sm: 2 },
-          py: 0.75,
+          minHeight: { xs: 50, md: 48 },
+          px: { xs: 1, md: 2 },
+          py: { xs: 0.625, md: 0.75 },
           display: 'flex',
           alignItems: 'center',
           boxSizing: 'border-box',
           '& .MuiButton-root': {
-            minHeight: 32,
+            minHeight: { xs: 38, md: 32 },
             borderRadius: 1,
             px: 1.5,
             py: 0.5,
@@ -182,8 +185,8 @@ export const TrainingHeader = ({
             ml: 0.75,
           },
           '& .MuiIconButton-root': {
-            width: 32,
-            height: 32,
+            width: { xs: 38, md: 32 },
+            height: { xs: 38, md: 32 },
             p: 0.75,
           },
         }}

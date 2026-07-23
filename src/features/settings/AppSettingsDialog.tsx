@@ -13,6 +13,7 @@ import {
   RadioGroup,
   Stack,
   Typography,
+  useMediaQuery,
   useTheme,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
@@ -54,6 +55,7 @@ export const AppSettingsDialog = ({
   onClose,
 }: AppSettingsDialogProps) => {
   const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const { t } = useTranslation('navbar');
   const [draft, setDraft] = useState<PronunciationSettings>(
     loadPronunciationSettings,
@@ -118,11 +120,12 @@ export const AppSettingsDialog = ({
       open={open}
       onClose={handleClose}
       fullWidth
+      fullScreen={fullScreen}
       maxWidth="sm"
       aria-labelledby="app-settings-title"
       PaperProps={{
         sx: {
-          borderRadius: 1,
+          borderRadius: { xs: 0, sm: 1 },
           overflow: 'hidden',
           border: '1px solid',
           borderColor: 'divider',

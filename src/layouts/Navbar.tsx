@@ -50,13 +50,13 @@ import {
 } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useThemeMode } from 'contexts/ThemeContext';
-import { loadTrainingSession as loadReadingSession } from 'features/train/train-start/sessionStorage';
-import { loadTrainingSession as loadListeningSession } from 'features/train/train-listen/sessionStorage';
 import { loadTrainingSession as loadReadWriteSession } from 'features/train/train-read-write/sessionStorage';
-import { loadTrainingSession as loadListenWriteSession } from 'features/train/train-listen-write/sessionStorage';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-import { getTopicLabel } from '@/features/vocabulary/utils/storageUtils';
 import { DATABASE_KEYS } from '@/data';
+import {
+  getStoredTrainingContext,
+  type TrainingContext,
+} from './navigationContext';
 
 const drawerWidth = 264;
 const collapsedWidth = 64;
@@ -65,63 +65,6 @@ const AppSettingsDialog = React.lazy(() =>
     default: module.AppSettingsDialog,
   })),
 );
-
-type StoredTrainingSession = {
-  topicId: string;
-  sourceTopicId?: string;
-  topicLabel?: string;
-  sourceTopicLabel?: string;
-  timestamp?: number;
-};
-
-type TrainingContext = {
-  topicId: string | null;
-  label: string | null;
-};
-
-const getSessionTopicLabel = (
-  session: StoredTrainingSession | null,
-): string | null => {
-  if (!session) return null;
-  return (
-    session.sourceTopicLabel ||
-    session.topicLabel ||
-    getTopicLabel(session.sourceTopicId || session.topicId) ||
-    null
-  );
-};
-
-const getStoredTrainingContext = (pathname: string): TrainingContext => {
-  const sessions = {
-    reading: loadReadingSession() as StoredTrainingSession | null,
-    listening: loadListeningSession() as StoredTrainingSession | null,
-    readWrite: loadReadWriteSession() as StoredTrainingSession | null,
-    listenWrite: loadListenWriteSession() as StoredTrainingSession | null,
-  };
-
-  let current: StoredTrainingSession | null = null;
-  if (pathname.startsWith('/train/flashcards-reading')) {
-    current = sessions.reading;
-  } else if (pathname.startsWith('/train/flashcards-listening')) {
-    current = sessions.listening;
-  } else if (pathname.startsWith('/train/read-write')) {
-    current = sessions.readWrite;
-  } else if (pathname.startsWith('/train/listen-write')) {
-    current = sessions.listenWrite;
-  }
-
-  if (!current) {
-    current =
-      Object.values(sessions)
-        .filter((session): session is StoredTrainingSession => Boolean(session))
-        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0] || null;
-  }
-
-  return {
-    topicId: current?.topicId || null,
-    label: getSessionTopicLabel(current),
-  };
-};
 
 const iconStyle = (expanded: boolean): SxProps<Theme> => ({
   minWidth: 0,

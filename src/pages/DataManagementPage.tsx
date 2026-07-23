@@ -46,6 +46,7 @@ import {
   saveBackupMetadata,
 } from '@/data';
 import { DataSourceSettings } from '@/features/data/components/DataSourceSettings';
+import { MOBILE_PAGE_VIEWPORT_HEIGHT } from '@/layouts/mobileLayoutConstants';
 
 const DataManagementPage: React.FC = () => {
   const theme = useTheme();
@@ -391,7 +392,10 @@ const DataManagementPage: React.FC = () => {
     <Box
         sx={{
           width: '100%',
-          minHeight: '100vh',
+          minHeight: {
+            xs: MOBILE_PAGE_VIEWPORT_HEIGHT,
+            md: '100vh',
+          },
           bgcolor: 'background.default',
           py: { xs: 2, sm: 2.5 },
         }}
@@ -409,8 +413,8 @@ const DataManagementPage: React.FC = () => {
               <Database size={20} />
             </Box>
             <Box sx={{ minWidth: 0 }}>
-              <Typography variant="h5" fontWeight={700}>{t('title')}</Typography>
-              <Typography variant="body2" color="text.secondary">{t('backup.subtitle')}</Typography>
+              <Typography sx={{ fontSize: { xs: '1.125rem', sm: '1.5rem' }, lineHeight: 1.25, fontWeight: 700 }}>{t('title')}</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{t('backup.subtitle')}</Typography>
             </Box>
           </Box>
 
